@@ -6,3 +6,7 @@ test('logo and portrait files exist', () => {
     expect(statSync(file).size).toBeGreaterThan(1000)
   }
 })
+
+test('hero video exists', () => {
+  expect(statSync('public/hero.mp4').size).toBeGreaterThan(10_000)
+})
