@@ -165,3 +165,19 @@ img, video { max-width: 100%; display: block; }
   .plates { flex-direction: column; }
   .plates article, .plates .is-both { min-height: 0; }
 }
+.hours { background: var(--paper-warm); padding: 28px 8vw 72px; }
+.hours-time { font-family: var(--font-display); font-size: 2rem; letter-spacing: -0.04em; margin: 0 0 12px; }
+.hours-dash { color: var(--yellow); }
+.hours-row { display: flex; }
+.hours-day {
+  flex: 1; min-height: 120px; margin-right: -8px;
+  background: var(--ink); color: var(--paper);
+  display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+  padding-bottom: 12px; text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.78rem;
+  clip-path: polygon(14% 0, 100% 0, 86% 100%, 0 100%);
+}
+.hours-day.is-closed { background: transparent; color: #6d685f; box-shadow: inset 0 1.5px 0 var(--ink), inset 0 -1.5px 0 var(--ink); }
+@media (max-width: 800px) {
+  .hours { padding: 12px 16px 48px; }
+  .hours-day { min-height: 88px; font-size: 0.62rem; letter-spacing: 0.04em; }
+}
