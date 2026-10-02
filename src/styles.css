@@ -125,3 +125,26 @@ img, video { max-width: 100%; display: block; }
 @media (max-width: 800px) {
   .map-fallback { padding-inline-start: max(24px, 12%); }
 }
+.booking {
+  background: var(--ink); color: var(--text-on-dark);
+  display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 24px;
+  padding: 48px 8vw 64px;
+  clip-path: polygon(0 0, 100% 0, 100% 88%, 0 100%);
+  scroll-margin-top: 72px;
+}
+.kicker { letter-spacing: 0.18em; font-size: 0.72rem; margin: 0 0 8px; }
+.booking h2 { font-family: var(--font-display); font-weight: 720; letter-spacing: -0.04em; margin: 0 0 8px; }
+.booking form { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.booking label { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
+.booking input, .booking select, .booking button {
+  min-height: 44px; background: transparent; color: var(--text-on-dark);
+  border: 1px solid rgba(255,255,255,.35); padding: 0 10px;
+  clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+}
+.booking button { background: var(--yellow); color: var(--ink); border: 0; cursor: pointer; font-weight: 500; }
+.booking [role="alert"] { color: var(--yellow); }
+@media (max-width: 800px) {
+  .booking { grid-template-columns: 1fr; padding: 32px 20px 48px; }
+  .booking form { flex-direction: column; align-items: stretch; }
+  .booking button { width: 100%; }
+}
