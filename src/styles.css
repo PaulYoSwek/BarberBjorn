@@ -1,0 +1,24 @@
+:root {
+  --ink: #101010;
+  --ink-deep: #070707;
+  --about: #2a2a2a;
+  --paper: #efece4;
+  --paper-warm: #e4dfd4;
+  --yellow: #f5c400;
+  --text: #161616;
+  --text-on-dark: #f4f1ea;
+  --font-display: "Bricolage Grotesque", sans-serif;
+  --font-body: Outfit, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; min-height: 100%; }
+body {
+  background: var(--paper);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-weight: 300;
+}
+button, input, select { font: inherit; }
+img, video { max-width: 100%; display: block; }
+:focus-visible { outline: 2px solid var(--yellow); outline-offset: 3px; }
