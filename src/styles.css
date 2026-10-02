@@ -204,3 +204,16 @@ img, video { max-width: 100%; display: block; }
   .about img { height: 420px; -webkit-mask-image: linear-gradient(#000 70%, transparent); mask-image: linear-gradient(#000 70%, transparent); }
   .about-shard { margin: -48px 16px 32px; }
 }
+.faq { background: var(--paper); padding: 48px 8vw 72px; display: flex; flex-direction: column; gap: 8px; }
+.faq article {
+  display: grid; grid-template-columns: 52px 1fr; gap: 12px;
+  background: var(--ink); color: var(--text-on-dark); padding: 14px 16px;
+  clip-path: polygon(0 0, 100% 0, 98.5% 100%, 0 100%);
+}
+.faq span { font-family: var(--font-display); color: var(--yellow); }
+.faq h3 { margin: 0 0 4px; font-size: 1rem; font-weight: 500; }
+.faq p { margin: 0; }
+@media (max-width: 800px) {
+  .faq { padding: 32px 16px 48px; }
+  .faq article { grid-template-columns: 1fr; }
+}
