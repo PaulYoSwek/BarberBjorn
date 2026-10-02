@@ -13,19 +13,36 @@ type MapErrorEvent = {
 }
 
 const styleLoadFailure = /style is not done loading|failed to load style|could not load style|missing style|no style added|there is no style/i
+const styleNotLoaded = /Style is not done loading|no style|missing style/
+const webglInitFailure = /Failed to initialize WebGL/
+const spriteResource = /sprite@2x\.png|\/sprite/i
+/** Style JSON, e.g. /styles/v1/mapbox/dark-v11 — not a sprite or tile subresource. */
+const styleDocumentUrl = /\/styles\/v1\/[^/?#]+\/[^/?#]+\/?(?=[?#]|$)/
+
+function isStyleDocumentUrl(value: string) {
+  return styleDocumentUrl.test(value) && !spriteResource.test(value) && !/\/tiles\//.test(value)
+}
+
+function isSpriteOnlyError(url: string, message: string) {
+  if (!spriteResource.test(url) && !spriteResource.test(message)) return false
+  return !isStyleDocumentUrl(url) && !isStyleDocumentUrl(message)
+}
 
 function isMapOrStyleFailure(event: MapErrorEvent, map: mapboxgl.Map) {
   if (event.tile != null || event.sourceId != null) return false
   const message = event.error?.message ?? ''
   const url = event.error?.url ?? ''
+  if (isSpriteOnlyError(url, message)) return false
+  if (webglInitFailure.test(message)) return true
+  if (isStyleDocumentUrl(url) || isStyleDocumentUrl(message)) return true
+  if (/mapbox:\/\/styles/.test(url) || /mapbox:\/\/styles/.test(message)) return true
   if (styleLoadFailure.test(message)) return true
-  if (/mapbox:\/\/styles|\/styles\/v\d+\//.test(url) && !/\/tiles\//.test(url)) return true
   try {
     const style: unknown = map.getStyle()
     return style == null
   } catch (error) {
     const text = error instanceof Error ? error.message : ''
-    return /no style|missing style/i.test(text)
+    return styleNotLoaded.test(text)
   }
 }
 
