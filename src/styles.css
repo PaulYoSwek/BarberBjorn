@@ -116,4 +116,12 @@ img, video { max-width: 100%; display: block; }
   }
 }
 .map-canvas { position: absolute; inset: 0; }
-.map-fallback { margin: 0; padding: 24px; color: var(--text-on-dark); }
+.map-fallback {
+  margin: 0;
+  padding: 24px;
+  padding-inline-start: calc(16% + 24px);
+  color: var(--text-on-dark);
+}
+@media (max-width: 800px) {
+  .map-fallback { padding-inline-start: max(24px, 12%); }
+}
