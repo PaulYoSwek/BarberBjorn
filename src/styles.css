@@ -148,3 +148,20 @@ img, video { max-width: 100%; display: block; }
   .booking form { flex-direction: column; align-items: stretch; }
   .booking button { width: 100%; }
 }
+.services { background: var(--paper); padding: 72px 8vw; }
+.services .kicker { color: var(--text); }
+.plates { display: flex; align-items: stretch; gap: 14px; }
+.plates article {
+  flex: 1; min-height: 280px; background: var(--ink); color: var(--text-on-dark);
+  padding: 22px 18px; display: flex; flex-direction: column; justify-content: space-between;
+  clip-path: polygon(0 0, 100% 0, 88% 100%, 0 100%);
+}
+.plates article:nth-child(2) { clip-path: polygon(10% 0, 100% 0, 100% 100%, 0 100%); }
+.plates strong { font-family: var(--font-display); font-size: 4rem; letter-spacing: -0.06em; line-height: 0.8; }
+.plates h3 { margin: 0; font-weight: 500; }
+.plates p { margin: 6px 0 0; }
+.plates .is-both { background: var(--yellow); color: var(--ink); clip-path: polygon(12% 0, 100% 0, 100% 100%, 0 100%); }
+@media (max-width: 800px) {
+  .plates { flex-direction: column; }
+  .plates article, .plates .is-both { min-height: 0; }
+}
