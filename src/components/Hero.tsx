@@ -24,7 +24,9 @@ export function Hero() {
         <p>{t.tagline}</p>
         <a className="book-link" href="#afspraak">{t.bookCta}</a>
       </div>
-      <div className="hero-map" data-testid="map-slot" />
+      <div className="hero-map-wrap">
+        <div className="hero-map" data-testid="map-slot" />
+      </div>
     </header>
   )
 }

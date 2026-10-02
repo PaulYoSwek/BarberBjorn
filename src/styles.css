@@ -92,18 +92,26 @@ img, video { max-width: 100%; display: block; }
   display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px;
   background: var(--yellow); color: var(--ink); text-decoration: none; font-weight: 500;
 }
-.hero-map {
+.hero-map-wrap {
   position: relative; z-index: 1; min-height: 100%;
+}
+.hero-map-wrap::before {
+  content: '';
+  position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cline x1='16' y1='0' x2='0' y2='100' stroke='%23f5c400' stroke-width='3'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+}
+.hero-map {
+  position: relative; min-height: 100%;
   background: #141414;
   clip-path: polygon(16% 0, 100% 0, 100% 100%, 0 100%);
-  border-left: 3px solid var(--yellow);
 }
 @media (max-width: 800px) {
   .hero { grid-template-columns: 1fr; min-height: auto; }
   .hero-copy { padding: 96px 20px 28px; }
+  .hero-map-wrap::before { display: none; }
   .hero-map {
     min-height: 240px;
     clip-path: polygon(0 0, 100% 0, 100% 100%, 12% 100%);
-    border-left: 0; border-top: 3px solid var(--yellow);
+    border-top: 3px solid var(--yellow);
   }
 }
