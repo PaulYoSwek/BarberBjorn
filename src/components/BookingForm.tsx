@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { mailtoHref, todayIso, validateBooking, type BookingInput } from '../booking'
 import { CONTACT } from '../content'
 import { useLang } from '../language'
@@ -10,6 +10,17 @@ export function BookingForm() {
   const [input, setInput] = useState<BookingInput>(empty)
   const [errors, setErrors] = useState<Partial<Record<keyof BookingInput, string>>>({})
   const [fallback, setFallback] = useState('')
+  const inputRef = useRef(input)
+  inputRef.current = input
+
+  useEffect(() => {
+    setErrors((current) => {
+      if (Object.keys(current).length === 0) return current
+      const result = validateBooking(inputRef.current, t, todayIso())
+      if (result.ok) return current
+      return result.errors
+    })
+  }, [t])
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault()
@@ -21,11 +32,8 @@ export function BookingForm() {
     }
     setErrors({})
     const href = mailtoHref(CONTACT.email, result.subject, result.body)
-    try {
-      window.location.assign(href)
-    } catch {
-      setFallback(`${t.mailFallback}\n${CONTACT.email}\n${result.body}`)
-    }
+    setFallback(`${t.mailFallback}\n${CONTACT.email}\n${result.body}`)
+    window.location.assign(href)
   }
 
   return (
