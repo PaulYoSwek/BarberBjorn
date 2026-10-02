@@ -61,3 +61,18 @@ img, video { max-width: 100%; display: block; }
   0%, 74% { opacity: 1; }
   86%, 100% { opacity: 0; }
 }
+.lang-switch {
+  position: fixed; top: 16px; right: 16px; z-index: 20; display: flex;
+}
+.lang-switch button {
+  min-width: 44px; min-height: 44px; cursor: pointer;
+  color: var(--ink); border: 1px solid var(--ink); background: var(--paper);
+}
+.lang-switch button.is-on {
+  background: var(--yellow); color: var(--ink); border-color: var(--yellow);
+  clip-path: polygon(0 0, 100% 0, 86% 100%, 0 100%);
+}
+.lang-switch button:last-child {
+  margin-left: -6px;
+  clip-path: polygon(14% 0, 100% 0, 100% 100%, 0 100%);
+}
