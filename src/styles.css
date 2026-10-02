@@ -22,3 +22,42 @@ body {
 button, input, select { font: inherit; }
 img, video { max-width: 100%; display: block; }
 :focus-visible { outline: 2px solid var(--yellow); outline-offset: 3px; }
+.splash { position: fixed; inset: 0; z-index: 30; }
+.splash-curtain {
+  position: absolute; inset: 0; background: var(--ink-deep);
+  animation: splash-wipe 4.2s cubic-bezier(.65, 0, .2, 1) forwards;
+}
+.splash-lockup {
+  position: absolute; inset: 0; z-index: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  animation: splash-hide 4.2s linear forwards;
+}
+.splash-mark { width: min(340px, 70vw); animation: splash-mark 4.2s cubic-bezier(.16, .84, .24, 1) forwards; }
+.splash-word { width: min(440px, 86vw); animation: splash-word 4.2s cubic-bezier(.16, .84, .24, 1) forwards; }
+.splash-meet {
+  width: 84px; height: 3px; margin: 10px 0 12px; background: var(--yellow);
+  transform: scaleX(0); animation: splash-line 4.2s ease forwards;
+}
+@keyframes splash-mark {
+  0%, 6% { opacity: 0; transform: translateY(-64px); }
+  26%, 68% { opacity: 1; transform: translateY(0); }
+  82%, 100% { opacity: 0; transform: translateY(-24px); }
+}
+@keyframes splash-word {
+  0%, 16% { opacity: 0; transform: translateY(72px); }
+  38%, 68% { opacity: 1; transform: translateY(0); }
+  82%, 100% { opacity: 0; transform: translateY(28px); }
+}
+@keyframes splash-line {
+  0%, 30% { transform: scaleX(0); opacity: 0; }
+  46%, 68% { transform: scaleX(1); opacity: 1; }
+  80%, 100% { transform: scaleX(0); opacity: 0; }
+}
+@keyframes splash-wipe {
+  0%, 68% { transform: translateY(0); }
+  100% { transform: translateY(-110%); }
+}
+@keyframes splash-hide {
+  0%, 74% { opacity: 1; }
+  86%, 100% { opacity: 0; }
+}
