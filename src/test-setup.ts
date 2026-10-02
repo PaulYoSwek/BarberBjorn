@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest'
-import { afterEach } from 'vitest'
+import { afterEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
 
 afterEach(() => {
@@ -18,4 +18,17 @@ Object.defineProperty(window, 'matchMedia', {
     removeEventListener: () => {},
     dispatchEvent: () => false,
   }),
+})
+
+vi.mock('mapbox-gl', () => {
+  class Map {
+    on() {}
+    remove() {}
+    setLanguage() {}
+  }
+  class Marker {
+    setLngLat() { return this }
+    addTo() { return this }
+  }
+  return { default: { accessToken: '', Map, Marker } }
 })

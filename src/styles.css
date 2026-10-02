@@ -115,3 +115,5 @@ img, video { max-width: 100%; display: block; }
     border-top: 3px solid var(--yellow);
   }
 }
+.map-canvas { position: absolute; inset: 0; }
+.map-fallback { margin: 0; padding: 24px; color: var(--text-on-dark); }

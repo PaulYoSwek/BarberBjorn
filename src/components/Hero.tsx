@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useLang } from '../language'
+import { MapPanel } from './MapPanel'
 
 export function Hero() {
   const { t } = useLang()
@@ -25,7 +26,9 @@ export function Hero() {
         <a className="book-link" href="#afspraak">{t.bookCta}</a>
       </div>
       <div className="hero-map-wrap">
-        <div className="hero-map" data-testid="map-slot" />
+        <div className="hero-map">
+          <MapPanel />
+        </div>
       </div>
     </header>
   )
