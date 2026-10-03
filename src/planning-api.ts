@@ -1,4 +1,4 @@
-import type { BookingInput } from './booking'
+import type { BookingInput, BookingKind } from './booking'
 import type { Lang, ServiceId } from './content'
 import { defaultSchedule, type DayHours, type Schedule, type ScheduleBlock, type Weekday } from './schedule'
 import { supabase } from './supabase'
@@ -83,7 +83,7 @@ export async function loadPublicSchedule(): Promise<Schedule> {
   }
 }
 
-export async function loadServices(): Promise<{ id: ServiceId; price: string; minutes: number }[]> {
+export async function loadServices(): Promise<ServiceSave[]> {
   if (!supabase) return []
   const rows = await read<ServiceRow>('services', 'id, price, minutes')
   return rows.filter(isServiceRow).map((row) => ({
@@ -121,13 +121,13 @@ async function invokeDetail(error: { message?: string; context?: unknown }): Pro
   return error.message || 'offline'
 }
 
-async function invokeBooking(
-  name: 'book' | 'request-custom',
-  input: BookingInput & { lang: Lang },
+async function invokeOk(
+  name: string,
+  body: object,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!supabase) return { ok: false, error: 'offline' }
   try {
-    const { data, error } = await supabase.functions.invoke(name, { body: input })
+    const { data, error } = await supabase.functions.invoke(name, { body })
     const failed = failurePayload(data)
     if (failed) return { ok: false, error: failed }
     if (error) return { ok: false, error: await invokeDetail(error) }
@@ -135,6 +135,10 @@ async function invokeBooking(
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : 'offline' }
   }
+}
+
+async function invokeBooking(name: 'book' | 'request-custom', input: BookingInput & { lang: Lang }) {
+  return invokeOk(name, input)
 }
 
 export function submitBook(input: BookingInput & { lang: Lang }) {
@@ -152,14 +156,119 @@ export type AdminWriteBody =
 export async function adminWrite(
   body: AdminWriteBody,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  if (!supabase) return { ok: false, error: 'offline' }
-  try {
-    const { data, error } = await supabase.functions.invoke('admin-write', { body })
-    const failed = failurePayload(data)
-    if (failed) return { ok: false, error: failed }
-    if (error) return { ok: false, error: await invokeDetail(error) }
-    return { ok: true }
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'offline' }
+  return invokeOk('admin-write', body)
+}
+
+export type InboxRow = {
+  id: string
+  service: ServiceId
+  name: string
+  email: string
+  phone: string
+  start: string
+  kind: BookingKind
+  status: 'confirmed' | 'pending' | 'declined'
+  mail_sent: boolean
+}
+
+export type ServiceSave = { id: ServiceId; price: string; minutes: number }
+
+export type TemplateKey = 'thanks' | 'accepted' | 'declined'
+export type TemplateLang = 'nl' | 'en'
+export type TemplateSave = {
+  key: TemplateKey
+  lang: TemplateLang
+  subject: string
+  body: string
+}
+
+type BookingRow = {
+  id: string
+  service: string
+  name: string
+  email: string
+  phone: string | null
+  start: string
+  kind: string
+  status: string
+  mail_sent: boolean | null
+}
+
+function isKind(value: string): value is BookingKind {
+  return value === 'slot' || value === 'custom'
+}
+
+function isStatus(value: string): value is InboxRow['status'] {
+  return value === 'confirmed' || value === 'pending' || value === 'declined'
+}
+
+function isTemplateKey(value: string): value is TemplateKey {
+  return value === 'thanks' || value === 'accepted' || value === 'declined'
+}
+
+function isLang(value: string): value is TemplateLang {
+  return value === 'nl' || value === 'en'
+}
+
+export async function loadInbox(): Promise<InboxRow[]> {
+  if (!supabase) return []
+  const rows = await read<BookingRow>(
+    'bookings',
+    'id, service, name, email, phone, start, kind, status, mail_sent',
+  )
+  const inbox: InboxRow[] = []
+  for (const row of rows) {
+    if (!isServiceId(row.service) || !isKind(row.kind) || !isStatus(row.status)) continue
+    inbox.push({
+      id: String(row.id),
+      service: row.service,
+      name: row.name,
+      email: row.email,
+      phone: row.phone ?? '',
+      start: localStart(String(row.start)),
+      kind: row.kind,
+      status: row.status,
+      mail_sent: Boolean(row.mail_sent),
+    })
   }
+  return inbox
+}
+
+export async function loadTemplates(): Promise<TemplateSave[]> {
+  if (!supabase) return []
+  const rows = await read<{ key: string; lang: string; subject: string; body: string }>(
+    'mail_templates',
+    'key, lang, subject, body',
+  )
+  const templates: TemplateSave[] = []
+  for (const row of rows) {
+    if (!isTemplateKey(row.key) || !isLang(row.lang)) continue
+    if (typeof row.subject !== 'string' || typeof row.body !== 'string') continue
+    templates.push({ key: row.key, lang: row.lang, subject: row.subject, body: row.body })
+  }
+  return templates
+}
+
+export function decideInbox(id: string, action: 'accept' | 'decline') {
+  return invokeOk('inbox-decide', { id, action })
+}
+
+export function sendClientMail(
+  id: string,
+  key: TemplateKey,
+  draft?: { subject: string; body: string },
+) {
+  return invokeOk('send-mail', {
+    id,
+    key,
+    ...(draft ? { subject: draft.subject, body: draft.body } : {}),
+  })
+}
+
+export function saveServices(services: ServiceSave[]) {
+  return invokeOk('admin-write', { type: 'services', services })
+}
+
+export function saveTemplates(templates: TemplateSave[]) {
+  return invokeOk('admin-write', { type: 'templates', templates })
 }

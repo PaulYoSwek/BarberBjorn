@@ -269,3 +269,22 @@ img, video { max-width: 100%; display: block; }
 .admin-tabs button { flex: 1; min-height: 44px; border: 0; background: transparent; }
 .admin-tabs button.is-on { font-weight: 700; }
 .admin-primary { background: #f5c400; color: #101010; min-height: 44px; border: 0; width: 100%; }
+.admin-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.admin-row { border: 1px solid #2a2a2a; padding: 12px; display: grid; gap: 4px; }
+.admin-row p { margin: 0; }
+.admin-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.admin-actions button { min-height: 44px; border: 1px solid #2a2a2a; background: #fff; color: inherit; padding: 8px 12px; }
+.admin-actions .admin-primary { width: auto; flex: 1; margin-top: 0; }
+.admin-form { display: grid; gap: 8px; }
+.admin-form label, .admin-field label { display: grid; gap: 4px; }
+.admin-form input, .admin-form select, .admin-form textarea,
+.admin-field input, .admin-field textarea {
+  min-height: 44px;
+  border: 1px solid #2a2a2a;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  padding: 8px;
+}
+.admin-field { border: 1px solid #2a2a2a; margin: 0 0 12px; padding: 12px; }
+.admin-field legend { padding: 0 4px; }

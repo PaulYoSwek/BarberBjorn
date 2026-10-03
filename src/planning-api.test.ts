@@ -181,6 +181,94 @@ test('adminWrite invokes admin-write with the body', async () => {
   expect(invoke).toHaveBeenCalledWith('admin-write', { body })
 })
 
+test('inbox mail and settings helpers fail closed without a supabase client', async () => {
+  vi.doUnmock('./supabase')
+  vi.resetModules()
+  const api = await import('./planning-api')
+  expect(api.loadInbox).toEqual(expect.any(Function))
+  expect(api.loadTemplates).toEqual(expect.any(Function))
+  expect(api.decideInbox).toEqual(expect.any(Function))
+  expect(api.sendClientMail).toEqual(expect.any(Function))
+  expect(api.saveServices).toEqual(expect.any(Function))
+  expect(api.saveTemplates).toEqual(expect.any(Function))
+  expect(await api.loadInbox()).toEqual([])
+  expect(await api.loadTemplates()).toEqual([])
+  expect(await api.decideInbox('b1', 'accept')).toEqual({ ok: false, error: 'offline' })
+  expect(await api.sendClientMail('b1', 'thanks')).toEqual({ ok: false, error: 'offline' })
+  expect(await api.saveServices([])).toEqual({ ok: false, error: 'offline' })
+  expect(await api.saveTemplates([])).toEqual({ ok: false, error: 'offline' })
+})
+
+test('decide send and save invoke the admin edge functions', async () => {
+  const invoke = vi.fn(async () => ({ data: { ok: true }, error: null }))
+  vi.resetModules()
+  vi.doMock('./supabase', () => ({ supabase: { functions: { invoke } } }))
+  const api = await import('./planning-api')
+  expect(await api.decideInbox('b1', 'decline')).toEqual({ ok: true })
+  expect(invoke).toHaveBeenCalledWith('inbox-decide', { body: { id: 'b1', action: 'decline' } })
+  expect(await api.sendClientMail('b1', 'accepted', { subject: 'S', body: 'B' })).toEqual({ ok: true })
+  expect(invoke).toHaveBeenCalledWith('send-mail', {
+    body: { id: 'b1', key: 'accepted', subject: 'S', body: 'B' },
+  })
+  const services = [{ id: 'cut' as const, price: '€30', minutes: 50 }]
+  expect(await api.saveServices(services)).toEqual({ ok: true })
+  expect(invoke).toHaveBeenCalledWith('admin-write', { body: { type: 'services', services } })
+  const templates = [{ key: 'thanks' as const, lang: 'nl' as const, subject: 'S', body: 'B' }]
+  expect(await api.saveTemplates(templates)).toEqual({ ok: true })
+  expect(invoke).toHaveBeenCalledWith('admin-write', { body: { type: 'templates', templates } })
+})
+
+test('loadInbox maps booking rows and drops unknown services', async () => {
+  const tables: Record<string, unknown[]> = {
+    bookings: [
+      {
+        id: '1',
+        service: 'cut',
+        name: 'Sam',
+        email: 'sam@mail.nl',
+        phone: '',
+        start: '2026-10-06T12:00:00Z',
+        kind: 'custom',
+        status: 'pending',
+        mail_sent: false,
+      },
+      {
+        id: '2',
+        service: 'nope',
+        name: 'X',
+        email: 'x@mail.nl',
+        phone: '',
+        start: '2026-10-06T12:00:00',
+        kind: 'slot',
+        status: 'confirmed',
+        mail_sent: true,
+      },
+    ],
+    mail_templates: [
+      { key: 'thanks', lang: 'nl', subject: 'Hoi', body: 'Tot dan' },
+      { key: 'other', lang: 'nl', subject: 'Nee', body: 'Nee' },
+    ],
+  }
+  const from = vi.fn((table: string) => ({
+    select: vi.fn(async () => ({ data: tables[table] ?? [], error: null })),
+  }))
+  vi.resetModules()
+  vi.doMock('./supabase', () => ({ supabase: { from } }))
+  const api = await import('./planning-api')
+  const inbox = await api.loadInbox()
+  const listed = await api.loadTemplates()
+  expect(from).toHaveBeenCalledWith('bookings')
+  expect(from).toHaveBeenCalledWith('mail_templates')
+  expect(inbox).toHaveLength(1)
+  expect(inbox[0]?.id).toBe('1')
+  expect(inbox[0]?.service).toBe('cut')
+  expect(inbox[0]?.status).toBe('pending')
+  expect(inbox[0]?.mail_sent).toBe(false)
+  expect(inbox[0]?.start).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/)
+  expect(new Date(inbox[0]!.start).getTime()).toBe(new Date('2026-10-06T12:00:00Z').getTime())
+  expect(listed).toEqual([{ key: 'thanks', lang: 'nl', subject: 'Hoi', body: 'Tot dan' }])
+})
+
 test('loadPublicSchedule throws when a read fails', async () => {
   vi.resetModules()
   vi.doMock('./supabase', () => ({
