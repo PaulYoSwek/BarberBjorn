@@ -24,7 +24,18 @@ function isService(value: string): value is ServiceId {
 
 const SLOT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/
 
-export function validateBooking(input: BookingInput, t: Copy, todayIso: string): BookingResult {
+function dateIso(now: Date): string {
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${now.getFullYear()}-${month}-${day}`
+}
+
+export function validateBooking(
+  input: BookingInput,
+  t: Copy,
+  todayIso: string,
+  now = new Date(),
+): BookingResult {
   const errors: Partial<Record<Field, string>> = {}
   if (!isService(input.service)) errors.service = t.fieldError
   if (input.name.trim().length < 2) errors.name = t.fieldError
@@ -37,7 +48,8 @@ export function validateBooking(input: BookingInput, t: Copy, todayIso: string):
     if (date < todayIso) {
       errors.slot = t.pastError
     } else if (input.kind === 'slot' && isService(input.service)) {
-      const day = agendaDays(input.service, new Date(`${todayIso}T00:00:00`)).find((item) => item.date === date)
+      const agendaNow = dateIso(now) !== todayIso ? new Date(`${todayIso}T23:59:00`) : now
+      const day = agendaDays(input.service, agendaNow).find((item) => item.date === date)
       const found = day?.slots.find((item) => item.start === input.slot)
       if (!day || day.closed) errors.slot = t.weekendError
       else if (!found) errors.slot = t.fieldError
@@ -65,7 +77,5 @@ export function mailtoHref(email: string, subject: string, body: string): string
 }
 
 export function todayIso(now = new Date()): string {
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  return `${now.getFullYear()}-${month}-${day}`
+  return dateIso(now)
 }
