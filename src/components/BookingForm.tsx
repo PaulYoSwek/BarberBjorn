@@ -20,7 +20,8 @@ import {
   type Schedule,
 } from '../schedule'
 
-const empty: BookingInput = { service: '', name: '', email: '', phone: '', slot: '', kind: 'slot' }
+const empty: BookingInput = { service: 'both', name: '', email: '', phone: '', slot: '', kind: 'slot' }
+const WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const
 const WEEK = 7
 
 function monthIndex(date: string) {
@@ -45,6 +46,22 @@ function monthTitle(visible: AgendaDay[], months: string[]) {
 function customSlot(date: string, time: string) {
   if (!date || !time) return ''
   return `${date}T${time.slice(0, 5)}:00`
+}
+
+function whenStamp(
+  slot: string,
+  days: AgendaDay[],
+  labels: { key: string; label: string }[],
+  short: string[],
+) {
+  if (!slot) return ''
+  const date = slot.slice(0, 10)
+  const time = slot.slice(11, 16)
+  const day = days.find((item) => item.date === date)
+  if (day) return `${dayStamp(day, labels, short)} ${time}`
+  const weekday = WEEKDAYS[new Date(`${date}T12:00:00`).getDay()]
+  const name = labels.find((item) => item.key === weekday)?.label ?? weekday
+  return `${name} ${Number(date.slice(8, 10))} ${short[monthIndex(date)]} ${time}`
 }
 
 const TAKEN_SIGNALS = new Set(['taken', 'takenError', copy.nl.takenError, copy.en.takenError])
@@ -147,10 +164,6 @@ export function BookingForm() {
     })
   }, [t, agendaExtra])
 
-  const setService = (service: BookingInput['service']) => {
-    edit({ ...input, service, slot: input.kind === 'slot' ? '' : input.slot })
-  }
-
   const chooseCustom = () => {
     setCustomDate('')
     setCustomTime('')
@@ -161,6 +174,12 @@ export function BookingForm() {
     setCustomDate(date)
     setCustomTime(time)
     edit({ ...input, kind: 'custom', slot: customSlot(date, time) })
+  }
+
+  const backToAgenda = () => {
+    setCustomDate('')
+    setCustomTime('')
+    edit({ ...input, kind: 'slot', slot: '' })
   }
 
   const onSubmit = async (event: FormEvent) => {
@@ -201,35 +220,22 @@ export function BookingForm() {
     }
   }
 
-  const duration = input.service ? (minutes?.[input.service] ?? SERVICE_MINUTES[input.service]) : 0
+  const duration = minutes?.[input.service] ?? SERVICE_MINUTES[input.service]
+  const serviceName = t.services.find((item) => item.id === input.service)?.name ?? ''
+  const when = whenStamp(input.slot, days, t.days, t.monthShort)
 
   return (
     <section id="afspraak" className="booking">
       <form onSubmit={onSubmit}>
         <div className="booking-top">
-          <div>
-            <p className="kicker">{t.bookKicker}</p>
-            <h2>{t.bookTitle}</h2>
-            <p>{t.bookIntro}</p>
-          </div>
-          <label>
-            {t.serviceLabel}
-            {duration > 0 ? ` · ${duration} min` : ''}
-            <select
-              value={input.service}
-              onChange={(event) => setService(event.target.value as BookingInput['service'])}
-            >
-              <option value="">{t.serviceLabel}</option>
-              {t.services.map((item) => (
-                <option key={item.id} value={item.id}>{item.name}</option>
-              ))}
-            </select>
-            {errors.service && <span role="alert">{errors.service}</span>}
-          </label>
+          <p className="kicker">{t.bookKicker}</p>
+          <h2>{t.bookTitle}</h2>
+          <p>{t.bookIntro}</p>
         </div>
         <div className="agenda-wrap">
           {input.kind === 'custom' ? (
             <div className="booking-fields">
+              <button type="button" onClick={backToAgenda}>{t.backToAgenda}</button>
               <h3>{t.customTimeTitle}</h3>
               <label>
                 {t.dayLabel}
@@ -319,6 +325,12 @@ export function BookingForm() {
             <input value={input.phone} type="tel" inputMode="tel" autoComplete="tel" onChange={(event) => edit({ ...input, phone: event.target.value })} />
             {errors.phone && <span role="alert">{errors.phone}</span>}
           </label>
+        </div>
+        <div className="booking-confirm">
+          <p className="booking-summary" data-testid="booking-summary">
+            <span>{serviceName}{duration > 0 ? ` · ${duration} min` : ''}</span>
+            <strong>{when || t.noTimeYet}</strong>
+          </p>
           <button type="submit">{t.sendLabel}</button>
         </div>
         {status === 'book' && <p>{t.bookSuccess}</p>}

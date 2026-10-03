@@ -55,30 +55,26 @@ export function AdminGate({ onSuccess }: Props) {
   }
 
   return (
-    <form
-      onSubmit={onSubmit}
-      style={{
-        display: 'grid',
-        gap: 12,
-        maxWidth: 360,
-        margin: '15vh auto',
-        padding: 24,
-      }}
-    >
-      <label style={{ display: 'grid', gap: 6 }}>
-        Wachtwoord
-        <input
-          type="password"
-          value={password}
-          autoComplete="current-password"
-          onChange={(event) => setPassword(event.target.value)}
-          style={{ minHeight: 44, padding: '0 12px' }}
-        />
-      </label>
-      {wrong ? <p style={{ margin: 0 }}>Onjuist wachtwoord.</p> : null}
-      <button type="submit" style={{ minHeight: 44 }}>
-        Inloggen
-      </button>
-    </form>
+    <div className="admin-gate">
+      <form className="admin-gate-card" onSubmit={onSubmit}>
+        <div className="admin-gate-brand">
+          <img className="admin-gate-word" src="/logo-wordmark.png?v=2" alt="BarberBjorn" />
+          <span className="admin-gate-rule" aria-hidden="true" />
+          <p className="admin-gate-kicker">Dashboard</p>
+        </div>
+        <p className="admin-gate-lead">Planning en afspraken</p>
+        <label>
+          Wachtwoord
+          <input
+            type="password"
+            value={password}
+            autoComplete="current-password"
+            onChange={(event) => setPassword(event.target.value)}
+          />
+        </label>
+        {wrong ? <p role="alert">Onjuist wachtwoord.</p> : null}
+        <button type="submit">Inloggen</button>
+      </form>
+    </div>
   )
 }

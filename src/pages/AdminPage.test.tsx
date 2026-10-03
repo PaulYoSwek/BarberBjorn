@@ -53,6 +53,8 @@ test('admin without a session shows the password gate', () => {
       </LanguageProvider>
     </BrowserRouter>,
   )
+  expect(screen.getByRole('img', { name: 'BarberBjorn' })).toBeInTheDocument()
+  expect(screen.getByText('Dashboard')).toBeInTheDocument()
   expect(screen.getByLabelText('Wachtwoord')).toBeInTheDocument()
   expect(screen.queryByText('Agenda')).not.toBeInTheDocument()
 })
@@ -62,6 +64,16 @@ test('a stored session skips the password gate', () => {
   renderAt('/admin')
   expect(screen.getByText('Agenda')).toBeInTheDocument()
   expect(screen.queryByLabelText('Wachtwoord')).not.toBeInTheDocument()
+})
+
+test('uitloggen returns to the password gate', async () => {
+  sessionStorage.setItem('barber-admin', '1')
+  renderAt('/admin')
+  expect(screen.getByText('Agenda')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'Uitloggen' }))
+  expect(screen.getByLabelText('Wachtwoord')).toBeInTheDocument()
+  expect(screen.queryByText('Agenda')).not.toBeInTheDocument()
+  expect(sessionStorage.getItem('barber-admin')).not.toBe('1')
 })
 
 test('a correct password opens the agenda and stores the session', async () => {

@@ -14,6 +14,8 @@ export type Copy = {
   phoneOptional: string
   customTimeCta: string
   customTimeTitle: string
+  backToAgenda: string
+  noTimeYet: string
   bookSuccess: string
   requestSuccess: string
   dayLabel: string
@@ -72,7 +74,7 @@ export const copy: Record<Lang, Copy> = {
     bookCta: 'Afspraak maken',
     bookKicker: 'DE STOEL',
     bookTitle: 'Afspraak maken',
-    bookIntro: 'Kies een dienst en een vrije tijd. Tot het systeem er is, gaat dit als mail weg.',
+    bookIntro: 'Kies een vrije tijd. Tot het systeem er is, gaat dit als mail weg.',
     serviceLabel: 'Dienst',
     nameLabel: 'Naam',
     phoneLabel: 'Telefoon',
@@ -80,6 +82,8 @@ export const copy: Record<Lang, Copy> = {
     phoneOptional: 'Telefoon (niet verplicht)',
     customTimeCta: 'Ander tijdstip vragen',
     customTimeTitle: 'Ander tijdstip',
+    backToAgenda: 'Terug naar het overzicht',
+    noTimeYet: 'Nog geen tijd gekozen',
     bookSuccess: 'Je tijd is van jou. Er gaat een mail naartoe.',
     requestSuccess: 'Nog geen bevestiging. Je krijgt mail als Bjorn ja of nee zegt.',
     dayLabel: 'Dag',
@@ -135,7 +139,7 @@ export const copy: Record<Lang, Copy> = {
     bookCta: 'Book a visit',
     bookKicker: 'THE CHAIR',
     bookTitle: 'Book a visit',
-    bookIntro: 'Pick a service and a free time. Until the booking system is in place, this leaves as an email.',
+    bookIntro: 'Pick a free time. Until the booking system is in place, this leaves as an email.',
     serviceLabel: 'Service',
     nameLabel: 'Name',
     phoneLabel: 'Phone',
@@ -143,6 +147,8 @@ export const copy: Record<Lang, Copy> = {
     phoneOptional: 'Phone (optional)',
     customTimeCta: 'Request another time',
     customTimeTitle: 'Another time',
+    backToAgenda: 'Back to the overview',
+    noTimeYet: 'No time chosen yet',
     bookSuccess: 'That time is yours. A mail is on its way.',
     requestSuccess: 'Not confirmed yet. You will get a mail when Bjorn says yes or no.',
     dayLabel: 'Day',

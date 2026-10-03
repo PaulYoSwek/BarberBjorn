@@ -15,7 +15,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'settings', label: 'Settings' },
 ]
 
-type Props = { pending?: number }
+type Props = { pending?: number; onLogout?: () => void }
 
 function applyInbox(incoming: InboxRow[], decided: ReadonlyMap<string, 'confirmed' | 'declined'>): InboxRow[] {
   return incoming.map((row) => {
@@ -25,7 +25,7 @@ function applyInbox(incoming: InboxRow[], decided: ReadonlyMap<string, 'confirme
   })
 }
 
-export function AdminShell({ pending }: Props) {
+export function AdminShell({ pending, onLogout }: Props) {
   const [tab, setTab] = useState<Tab>('agenda')
   const [rows, setRows] = useState<InboxRow[]>([])
   const [inboxError, setInboxError] = useState<string | null>(null)
@@ -90,6 +90,9 @@ export function AdminShell({ pending }: Props) {
           )
         })}
         </nav>
+        <button type="button" className="admin-logout" onClick={onLogout}>
+          Uitloggen
+        </button>
       </header>
       <div className="admin-card">
         {tab === 'agenda' ? <AdminAgenda clients={displayRows} /> : null}

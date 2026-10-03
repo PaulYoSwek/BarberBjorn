@@ -36,6 +36,63 @@ beforeEach(() => {
   loadPublicSchedule.mockResolvedValue(defaultSchedule)
 })
 
+test('starts on both and does not offer a service field', () => {
+  render(
+    <LanguageProvider>
+      <BookingForm />
+    </LanguageProvider>,
+  )
+  expect(screen.queryByLabelText(/Dienst/)).not.toBeInTheDocument()
+  expect(screen.getByTestId('booking-summary')).toHaveTextContent('Allebei')
+})
+
+test('shows the chosen service and time above send', async () => {
+  window.history.replaceState(null, '', '/?lang=nl')
+  localStorage.clear()
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-05T12:00:00'))
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  try {
+    render(
+      <LanguageProvider>
+        <BookingForm />
+      </LanguageProvider>,
+    )
+    await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
+    const summary = screen.getByTestId('booking-summary')
+    expect(summary).toHaveTextContent('Allebei')
+    expect(summary).toHaveTextContent('di 6 okt 09:00')
+    expect(summary.compareDocumentPosition(screen.getByRole('button', { name: 'Verstuur' }))).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
+test('another time can return to the agenda', async () => {
+  window.history.replaceState(null, '', '/?lang=nl')
+  localStorage.clear()
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-05T12:00:00'))
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  try {
+    render(
+      <LanguageProvider>
+        <BookingForm />
+      </LanguageProvider>,
+    )
+    await user.click(screen.getByRole('button', { name: 'Ander tijdstip vragen' }))
+    expect(screen.getByLabelText('Dag')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'oktober 2026' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Terug naar het overzicht' }))
+    expect(screen.getByRole('heading', { name: 'oktober 2026' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Dag')).not.toBeInTheDocument()
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
 test('an empty submit shows the Dutch hint and does not navigate', async () => {
   const assign = vi.spyOn(window.location, 'assign').mockImplementation(() => {})
   render(
@@ -63,13 +120,12 @@ test('a free slot books through submitBook', async () => {
         <BookingForm />
       </LanguageProvider>,
     )
-    await user.selectOptions(screen.getByLabelText(/Dienst/), 'cut')
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
     await user.click(screen.getByRole('button', { name: 'Verstuur' }))
     expect(submitBook).toHaveBeenCalledWith({
-      service: 'cut',
+      service: 'both',
       name: 'Sam',
       email: 'sam@mail.nl',
       phone: '',
@@ -97,7 +153,6 @@ test('a custom time asks through submitCustom', async () => {
         <BookingForm />
       </LanguageProvider>,
     )
-    await user.selectOptions(screen.getByLabelText(/Dienst/), 'cut')
     await user.click(screen.getByRole('button', { name: 'Ander tijdstip vragen' }))
     fireEvent.change(screen.getByLabelText('Dag'), { target: { value: '2026-10-15' } })
     fireEvent.change(screen.getByLabelText('Tijd'), { target: { value: '19:30' } })
@@ -105,7 +160,7 @@ test('a custom time asks through submitCustom', async () => {
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
     await user.click(screen.getByRole('button', { name: 'Verstuur' }))
     expect(submitCustom).toHaveBeenCalledWith({
-      service: 'cut',
+      service: 'both',
       name: 'Sam',
       email: 'sam@mail.nl',
       phone: '',
@@ -191,7 +246,6 @@ test('closed days stay visible and taken times stay blocked', async () => {
     expect(screen.getByRole('heading', { name: 'oktober 2026' })).toBeInTheDocument()
     expect(screen.getAllByText('dicht')).toHaveLength(2)
     expect(screen.getByText('zo 11 okt')).toBeInTheDocument()
-    await userEvent.selectOptions(screen.getByLabelText(/Dienst/), 'cut')
     expect(screen.getByRole('button', { name: 'ma 5 okt 10:00' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'di 6 okt 09:00' })).toBeEnabled()
     await userEvent.click(screen.getByRole('button', { name: 'Volgende week' }))
@@ -269,7 +323,6 @@ test('a taken book error shows the Dutch taken line', async () => {
         <BookingForm />
       </LanguageProvider>,
     )
-    await user.selectOptions(screen.getByLabelText(/Dienst/), 'cut')
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
@@ -294,7 +347,6 @@ test('a successful slot book takes that start and ignores another submit', async
         <BookingForm />
       </LanguageProvider>,
     )
-    await user.selectOptions(screen.getByLabelText(/Dienst/), 'cut')
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
@@ -331,7 +383,6 @@ test('a second click while book is in flight does not submit twice', async () =>
         <BookingForm />
       </LanguageProvider>,
     )
-    await user.selectOptions(screen.getByLabelText(/Dienst/), 'cut')
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
@@ -357,7 +408,6 @@ test('a successful custom request does not send twice', async () => {
         <BookingForm />
       </LanguageProvider>,
     )
-    await user.selectOptions(screen.getByLabelText(/Dienst/), 'cut')
     await user.click(screen.getByRole('button', { name: 'Ander tijdstip vragen' }))
     fireEvent.change(screen.getByLabelText('Dag'), { target: { value: '2026-10-15' } })
     fireEvent.change(screen.getByLabelText('Tijd'), { target: { value: '19:30' } })
@@ -392,7 +442,6 @@ test('a late schedule load keeps a start booked in this session', async () => {
         <BookingForm />
       </LanguageProvider>,
     )
-    await user.selectOptions(screen.getByLabelText(/Dienst/), 'cut')
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
@@ -419,12 +468,10 @@ test('the service label uses live minutes when services have loaded', async () =
     { id: 'beard', price: '€18', minutes: 25 },
     { id: 'both', price: '€45', minutes: 70 },
   ])
-  const user = userEvent.setup()
   render(
     <LanguageProvider>
       <BookingForm />
     </LanguageProvider>,
   )
-  await user.selectOptions(screen.getByLabelText(/Dienst/), 'cut')
-  expect(await screen.findByLabelText(/40 min/)).toBeInTheDocument()
+  expect(await screen.findByText(/70 min/)).toBeInTheDocument()
 })

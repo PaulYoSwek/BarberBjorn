@@ -5,5 +5,12 @@ import { AdminShell } from '../components/admin/AdminShell'
 export function AdminPage() {
   const [open, setOpen] = useState(() => sessionStorage.getItem('barber-admin') === '1')
   if (!open) return <AdminGate onSuccess={() => setOpen(true)} />
-  return <AdminShell />
+  return (
+    <AdminShell
+      onLogout={() => {
+        sessionStorage.removeItem('barber-admin')
+        setOpen(false)
+      }}
+    />
+  )
 }
