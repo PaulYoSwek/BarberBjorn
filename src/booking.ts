@@ -48,7 +48,7 @@ export function validateBooking(
     if (date < todayIso) {
       errors.slot = t.pastError
     } else if (input.kind === 'slot' && isService(input.service)) {
-      const agendaNow = dateIso(now) !== todayIso ? new Date(`${todayIso}T23:59:00`) : now
+      const agendaNow = dateIso(now) !== todayIso ? new Date(`${todayIso}T00:00:00`) : now
       const day = agendaDays(input.service, agendaNow).find((item) => item.date === date)
       const found = day?.slots.find((item) => item.start === input.slot)
       if (!day || day.closed) errors.slot = t.weekendError

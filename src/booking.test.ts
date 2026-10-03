@@ -69,6 +69,18 @@ test('rejects empty fields, past slots, closed days, and taken times', () => {
   if (!sameDayTaken.ok) expect(sameDayTaken.errors.slot).toBe('Die tijd is al weg. Kies een vrije.')
 })
 
+test('free slot passes when today is frozen and now is omitted', () => {
+  const nextDay = validateBooking(base, copy.nl, today)
+  expect(nextDay.ok).toBe(true)
+
+  const sameDayAfternoon = validateBooking(
+    { ...base, slot: '2026-10-05T14:00:00' },
+    copy.nl,
+    today,
+  )
+  expect(sameDayAfternoon.ok).toBe(true)
+})
+
 test('requires email and allows an empty phone on a free slot', () => {
   const missing = validateBooking({ ...base, email: '' }, copy.nl, today)
   expect(missing.ok).toBe(false)
