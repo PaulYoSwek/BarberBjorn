@@ -1,13 +1,18 @@
 import type { Copy, ServiceId } from './content'
+import { agendaDays } from './schedule'
+
+export type BookingKind = 'slot' | 'custom'
 
 export type BookingInput = {
   service: ServiceId | ''
   name: string
+  email: string
   phone: string
-  day: string
+  slot: string
+  kind: BookingKind
 }
 
-type Field = 'service' | 'name' | 'phone' | 'day'
+export type Field = 'service' | 'name' | 'email' | 'phone' | 'slot'
 
 export type BookingResult =
   | { ok: true; subject: string; body: string }
@@ -17,32 +22,41 @@ function isService(value: string): value is ServiceId {
   return value === 'cut' || value === 'beard' || value === 'both'
 }
 
+const SLOT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/
+
 export function validateBooking(input: BookingInput, t: Copy, todayIso: string): BookingResult {
   const errors: Partial<Record<Field, string>> = {}
   if (!isService(input.service)) errors.service = t.fieldError
   if (input.name.trim().length < 2) errors.name = t.fieldError
-  if (input.phone.replace(/\D/g, '').length < 8) errors.phone = t.fieldError
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email.trim())) errors.email = t.fieldError
 
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.day)) {
-    errors.day = t.fieldError
-  } else if (input.day < todayIso) {
-    errors.day = t.pastError
+  if (!SLOT.test(input.slot)) {
+    errors.slot = t.fieldError
   } else {
-    const weekday = new Date(`${input.day}T12:00:00`).getDay()
-    if (weekday === 0 || weekday === 6) errors.day = t.weekendError
+    const date = input.slot.slice(0, 10)
+    if (date < todayIso) {
+      errors.slot = t.pastError
+    } else if (input.kind === 'slot' && isService(input.service)) {
+      const day = agendaDays(input.service, new Date(`${todayIso}T00:00:00`)).find((item) => item.date === date)
+      const found = day?.slots.find((item) => item.start === input.slot)
+      if (!day || day.closed) errors.slot = t.weekendError
+      else if (!found) errors.slot = t.fieldError
+      else if (found.taken) errors.slot = t.takenError
+      else if (found.past) errors.slot = t.pastError
+    }
   }
 
   if (Object.keys(errors).length > 0) return { ok: false, errors }
 
   const serviceName = t.services.find((item) => item.id === input.service)?.name ?? ''
-  const body = [
+  const lines = [
     `${t.serviceLabel}: ${serviceName}`,
     `${t.nameLabel}: ${input.name.trim()}`,
-    `${t.phoneLabel}: ${input.phone.trim()}`,
-    `${t.dayLabel}: ${input.day}`,
-    '',
-    t.requestNote,
-  ].join('\n')
+    `${t.emailLabel}: ${input.email.trim()}`,
+  ]
+  if (input.phone.trim()) lines.push(`${t.phoneLabel}: ${input.phone.trim()}`)
+  lines.push(`${t.slotLabel}: ${input.slot.slice(0, 10)} ${input.slot.slice(11, 16)}`, '', t.requestNote)
+  const body = lines.join('\n')
   return { ok: true, subject: t.mailSubject, body }
 }
 

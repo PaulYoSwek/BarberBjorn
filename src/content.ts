@@ -10,11 +10,20 @@ export type Copy = {
   serviceLabel: string
   nameLabel: string
   phoneLabel: string
+  emailLabel: string
+  phoneOptional: string
+  customTimeCta: string
+  customTimeTitle: string
+  bookSuccess: string
+  requestSuccess: string
   dayLabel: string
+  slotLabel: string
   sendLabel: string
   fieldError: string
   weekendError: string
   pastError: string
+  takenError: string
+  agendaHint: string
   mailFallback: string
   requestNote: string
   mailSubject: string
@@ -22,19 +31,26 @@ export type Copy = {
   services: { id: ServiceId; name: string; price: string; detail: string }[]
   hoursTime: string
   days: { key: string; label: string; closed: boolean }[]
+  months: string[]
+  monthShort: string[]
+  weekPrev: string
+  weekNext: string
   closedLabel: string
   aboutKicker: string
   aboutTitle: string
   aboutLines: string[]
+  faqKicker: string
+  faqTitle: string
   faq: { q: string; a: string }[]
   mapLabel: string
+  directionsCta: string
 }
 
 export const CONTACT = {
   email: 'hallo@barberbjorn.nl',
   phone: '06 12 34 56 78',
-  addressLine: 'Olivierstraat 20, Axel',
-  addressFull: 'Olivierstraat 20, 4571 AZ Axel',
+  addressLine: 'Ferdinandstraat 8, Axel',
+  addressFull: 'Ferdinandstraat 8, 4571 AP Axel',
 }
 
 const services = {
@@ -56,15 +72,24 @@ export const copy: Record<Lang, Copy> = {
     bookCta: 'Afspraak maken',
     bookKicker: 'DE STOEL',
     bookTitle: 'Afspraak maken',
-    bookIntro: 'Kies een dienst en laat je nummer achter. Tot het systeem er is, gaat dit als mail weg.',
+    bookIntro: 'Kies een dienst en een vrije tijd. Tot het systeem er is, gaat dit als mail weg.',
     serviceLabel: 'Dienst',
     nameLabel: 'Naam',
     phoneLabel: 'Telefoon',
+    emailLabel: 'E-mail',
+    phoneOptional: 'Telefoon (niet verplicht)',
+    customTimeCta: 'Ander tijdstip vragen',
+    customTimeTitle: 'Ander tijdstip',
+    bookSuccess: 'Je tijd is van jou. Er gaat een mail naartoe.',
+    requestSuccess: 'Nog geen bevestiging. Je krijgt mail als Bjorn ja of nee zegt.',
     dayLabel: 'Dag',
+    slotLabel: 'Tijd',
     sendLabel: 'Verstuur',
     fieldError: 'Vul dit nog even in.',
     weekendError: 'Zaterdag en zondag is de stoel dicht. Kies een weekdag.',
     pastError: 'Die dag is al geweest. Kies vandaag of later.',
+    takenError: 'Die tijd is al weg. Kies een vrije.',
+    agendaHint: 'Kies eerst een dienst.',
     mailFallback: 'De mail opent niet. Kopieer het adres en de aanvraag.',
     requestNote: 'Dit is een aanvraag, nog geen bevestiging.',
     mailSubject: 'Afspraak BarberBjorn',
@@ -80,9 +105,15 @@ export const copy: Record<Lang, Copy> = {
       { key: 'sat', label: 'za', closed: true },
       { key: 'sun', label: 'zo', closed: true },
     ],
+    months: ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'],
+    monthShort: ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'],
+    weekPrev: 'Vorige week',
+    weekNext: 'Volgende week',
     closedLabel: 'dicht',
     aboutKicker: 'OVER BJORN',
     aboutTitle: 'Alleen hij. Alle tijd.',
+    faqKicker: 'VRAGEN',
+    faqTitle: 'Voor je komt.',
     aboutLines: [
       'Hij knipt hier zelf. Geen tweede stoel.',
       'Jij kiest de muziek. Er is een drankje, en een praatje als je wilt.',
@@ -94,24 +125,34 @@ export const copy: Record<Lang, Copy> = {
       { q: 'Hoe lang duurt het?', a: 'Knippen zo’n 45 minuten, een baard 20 minuten, allebei rond een uur. Hij werkt niet op de klok.' },
       { q: 'Mag ik de muziek kiezen?', a: 'Ja. Zeg een artiest of een sfeer. Liever stil, dan blijft het stil.' },
       { q: 'Geeft hij advies?', a: 'Ja. Hij zegt het als een andere lengte of een andere lijn je beter staat.' },
-      { q: 'Waar zit BarberBjorn?', a: 'Olivierstraat 20 in Axel. De kaart bovenaan wijst de deur.' },
+      { q: 'Waar zit BarberBjorn?', a: 'Ferdinandstraat 8 in Axel. De kaart bovenaan wijst de deur.' },
     ],
-    mapLabel: 'Olivierstraat 20, Axel',
+    mapLabel: 'Ferdinandstraat 8, Axel',
+    directionsCta: 'Route',
   },
   en: {
     tagline: 'A proper cut. No rush.',
     bookCta: 'Book a visit',
     bookKicker: 'THE CHAIR',
     bookTitle: 'Book a visit',
-    bookIntro: 'Pick a service and leave your number. Until the booking system is in place, this leaves as an email.',
+    bookIntro: 'Pick a service and a free time. Until the booking system is in place, this leaves as an email.',
     serviceLabel: 'Service',
     nameLabel: 'Name',
     phoneLabel: 'Phone',
+    emailLabel: 'Email',
+    phoneOptional: 'Phone (optional)',
+    customTimeCta: 'Request another time',
+    customTimeTitle: 'Another time',
+    bookSuccess: 'That time is yours. A mail is on its way.',
+    requestSuccess: 'Not confirmed yet. You will get a mail when Bjorn says yes or no.',
     dayLabel: 'Day',
+    slotLabel: 'Time',
     sendLabel: 'Send',
     fieldError: 'Add this first.',
     weekendError: 'Saturday and Sunday the chair is closed. Pick a weekday.',
     pastError: 'That day has passed. Pick today or a later day.',
+    takenError: 'That time is taken. Pick a free one.',
+    agendaHint: 'Pick a service first.',
     mailFallback: 'The email did not open. Copy the address and the request.',
     requestNote: 'This is a request, not a confirmation yet.',
     mailSubject: 'Appointment BarberBjorn',
@@ -127,9 +168,15 @@ export const copy: Record<Lang, Copy> = {
       { key: 'sat', label: 'sat', closed: true },
       { key: 'sun', label: 'sun', closed: true },
     ],
+    months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+    monthShort: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    weekPrev: 'Previous week',
+    weekNext: 'Next week',
     closedLabel: 'closed',
     aboutKicker: 'ABOUT BJORN',
     aboutTitle: 'Just him. All the time.',
+    faqKicker: 'QUESTIONS',
+    faqTitle: 'Before you sit.',
     aboutLines: [
       'He cuts here himself. No second chair.',
       "You pick the music. There's a drink, and a chat if you want one.",
@@ -141,8 +188,9 @@ export const copy: Record<Lang, Copy> = {
       { q: 'How long does it take?', a: "A cut takes about 45 minutes, a beard 20 minutes, both around an hour. He doesn't work to the clock." },
       { q: 'Can I choose the music?', a: "Yes. Name an artist or a mood. If you'd rather have quiet, it stays quiet." },
       { q: 'Does he give advice?', a: "Yes. He'll say so if a different length or line would suit you better." },
-      { q: 'Where is BarberBjorn?', a: 'Olivierstraat 20 in Axel. The map at the top points to the door.' },
+      { q: 'Where is BarberBjorn?', a: 'Ferdinandstraat 8 in Axel. The map at the top points to the door.' },
     ],
-    mapLabel: 'Olivierstraat 20, Axel',
+    mapLabel: 'Ferdinandstraat 8, Axel',
+    directionsCta: 'Directions',
   },
 }
