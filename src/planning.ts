@@ -11,7 +11,16 @@ export function weekHoursFromDays(
   return week
 }
 
-export function isFree(start: string, minutes: number, schedule: Schedule): boolean {
+export function isFree(
+  start: string,
+  minutes: number,
+  schedule: Schedule,
+  now = new Date(),
+): boolean {
+  const startAt = new Date(start)
+  if (startAt.getTime() <= now.getTime()) {
+    return false
+  }
   const date = start.slice(0, 10)
   const days = agendaDays('cut', new Date(`${date}T00:00:00`), {
     ...schedule,

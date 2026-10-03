@@ -22,6 +22,12 @@ test('isFree is false on a confirmed hold and true on a pending-only world', () 
   expect(isFree('2026-10-05T09:00:00', 45, taken)).toBe(true)
 })
 
+test('isFree rejects slots that already started when now is passed', () => {
+  const noon = new Date('2026-10-05T12:00:00')
+  expect(isFree('2026-10-05T09:00:00', 45, defaultSchedule, noon)).toBe(false)
+  expect(isFree('2026-10-05T14:00:00', 45, defaultSchedule, noon)).toBe(true)
+})
+
 test('fillTemplate substitutes the four tokens', () => {
   expect(
     fillTemplate('Hoi {{name}}, {{service}} op {{date}} om {{time}}.', {
