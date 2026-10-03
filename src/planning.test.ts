@@ -17,9 +17,10 @@ test('apply week keeps Saturday closed from the viewed days', () => {
 })
 
 test('isFree is false on a confirmed hold and true on a pending-only world', () => {
+  const now = new Date('2026-10-03T12:00:00')
   const taken = { ...defaultSchedule, bookings: [{ start: '2026-10-05T10:00:00', minutes: 45 }] }
-  expect(isFree('2026-10-05T10:00:00', 45, taken)).toBe(false)
-  expect(isFree('2026-10-05T09:00:00', 45, taken)).toBe(true)
+  expect(isFree('2026-10-05T10:00:00', 45, taken, now)).toBe(false)
+  expect(isFree('2026-10-05T09:00:00', 45, taken, now)).toBe(true)
 })
 
 test('isFree rejects slots that already started when now is passed', () => {
