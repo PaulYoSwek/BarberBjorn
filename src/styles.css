@@ -228,3 +228,27 @@ img, video { max-width: 100%; display: block; }
 @media (max-width: 800px) {
   .footer { flex-direction: column; align-items: flex-start; padding: 48px 20px 28px; }
 }
+
+.rope-band {
+  display: block; line-height: 0;
+  background: transparent; margin: -13px 0; position: relative; z-index: 6;
+  pointer-events: none;
+}
+.rope-band img {
+  width: 100%; max-width: none; height: 26px;
+  object-fit: cover; object-position: center;
+  display: block; pointer-events: none; user-select: none;
+}
+.rope-band.is-cut {
+  height: 0; margin: 0; overflow: visible;
+}
+.rope-band.is-cut img {
+  position: absolute; height: 26px; max-width: none;
+  object-fit: cover; object-position: center;
+  transform-origin: center center;
+}
+@media (max-width: 800px) {
+  .rope-band { margin: -6px 0; }
+  .rope-band img { height: 18px; }
+  .rope-band.is-cut img { height: 18px; }
+}
