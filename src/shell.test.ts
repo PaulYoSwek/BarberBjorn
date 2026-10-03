@@ -1,6 +1,13 @@
 import { readFileSync } from 'node:fs'
 import { expect, test } from 'vitest'
 
+test('vercel serves /admin through the app instead of a missing file', () => {
+  const config = JSON.parse(readFileSync('vercel.json', 'utf8')) as {
+    rewrites?: { source: string; destination: string }[]
+  }
+  expect(config.rewrites).toEqual([{ source: '/(.*)', destination: '/index.html' }])
+})
+
 test('the shell defines the locked colors and no radius tokens', () => {
   const css = readFileSync('src/styles.css', 'utf8')
   expect(css).toContain('--yellow: #f5c400')
