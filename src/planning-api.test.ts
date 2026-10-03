@@ -71,6 +71,47 @@ test('maps live week blocks and occupancy into a schedule', async () => {
   expect(listed).toEqual(tables.services)
 })
 
+test('submit wrappers fail closed without a supabase client', async () => {
+  vi.doUnmock('./supabase')
+  vi.resetModules()
+  const api = await import('./planning-api')
+  const input = {
+    service: 'cut' as const,
+    name: 'Sam',
+    email: 'sam@mail.nl',
+    phone: '',
+    slot: '2026-10-06T09:00:00',
+    kind: 'slot' as const,
+    lang: 'nl' as const,
+  }
+  expect(await api.submitBook(input)).toEqual({ ok: false, error: 'offline' })
+  expect(await api.submitCustom({ ...input, kind: 'custom' })).toEqual({ ok: false, error: 'offline' })
+})
+
+test('submitBook invokes book and submitCustom invokes request-custom', async () => {
+  const invoke = vi.fn(async (name: string) => {
+    if (name === 'request-custom') return { data: null, error: { message: 'closed' } }
+    return { data: {}, error: null }
+  })
+  vi.resetModules()
+  vi.doMock('./supabase', () => ({ supabase: { functions: { invoke } } }))
+  const api = await import('./planning-api')
+  const input = {
+    service: 'cut' as const,
+    name: 'Sam',
+    email: 'sam@mail.nl',
+    phone: '',
+    slot: '2026-10-06T09:00:00',
+    kind: 'slot' as const,
+    lang: 'nl' as const,
+  }
+  expect(await api.submitBook(input)).toEqual({ ok: true })
+  expect(invoke).toHaveBeenCalledWith('book', { body: input })
+  const custom = { ...input, kind: 'custom' as const }
+  expect(await api.submitCustom(custom)).toEqual({ ok: false, error: 'closed' })
+  expect(invoke).toHaveBeenCalledWith('request-custom', { body: custom })
+})
+
 test('loadPublicSchedule throws when a read fails', async () => {
   vi.resetModules()
   vi.doMock('./supabase', () => ({

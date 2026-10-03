@@ -1,4 +1,5 @@
-import type { ServiceId } from './content'
+import type { BookingInput } from './booking'
+import type { Lang, ServiceId } from './content'
 import { defaultSchedule, type DayHours, type Schedule, type ScheduleBlock, type Weekday } from './schedule'
 import { supabase } from './supabase'
 
@@ -94,4 +95,26 @@ export async function loadServices(): Promise<{ id: ServiceId; price: string; mi
 
 function isServiceRow(row: ServiceRow): row is ServiceRow & { id: ServiceId } {
   return isServiceId(row.id)
+}
+
+async function invokeBooking(
+  name: 'book' | 'request-custom',
+  input: BookingInput & { lang: Lang },
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!supabase) return { ok: false, error: 'offline' }
+  try {
+    const { error } = await supabase.functions.invoke(name, { body: input })
+    if (error) return { ok: false, error: error.message || 'offline' }
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'offline' }
+  }
+}
+
+export function submitBook(input: BookingInput & { lang: Lang }) {
+  return invokeBooking('book', input)
+}
+
+export function submitCustom(input: BookingInput & { lang: Lang }) {
+  return invokeBooking('request-custom', input)
 }
