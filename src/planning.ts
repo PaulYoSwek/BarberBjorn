@@ -35,6 +35,17 @@ export function isFree(
   return false
 }
 
+export function applyDecision(
+  row: { start: string; minutes: number; status: string },
+  action: 'accept' | 'decline',
+  schedule: Schedule,
+  now = new Date(),
+): { status: 'confirmed' | 'declined' } | { error: 'overlap' } {
+  if (action === 'decline') return { status: 'declined' }
+  if (!isFree(row.start, row.minutes, schedule, now)) return { error: 'overlap' }
+  return { status: 'confirmed' }
+}
+
 export function fillTemplate(
   body: string,
   vars: { name: string; service: string; date: string; time: string },
