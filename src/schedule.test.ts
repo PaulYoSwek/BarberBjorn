@@ -65,8 +65,8 @@ test('a half-hour block occupies that span for overlap', () => {
 })
 
 test('live minutes move the last bookable start', () => {
-  const days = agendaDays('cut', saturday, { minutes: { cut: 60, beard: 20, both: 60 } })
-  expect(days[2].slots.at(-1)?.time).toBe('17:00')
+  const days = agendaDays('cut', saturday, { minutes: { cut: 90, beard: 20, both: 60 } })
+  expect(days[2].slots.at(-1)?.time).toBe('16:30')
 })
 
 test('pending-only extra bookings are not used — only the bookings array occupies', () => {
