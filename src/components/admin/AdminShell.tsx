@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { loadInbox, type InboxRow } from '../../planning-api'
+import { DEMO_INBOX } from './admin-defaults'
 import { AdminAgenda } from './AdminAgenda'
 import { AdminInbox } from './AdminInbox'
 import { AdminMail } from './AdminMail'
@@ -62,27 +63,17 @@ export function AdminShell({ pending }: Props) {
     }
   }, [])
 
-  const pendingCount = pending ?? rows.filter((row) => row.status === 'pending').length
+  const displayRows = rows.length > 0 ? rows : DEMO_INBOX
+  const pendingCount = pending ?? displayRows.filter((row) => row.status === 'pending').length
 
   return (
     <div className="admin">
-      <div className="admin-card">
-        {tab === 'agenda' ? <AdminAgenda /> : null}
-        {tab === 'inbox' ? (
-          <AdminInbox
-            rows={rows}
-            error={inboxError}
-            onChanged={onDecided}
-            onResend={(id) => {
-              setMailClientId(id)
-              setTab('mail')
-            }}
-          />
-        ) : null}
-        {tab === 'mail' ? <AdminMail rows={rows} clientId={mailClientId} onSent={markMailSent} /> : null}
-        {tab === 'settings' ? <AdminSettings /> : null}
-      </div>
-      <nav className="admin-tabs">
+      <header className="admin-bar">
+        <div className="admin-brand">
+          <img className="admin-brand-mark" src="/logo-mark.png?v=2" alt="BarberBjorn" />
+          <span className="admin-brand-name">BarberBjorn</span>
+        </div>
+        <nav className="admin-tabs">
         {TABS.map((item) => {
           const on = tab === item.id
           const label = item.id === 'inbox' && pendingCount > 0 ? `Inbox ${pendingCount}` : item.label
@@ -98,7 +89,24 @@ export function AdminShell({ pending }: Props) {
             </button>
           )
         })}
-      </nav>
+        </nav>
+      </header>
+      <div className="admin-card">
+        {tab === 'agenda' ? <AdminAgenda clients={displayRows} /> : null}
+        {tab === 'inbox' ? (
+          <AdminInbox
+            rows={displayRows}
+            error={rows.length > 0 ? inboxError : null}
+            onChanged={onDecided}
+            onResend={(id) => {
+              setMailClientId(id)
+              setTab('mail')
+            }}
+          />
+        ) : null}
+        {tab === 'mail' ? <AdminMail rows={displayRows} clientId={mailClientId} onSent={markMailSent} /> : null}
+        {tab === 'settings' ? <AdminSettings /> : null}
+      </div>
     </div>
   )
 }

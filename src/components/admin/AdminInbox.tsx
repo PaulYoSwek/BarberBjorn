@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { copy } from '../../content'
 import { decideInbox, type InboxRow } from '../../planning-api'
 import { serviceName } from './admin-defaults'
 
@@ -9,7 +10,7 @@ const STATUS_ORDER: Record<InboxRow['status'], number> = {
 }
 
 const STATUS_LABEL: Record<InboxRow['status'], string> = {
-  pending: 'In afwachting',
+  pending: 'Nieuw',
   confirmed: 'Bevestigd',
   declined: 'Geweigerd',
 }
@@ -26,7 +27,12 @@ function ordered(rows: InboxRow[]): InboxRow[] {
 }
 
 function when(start: string): string {
-  return `${start.slice(0, 10)} ${start.slice(11, 16)}`
+  const month = copy.nl.monthShort[Number(start.slice(5, 7)) - 1]
+  const day = Number(start.slice(8, 10))
+  const weekday = new Date(`${start.slice(0, 10)}T12:00:00`).getDay()
+  const keys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const
+  const label = copy.nl.days.find((item) => item.key === keys[weekday])?.label ?? ''
+  return `${label} ${day} ${month} · ${start.slice(11, 16)}`
 }
 
 export function AdminInbox({ rows, error, onChanged, onResend }: Props) {
@@ -54,28 +60,69 @@ export function AdminInbox({ rows, error, onChanged, onResend }: Props) {
     }
   }
 
+  const pendingCount = rows.filter((row) => row.status === 'pending').length
+
   return (
     <div className="admin-inbox">
+      <header className="admin-agenda-head">
+        <div>
+          <p className="admin-kicker">Afspraken</p>
+          <h1>Inbox</h1>
+        </div>
+        <p className="admin-inbox-count">
+          {pendingCount === 0 ? 'Alles bij' : `${pendingCount} nieuw`}
+        </p>
+      </header>
       {error ? <p role="alert">{error}</p> : null}
       {notice ? <p role="alert">{notice}</p> : null}
       <ul className="admin-list">
         {ordered(rows).map((row) => (
-          <li key={row.id} className="admin-row">
-            <p>{row.name}</p>
-            <p>{serviceName(row.service)}</p>
-            <p>{row.email}</p>
-            {row.phone ? <p>{row.phone}</p> : null}
-            <p>{when(row.start)}</p>
-            <p>{STATUS_LABEL[row.status]}</p>
-            {row.mail_sent ? null : <p>Mail niet gegaan</p>}
+          <li key={row.id} className={`admin-row admin-inbox-card is-${row.status}`}>
+            <div className="admin-inbox-card-head">
+              <h2>{row.name}</h2>
+              <span className="admin-status">{STATUS_LABEL[row.status]}</span>
+            </div>
+            <p className="admin-inbox-when">{when(row.start)}</p>
+            <dl className="admin-inbox-meta">
+              <div>
+                <dt>Dienst</dt>
+                <dd>{serviceName(row.service)}</dd>
+              </div>
+              <div>
+                <dt>Mail</dt>
+                <dd>{row.email}</dd>
+              </div>
+              <div>
+                <dt>Telefoon</dt>
+                <dd>{row.phone || '—'}</dd>
+              </div>
+              <div>
+                <dt>Type</dt>
+                <dd>{row.kind === 'custom' ? 'Ander tijdstip' : 'Slot'}</dd>
+              </div>
+            </dl>
+            {row.mail_sent ? null : <p className="admin-inbox-mail">Mail niet gegaan</p>}
             {row.status === 'pending' || !row.mail_sent ? (
               <div className="admin-actions">
                 {row.status === 'pending' ? (
                   <>
-                    <button type="button" className="admin-primary" disabled={decidingId === row.id} onClick={() => { void decide(row.id, 'accept') }}>
+                    <button
+                      type="button"
+                      className="admin-primary"
+                      disabled={decidingId === row.id}
+                      onClick={() => {
+                        void decide(row.id, 'accept')
+                      }}
+                    >
                       Accepteer
                     </button>
-                    <button type="button" disabled={decidingId === row.id} onClick={() => { void decide(row.id, 'decline') }}>
+                    <button
+                      type="button"
+                      disabled={decidingId === row.id}
+                      onClick={() => {
+                        void decide(row.id, 'decline')
+                      }}
+                    >
                       Weiger
                     </button>
                   </>

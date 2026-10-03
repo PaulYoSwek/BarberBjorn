@@ -62,8 +62,56 @@ async function read<T>(table: string, columns: string): Promise<T[]> {
   return (data ?? []) as T[]
 }
 
+export const LIVE_SCHEDULE_KEY = 'barber-live-schedule'
+const LIVE_EVENT = 'barber-live-schedule'
+
+export type LiveSchedule = {
+  week?: Schedule['week']
+  blocks?: ScheduleBlock[]
+  exceptions?: Schedule['exceptions']
+  bookings?: Schedule['bookings']
+}
+
+export function readLiveSchedule(): LiveSchedule {
+  try {
+    const raw = localStorage.getItem(LIVE_SCHEDULE_KEY)
+    return raw ? (JSON.parse(raw) as LiveSchedule) : {}
+  } catch {
+    return {}
+  }
+}
+
+export function publishLiveSchedule(next: LiveSchedule) {
+  localStorage.setItem(LIVE_SCHEDULE_KEY, JSON.stringify(next))
+  window.dispatchEvent(new Event(LIVE_EVENT))
+}
+
+export function subscribeLiveSchedule(onChange: (live: LiveSchedule) => void): () => void {
+  const notify = () => onChange(readLiveSchedule())
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === LIVE_SCHEDULE_KEY) notify()
+  }
+  window.addEventListener(LIVE_EVENT, notify)
+  window.addEventListener('storage', onStorage)
+  return () => {
+    window.removeEventListener(LIVE_EVENT, notify)
+    window.removeEventListener('storage', onStorage)
+  }
+}
+
+export function mergeLiveSchedule(base: Schedule, live = readLiveSchedule()): Schedule {
+  if (!live.week && !live.blocks && !live.exceptions && !live.bookings) return base
+  return {
+    ...base,
+    week: live.week ?? base.week,
+    blocks: live.blocks ?? base.blocks,
+    exceptions: live.exceptions ?? base.exceptions,
+    bookings: live.bookings ?? base.bookings,
+  }
+}
+
 export async function loadPublicSchedule(): Promise<Schedule> {
-  if (!supabase) return defaultSchedule
+  if (!supabase) return mergeLiveSchedule(defaultSchedule)
   const [weekRows, blockRows, occupancy] = await Promise.all([
     read<WeekRow>('schedule_week', 'weekday, closed, open, close'),
     read<BlockRow>('schedule_blocks', 'date, time'),
@@ -73,14 +121,14 @@ export async function loadPublicSchedule(): Promise<Schedule> {
   for (const row of weekRows) {
     if (isWeekday(row.weekday)) week[row.weekday] = dayHours(row)
   }
-  return {
+  return mergeLiveSchedule({
     week,
     blocks: blockRows.map(toBlock),
     bookings: occupancy.map((row) => ({
       start: localStart(String(row.start)),
       minutes: row.minutes,
     })),
-  }
+  })
 }
 
 export async function loadServices(): Promise<ServiceSave[]> {

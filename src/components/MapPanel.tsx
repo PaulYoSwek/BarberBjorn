@@ -62,6 +62,7 @@ export function MapPanel() {
         center: [FALLBACK_PIN.lng, FALLBACK_PIN.lat],
         zoom: 15,
         cooperativeGestures: true,
+        attributionControl: false,
       })
     } catch {
       setFailed(true)
@@ -74,11 +75,9 @@ export function MapPanel() {
       map.remove()
     }
     const marker = document.createElement('div')
-    marker.style.width = '14px'
-    marker.style.height = '14px'
-    marker.style.background = '#f5c400'
-    marker.style.clipPath = 'polygon(50% 0, 100% 100%, 0 100%)'
-    new mapboxgl.Marker({ element: marker }).setLngLat([FALLBACK_PIN.lng, FALLBACK_PIN.lat]).addTo(map)
+    marker.className = 'map-pin'
+    marker.innerHTML = '<svg viewBox="0 0 28 38" aria-hidden="true"><path fill="#f5c400" stroke="#101010" stroke-width="1.6" d="M14 36.5 3.2 16.2A11.2 11.2 0 1 1 24.8 16.2Z"/><circle cx="14" cy="14" r="4.2" fill="#101010"/></svg>'
+    new mapboxgl.Marker({ element: marker, anchor: 'bottom' }).setLngLat([FALLBACK_PIN.lng, FALLBACK_PIN.lat]).addTo(map)
     map.on('load', () => {
       map.setLanguage(lang)
     })

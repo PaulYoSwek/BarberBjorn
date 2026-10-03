@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { LanguageProvider } from '../language'
+import { publishLiveSchedule } from '../planning-api'
 import { defaultSchedule } from '../schedule'
 import { BookingForm } from './BookingForm'
 import { LanguageSwitch } from './LanguageSwitch'
@@ -135,6 +136,25 @@ test('an empty Dutch submit follows the active language', async () => {
   expect(screen.queryByText('Vul dit nog even in.')).not.toBeInTheDocument()
 })
 
+test('opens on the first week that still has a free slot', async () => {
+  window.history.replaceState(null, '', '/?lang=nl')
+  localStorage.clear()
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-04T12:00:00'))
+  try {
+    render(
+      <LanguageProvider>
+        <BookingForm />
+      </LanguageProvider>,
+    )
+    const slot = screen.getByRole('button', { name: 'ma 5 okt 09:00' })
+    expect(slot).toBeEnabled()
+    expect(screen.queryByRole('button', { name: 'ma 28 sep 09:00' })).not.toBeInTheDocument()
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
 test('a free slot can be selected without picking a service first', async () => {
   window.history.replaceState(null, '', '/?lang=nl')
   localStorage.clear()
@@ -170,6 +190,7 @@ test('closed days stay visible and taken times stay blocked', async () => {
     )
     expect(screen.getByRole('heading', { name: 'oktober 2026' })).toBeInTheDocument()
     expect(screen.getAllByText('dicht')).toHaveLength(2)
+    expect(screen.getByText('zo 11 okt')).toBeInTheDocument()
     await userEvent.selectOptions(screen.getByLabelText(/Dienst/), 'cut')
     expect(screen.getByRole('button', { name: 'ma 5 okt 10:00' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'di 6 okt 09:00' })).toBeEnabled()
@@ -178,6 +199,35 @@ test('closed days stay visible and taken times stay blocked', async () => {
     await userEvent.click(screen.getByRole('button', { name: 'Volgende week' }))
     expect(screen.getByRole('heading', { name: 'oktober – november 2026' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'ma 26 okt 09:00' })).toBeEnabled()
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
+test('a live dashboard close updates the public agenda immediately', async () => {
+  window.history.replaceState(null, '', '/?lang=nl')
+  localStorage.clear()
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-05T12:00:00'))
+  try {
+    render(
+      <LanguageProvider>
+        <BookingForm />
+      </LanguageProvider>,
+    )
+    expect(screen.getAllByText('dicht')).toHaveLength(2)
+    publishLiveSchedule({
+      week: defaultSchedule.week,
+      blocks: [{ date: '2026-10-06' }, { date: '2026-10-07', time: '15:00' }],
+      bookings: [{ start: '2026-10-08T10:00:00', minutes: 45 }],
+    })
+    await waitFor(() => {
+      expect(screen.getAllByText('dicht')).toHaveLength(3)
+    })
+    expect(screen.getByRole('button', { name: 'wo 7 okt 15:00' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'do 8 okt 10:00' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'do 8 okt 09:30' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'do 8 okt 11:00' })).toBeEnabled()
   } finally {
     vi.useRealTimers()
   }

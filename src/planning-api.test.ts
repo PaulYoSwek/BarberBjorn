@@ -1,10 +1,24 @@
 import { expect, test, vi } from 'vitest'
 import { defaultSchedule } from './schedule'
-import { loadPublicSchedule, loadServices } from './planning-api'
+import { loadPublicSchedule, loadServices, publishLiveSchedule } from './planning-api'
 
 test('supabase client stays null without env', async () => {
   const { supabase } = await import('./supabase')
   expect(supabase).toBeNull()
+})
+
+test('loadPublicSchedule overlays live week hours and blocks onto the public schedule', async () => {
+  localStorage.clear()
+  publishLiveSchedule({
+    week: { ...defaultSchedule.week, mon: { open: '10:00', close: '16:00' } },
+    blocks: [{ date: '2026-10-05', time: '12:00' }],
+    bookings: [{ start: '2026-10-06T09:00:00', minutes: 45 }],
+  })
+  const schedule = await loadPublicSchedule()
+  expect(schedule.week.mon).toEqual({ open: '10:00', close: '16:00' })
+  expect(schedule.blocks).toEqual([{ date: '2026-10-05', time: '12:00' }])
+  expect(schedule.bookings).toEqual([{ start: '2026-10-06T09:00:00', minutes: 45 }])
+  localStorage.clear()
 })
 
 test('maps occupancy rows into booking holds', async () => {

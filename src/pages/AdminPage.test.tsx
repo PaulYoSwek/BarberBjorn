@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { BrowserRouter } from 'react-router-dom'
 import App from '../App'
 import { LanguageProvider } from '../language'
@@ -37,6 +37,10 @@ beforeEach(() => {
   localStorage.clear()
   invoke.mockReset()
   clientBox.current = { functions: { invoke } }
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
 })
 
 test('admin without a session shows the password gate', () => {
@@ -83,6 +87,7 @@ test('a wrong password stays on the gate', async () => {
 
 test('login without a supabase client stays on the gate', async () => {
   clientBox.current = null
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }))
   renderAt('/admin')
   await userEvent.type(screen.getByLabelText('Wachtwoord'), 'geheim')
   await userEvent.click(screen.getByRole('button', { name: 'Inloggen' }))
@@ -90,4 +95,25 @@ test('login without a supabase client stays on the gate', async () => {
   expect(screen.getByLabelText('Wachtwoord')).toBeInTheDocument()
   expect(sessionStorage.getItem('barber-admin')).not.toBe('1')
   expect(invoke).not.toHaveBeenCalled()
+})
+
+test('a missing login function falls back to the local login route', async () => {
+  invoke.mockResolvedValue({
+    data: null,
+    error: { message: 'not found', context: { status: 404 } },
+  })
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true })
+  vi.stubGlobal('fetch', fetchMock)
+  renderAt('/admin')
+  await userEvent.type(screen.getByLabelText('Wachtwoord'), 'geheim')
+  await userEvent.click(screen.getByRole('button', { name: 'Inloggen' }))
+  expect(await screen.findByText('Agenda')).toBeInTheDocument()
+  expect(sessionStorage.getItem('barber-admin')).toBe('1')
+  expect(fetchMock).toHaveBeenCalledWith(
+    '/__admin-login',
+    expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ password: 'geheim' }),
+    }),
+  )
 })

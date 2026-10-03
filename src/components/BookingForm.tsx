@@ -2,10 +2,18 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { todayIso, validateBooking, type BookingInput } from '../booking'
 import { copy, type ServiceId } from '../content'
 import { useLang } from '../language'
-import { loadPublicSchedule, loadServices, submitBook, submitCustom } from '../planning-api'
+import {
+  loadPublicSchedule,
+  loadServices,
+  mergeLiveSchedule,
+  subscribeLiveSchedule,
+  submitBook,
+  submitCustom,
+} from '../planning-api'
 import {
   agendaDays,
   defaultSchedule,
+  firstBookableWeek,
   SERVICE_MINUTES,
   type AgendaDay,
   type BookingHold,
@@ -78,11 +86,19 @@ export function BookingForm() {
 
   useEffect(() => {
     let cancelled = false
+    function apply(next: Schedule) {
+      if (!cancelled) setSchedule(() => withSessionHolds(mergeLiveSchedule(next), sessionHolds.current))
+    }
     loadPublicSchedule()
-      .then((next) => {
-        if (!cancelled) setSchedule(() => withSessionHolds(next, sessionHolds.current))
-      })
+      .then(apply)
       .catch(() => {})
+    const stop = subscribeLiveSchedule(() => {
+      loadPublicSchedule()
+        .then(apply)
+        .catch(() => {
+          if (!cancelled) setSchedule((current) => withSessionHolds(mergeLiveSchedule(current), sessionHolds.current))
+        })
+    })
     loadServices()
       .then((rows) => {
         if (cancelled || rows.length === 0) return
@@ -93,6 +109,7 @@ export function BookingForm() {
       .catch(() => {})
     return () => {
       cancelled = true
+      stop()
     }
   }, [])
 
@@ -112,6 +129,14 @@ export function BookingForm() {
   )
   const visible = days.slice(week * WEEK, week * WEEK + WEEK)
   const lastWeek = Math.ceil(days.length / WEEK) - 1
+
+  useEffect(() => {
+    setWeek((current) => {
+      const page = days.slice(current * WEEK, current * WEEK + WEEK)
+      const open = page.some((day) => !day.closed && day.slots.some((slot) => !slot.taken && !slot.past))
+      return open ? current : firstBookableWeek(days, WEEK)
+    })
+  }, [days])
 
   useEffect(() => {
     setErrors((current) => {
@@ -250,6 +275,7 @@ export function BookingForm() {
                         {day.slots.map((slot) => {
                           const blocked = slot.taken || slot.past
                           const on = input.slot === slot.start
+                          const kind = slot.taken ? 'is-taken' : slot.past ? 'is-past' : undefined
                           return (
                             <button
                               key={slot.start}
@@ -257,7 +283,7 @@ export function BookingForm() {
                               aria-label={`${label} ${slot.time}`}
                               aria-pressed={on}
                               disabled={blocked}
-                              className={on ? 'is-on' : undefined}
+                              className={[on ? 'is-on' : undefined, kind].filter(Boolean).join(' ') || undefined}
                               onClick={() => edit({ ...input, slot: slot.start })}
                             >
                               {slot.time}

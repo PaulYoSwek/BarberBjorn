@@ -54,7 +54,15 @@ export const defaultSchedule: Schedule = {
     { start: '2026-10-05T10:00:00', minutes: 45 },
     { start: '2026-10-06T14:00:00', minutes: 60 },
     { start: '2026-10-07T09:00:00', minutes: 20 },
+    { start: '2026-10-08T11:30:00', minutes: 45 },
+    { start: '2026-10-09T16:00:00', minutes: 45 },
   ],
+}
+
+export function mondayOf(now: Date): Date {
+  const today = localDate(dateIso(now), '12:00')
+  const back = (today.getDay() + 6) % 7
+  return addDays(today, -back)
 }
 
 export function dateIso(value: Date): string {
@@ -131,10 +139,11 @@ export function agendaDays(
   }
   const minutes = (schedule.minutes ?? SERVICE_MINUTES)[service || 'cut']
   const today = dateIso(now)
+  const origin = mondayOf(now)
   const nowMinutes = now.getHours() * 60 + now.getMinutes()
 
   return Array.from({ length: AGENDA_DAYS }, (_, index) => {
-    const date = dateIso(addDays(localDate(today, '12:00'), index))
+    const date = dateIso(addDays(origin, index))
     const hours = hoursFor(date, schedule)
     const weekday = weekdayOf(localDate(date, '12:00'))
     if ('closed' in hours) {
@@ -157,4 +166,9 @@ export function agendaDays(
     }
     return { date, weekday, closed: false, slots }
   })
+}
+
+export function firstBookableWeek(days: AgendaDay[], size = 7): number {
+  const index = days.findIndex((day) => !day.closed && day.slots.some((slot) => !slot.taken && !slot.past))
+  return index < 0 ? 0 : Math.floor(index / size)
 }
