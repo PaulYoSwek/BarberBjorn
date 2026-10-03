@@ -99,6 +99,41 @@ test('Toepassen stays disabled until the schedule load resolves', async () => {
   expect(apply).toBeEnabled()
 })
 
+test('hour edits before the schedule loads yield to the loaded weekday hours', async () => {
+  let resolveLoad: (schedule: typeof defaultSchedule) => void = () => {}
+  loadPublicSchedule.mockReturnValue(
+    new Promise((resolve) => {
+      resolveLoad = resolve
+    }),
+  )
+  sessionStorage.setItem('barber-admin', '1')
+  render(<AdminPage />)
+  const open = screen.getByLabelText('Open')
+  const close = screen.getByLabelText('Sluit')
+  const shut = screen.getByRole('checkbox', { name: 'Dicht' })
+  expect(open).toBeDisabled()
+  expect(close).toBeDisabled()
+  expect(shut).toBeDisabled()
+  fireEvent.change(open, { target: { value: '10:00' } })
+  fireEvent.change(shut, { target: { checked: true } })
+  const loaded = {
+    ...defaultSchedule,
+    week: {
+      ...defaultSchedule.week,
+      mon: { open: '11:00', close: '17:00' },
+    },
+  }
+  await act(async () => {
+    resolveLoad(loaded)
+  })
+  expect(screen.getByLabelText('Open')).toHaveValue('11:00')
+  expect(screen.getByLabelText('Sluit')).toHaveValue('17:00')
+  expect(screen.getByRole('checkbox', { name: 'Dicht' })).not.toBeChecked()
+  expect(screen.getByRole('button', { name: /ma 5 okt/ })).toHaveTextContent(/11:00.17:00/)
+  await userEvent.click(screen.getByRole('button', { name: 'Toepassen op komende weken' }))
+  expect(adminWrite).toHaveBeenCalledWith({ type: 'week', week: loaded.week })
+})
+
 test('a failed schedule load keeps Toepassen disabled and shows an error', async () => {
   loadPublicSchedule.mockRejectedValue(new Error('offline'))
   sessionStorage.setItem('barber-admin', '1')

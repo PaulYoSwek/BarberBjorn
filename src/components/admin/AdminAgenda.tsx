@@ -97,6 +97,7 @@ export function AdminAgenda() {
       .then((next) => {
         if (cancelled) return
         setSchedule(() => withSessionBlocks(next, sessionBlocks.current))
+        setEdits({})
         setReady(true)
       })
       .catch(() => {
@@ -157,6 +158,11 @@ export function AdminAgenda() {
   const hours = selectedDay ? hoursFor(selectedDay) : null
   const times = selectedDay && hours ? halfHours(hours) : []
 
+  function remember(next: DayHours) {
+    if (!ready || !selectedDay) return
+    setEdits((current) => ({ ...current, [selectedDay.date]: next }))
+  }
+
   return (
     <div className="admin-agenda">
       <div className="admin-week">
@@ -196,12 +202,8 @@ export function AdminAgenda() {
                 <input
                   type="time"
                   value={hours.open}
-                  onChange={(event) =>
-                    setEdits((current) => ({
-                      ...current,
-                      [selectedDay.date]: { open: event.target.value, close: hours.close },
-                    }))
-                  }
+                  disabled={!ready}
+                  onChange={(event) => remember({ open: event.target.value, close: hours.close })}
                 />
               </label>
               <label>
@@ -209,12 +211,8 @@ export function AdminAgenda() {
                 <input
                   type="time"
                   value={hours.close}
-                  onChange={(event) =>
-                    setEdits((current) => ({
-                      ...current,
-                      [selectedDay.date]: { open: hours.open, close: event.target.value },
-                    }))
-                  }
+                  disabled={!ready}
+                  onChange={(event) => remember({ open: hours.open, close: event.target.value })}
                 />
               </label>
             </>
@@ -223,11 +221,9 @@ export function AdminAgenda() {
             <input
               type="checkbox"
               checked={'closed' in hours}
+              disabled={!ready}
               onChange={(event) =>
-                setEdits((current) => ({
-                  ...current,
-                  [selectedDay.date]: event.target.checked ? { closed: true } : { open: '09:00', close: '18:00' },
-                }))
+                remember(event.target.checked ? { closed: true } : { open: '09:00', close: '18:00' })
               }
             />
             Dicht
