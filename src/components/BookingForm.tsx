@@ -3,7 +3,14 @@ import { todayIso, validateBooking, type BookingInput } from '../booking'
 import { copy, type ServiceId } from '../content'
 import { useLang } from '../language'
 import { loadPublicSchedule, loadServices, submitBook, submitCustom } from '../planning-api'
-import { agendaDays, defaultSchedule, SERVICE_MINUTES, type AgendaDay, type Schedule } from '../schedule'
+import {
+  agendaDays,
+  defaultSchedule,
+  SERVICE_MINUTES,
+  type AgendaDay,
+  type BookingHold,
+  type Schedule,
+} from '../schedule'
 
 const empty: BookingInput = { service: '', name: '', email: '', phone: '', slot: '', kind: 'slot' }
 const WEEK = 7
@@ -34,6 +41,15 @@ function customSlot(date: string, time: string) {
 
 const TAKEN_SIGNALS = new Set(['taken', 'takenError', copy.nl.takenError, copy.en.takenError])
 
+function withSessionHolds(loaded: Schedule, holds: BookingHold[]): Schedule {
+  if (holds.length === 0) return loaded
+  const bookings = loaded.bookings ?? []
+  const seen = new Set(bookings.map((item) => item.start))
+  const extra = holds.filter((item) => !seen.has(item.start))
+  if (extra.length === 0) return loaded
+  return { ...loaded, bookings: [...bookings, ...extra] }
+}
+
 function shownSubmitError(error: string, taken: string) {
   return TAKEN_SIGNALS.has(error) ? taken : error
 }
@@ -53,6 +69,7 @@ export function BookingForm() {
   const [week, setWeek] = useState(0)
   const [latched, setLatched] = useState(false)
   const busy = useRef(false)
+  const sessionHolds = useRef<BookingHold[]>([])
 
   const edit = (next: BookingInput) => {
     setLatched(false)
@@ -63,7 +80,7 @@ export function BookingForm() {
     let cancelled = false
     loadPublicSchedule()
       .then((next) => {
-        if (!cancelled) setSchedule(next)
+        if (!cancelled) setSchedule(() => withSessionHolds(next, sessionHolds.current))
       })
       .catch(() => {})
     loadServices()
@@ -146,10 +163,11 @@ export function BookingForm() {
       setLatched(true)
       if (input.kind === 'slot' && input.service) {
         const holdMinutes = minutes?.[input.service] ?? SERVICE_MINUTES[input.service]
-        const start = input.slot
+        const hold = { start: input.slot, minutes: holdMinutes }
+        sessionHolds.current = [...sessionHolds.current, hold]
         setSchedule((current) => ({
           ...current,
-          bookings: [...(current.bookings ?? []), { start, minutes: holdMinutes }],
+          bookings: [...(current.bookings ?? []), hold],
         }))
         setInput((current) => ({ ...current, slot: '' }))
       }

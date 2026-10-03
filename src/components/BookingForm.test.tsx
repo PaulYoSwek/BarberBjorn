@@ -323,6 +323,46 @@ test('a successful custom request does not send twice', async () => {
   }
 })
 
+test('a late schedule load keeps a start booked in this session', async () => {
+  window.history.replaceState(null, '', '/?lang=nl')
+  localStorage.clear()
+  let releaseSchedule: (value: typeof defaultSchedule) => void = () => {}
+  loadPublicSchedule.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        releaseSchedule = resolve
+      }),
+  )
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-05T12:00:00'))
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  try {
+    render(
+      <LanguageProvider>
+        <BookingForm />
+      </LanguageProvider>,
+    )
+    await user.selectOptions(screen.getByLabelText(/Dienst/), 'cut')
+    await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
+    await user.type(screen.getByLabelText('Naam'), 'Sam')
+    await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
+    await user.click(screen.getByRole('button', { name: 'Verstuur' }))
+    expect(await screen.findByText('Je tijd is van jou. Er gaat een mail naartoe.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'di 6 okt 09:00' })).toBeDisabled()
+    releaseSchedule({
+      ...defaultSchedule,
+      bookings: [{ start: '2026-10-06T10:00:00', minutes: 45 }],
+    })
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'di 6 okt 10:00' })).toBeDisabled()
+    })
+    expect(screen.getByRole('button', { name: 'di 6 okt 09:00' })).toBeDisabled()
+    expect(screen.getByText('Je tijd is van jou. Er gaat een mail naartoe.')).toBeInTheDocument()
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
 test('the service label uses live minutes when services have loaded', async () => {
   loadServices.mockResolvedValue([
     { id: 'cut', price: '€32', minutes: 40 },
