@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { decideInbox, type InboxRow } from '../../planning-api'
 import { serviceName } from './admin-defaults'
 
@@ -17,7 +17,7 @@ const STATUS_LABEL: Record<InboxRow['status'], string> = {
 type Props = {
   rows: InboxRow[]
   error?: string | null
-  onChanged: () => void
+  onChanged: (id: string, status: 'confirmed' | 'declined') => void
   onResend: (id: string) => void
 }
 
@@ -31,8 +31,13 @@ function when(start: string): string {
 
 export function AdminInbox({ rows, error, onChanged, onResend }: Props) {
   const [notice, setNotice] = useState<string | null>(null)
+  const [decidingId, setDecidingId] = useState<string | null>(null)
+  const decidingRef = useRef<string | null>(null)
 
   async function decide(id: string, action: 'accept' | 'decline') {
+    if (decidingRef.current) return
+    decidingRef.current = id
+    setDecidingId(id)
     try {
       const result = await decideInbox(id, action)
       if (!result.ok) {
@@ -40,9 +45,12 @@ export function AdminInbox({ rows, error, onChanged, onResend }: Props) {
         return
       }
       setNotice(null)
-      onChanged()
+      onChanged(id, action === 'accept' ? 'confirmed' : 'declined')
     } catch {
       setNotice('Beslissen mislukt.')
+    } finally {
+      decidingRef.current = null
+      setDecidingId(null)
     }
   }
 
@@ -64,10 +72,10 @@ export function AdminInbox({ rows, error, onChanged, onResend }: Props) {
               <div className="admin-actions">
                 {row.status === 'pending' ? (
                   <>
-                    <button type="button" className="admin-primary" onClick={() => { void decide(row.id, 'accept') }}>
+                    <button type="button" className="admin-primary" disabled={decidingId === row.id} onClick={() => { void decide(row.id, 'accept') }}>
                       Accepteer
                     </button>
-                    <button type="button" onClick={() => { void decide(row.id, 'decline') }}>
+                    <button type="button" disabled={decidingId === row.id} onClick={() => { void decide(row.id, 'decline') }}>
                       Weiger
                     </button>
                   </>

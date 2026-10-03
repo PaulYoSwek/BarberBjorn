@@ -274,7 +274,7 @@ img, video { max-width: 100%; display: block; }
 .admin-row p { margin: 0; }
 .admin-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .admin-actions button { min-height: 44px; border: 1px solid #2a2a2a; background: #fff; color: inherit; padding: 8px 12px; }
-.admin-actions .admin-primary { width: auto; flex: 1; margin-top: 0; }
+.admin-actions .admin-primary { width: auto; flex: 1; margin-top: 0; background: #f5c400; color: #101010; border: 0; }
 .admin-form { display: grid; gap: 8px; }
 .admin-form label, .admin-field label { display: grid; gap: 4px; }
 .admin-form input, .admin-form select, .admin-form textarea,

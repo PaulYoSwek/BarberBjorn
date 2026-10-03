@@ -28,6 +28,11 @@ export function AdminShell({ pending }: Props) {
       .catch(() => {})
   }
 
+  function onDecided(id: string, status: 'confirmed' | 'declined') {
+    setRows((current) => current.map((row) => (row.id === id ? { ...row, status } : row)))
+    refresh()
+  }
+
   function markMailSent(id: string) {
     setRows((current) => current.map((row) => (row.id === id ? { ...row, mail_sent: true } : row)))
   }
@@ -58,7 +63,7 @@ export function AdminShell({ pending }: Props) {
           <AdminInbox
             rows={rows}
             error={inboxError}
-            onChanged={refresh}
+            onChanged={onDecided}
             onResend={(id) => {
               setMailClientId(id)
               setTab('mail')

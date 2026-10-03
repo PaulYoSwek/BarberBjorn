@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { defaultSchedule } from '../../schedule'
@@ -77,7 +77,30 @@ test('pending rows offer accept and decline and the badge counts them', async ()
 
   await userEvent.click(within(pendingRow).getByRole('button', { name: 'Accepteer' }))
   expect(decideInbox).toHaveBeenCalledWith('pend-1', 'accept')
-  await userEvent.click(within(pendingRow).getByRole('button', { name: 'Weiger' }))
+})
+
+test('accept hides the decision buttons when the inbox reload fails', async () => {
+  loadInbox.mockResolvedValueOnce([pending])
+  render(<AdminShell />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Inbox 1' }))
+  loadInbox.mockRejectedValue(new Error('reload failed'))
+
+  const pendingRow = row('Sam Pending')
+  await userEvent.click(within(pendingRow).getByRole('button', { name: 'Accepteer' }))
+
+  await waitFor(() => {
+    expect(within(row('Sam Pending')).queryByRole('button', { name: 'Accepteer' })).not.toBeInTheDocument()
+  })
+  expect(within(row('Sam Pending')).queryByRole('button', { name: 'Weiger' })).not.toBeInTheDocument()
+  expect(decideInbox).toHaveBeenCalledTimes(1)
+  expect(decideInbox).toHaveBeenCalledWith('pend-1', 'accept')
+})
+
+test('decline calls decideInbox while the row is still pending', async () => {
+  loadInbox.mockResolvedValue([pending])
+  render(<AdminShell />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Inbox 1' }))
+  await userEvent.click(within(row('Sam Pending')).getByRole('button', { name: 'Weiger' }))
   expect(decideInbox).toHaveBeenCalledWith('pend-1', 'decline')
 })
 
