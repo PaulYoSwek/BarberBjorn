@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 import { salonWallToUtc, utcToSalonWall } from '../supabase/functions/_shared/salon'
-import { applyDecision } from './planning'
+import { applyDecision, decisionMail } from './planning'
 import { defaultSchedule, type Schedule } from './schedule'
 
 function futureWeekdayAt(time: string): string {
@@ -37,6 +37,20 @@ test('decline returns declined even when the start is held', () => {
   expect(applyDecision({ start, minutes: 45, status: 'pending' }, 'decline', schedule)).toEqual({
     status: 'declined',
   })
+})
+
+test('accept of an already confirmed booking does not send another accepted mail', () => {
+  const start = futureWeekdayAt('11:00')
+  const decision = applyDecision({ start, minutes: 45, status: 'confirmed' }, 'accept', defaultSchedule)
+  expect(decision).toEqual({ noop: true })
+  expect(decisionMail(decision, 'accept')).toBeNull()
+})
+
+test('decline of a booking that is no longer pending does not send mail', () => {
+  const start = futureWeekdayAt('11:00')
+  const decision = applyDecision({ start, minutes: 45, status: 'declined' }, 'decline', defaultSchedule)
+  expect(decision).toEqual({ noop: true })
+  expect(decisionMail(decision, 'decline')).toBeNull()
 })
 
 test('accept of a free start returns confirmed', () => {

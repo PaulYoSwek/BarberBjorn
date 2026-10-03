@@ -64,15 +64,29 @@ export function isFree(
   return !holdsOn(date, schedule).some((hold) => rangesOverlap(startMin, endMin, hold.start, hold.end))
 }
 
+export type DecisionResult =
+  | { status: 'confirmed' | 'declined' }
+  | { error: 'overlap' }
+  | { noop: true }
+
 export function applyDecision(
   row: { start: string; minutes: number; status: string },
   action: 'accept' | 'decline',
   schedule: Schedule,
   now = new Date(),
-): { status: 'confirmed' | 'declined' } | { error: 'overlap' } {
+): DecisionResult {
+  if (row.status !== 'pending') return { noop: true }
   if (action === 'decline') return { status: 'declined' }
   if (!isFree(row.start, row.minutes, schedule, now)) return { error: 'overlap' }
   return { status: 'confirmed' }
+}
+
+export function decisionMail(
+  decision: DecisionResult,
+  action: 'accept' | 'decline',
+): 'accepted' | 'declined' | null {
+  if (!('status' in decision)) return null
+  return action === 'accept' ? 'accepted' : 'declined'
 }
 
 export function fillTemplate(

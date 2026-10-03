@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { loadInbox, type InboxRow } from '../../planning-api'
 import { AdminAgenda } from './AdminAgenda'
 import { AdminInbox } from './AdminInbox'
@@ -16,21 +16,39 @@ const TABS: { id: Tab; label: string }[] = [
 
 type Props = { pending?: number }
 
+function applyInbox(incoming: InboxRow[], decided: ReadonlyMap<string, 'confirmed' | 'declined'>): InboxRow[] {
+  return incoming.map((row) => {
+    const status = decided.get(row.id)
+    if (status && row.status === 'pending') return { ...row, status }
+    return row
+  })
+}
+
 export function AdminShell({ pending }: Props) {
   const [tab, setTab] = useState<Tab>('agenda')
   const [rows, setRows] = useState<InboxRow[]>([])
   const [inboxError, setInboxError] = useState<string | null>(null)
   const [mailClientId, setMailClientId] = useState<string | null>(null)
+  const inboxGeneration = useRef(0)
+  const decidedStatus = useRef(new Map<string, 'confirmed' | 'declined'>())
 
-  function refresh() {
+  function pullInbox(reportError: boolean) {
+    const generation = ++inboxGeneration.current
     loadInbox()
-      .then(setRows)
-      .catch(() => {})
+      .then((next) => {
+        if (generation !== inboxGeneration.current) return
+        setRows(applyInbox(next, decidedStatus.current))
+        setInboxError(null)
+      })
+      .catch(() => {
+        if (reportError && generation === inboxGeneration.current) setInboxError('Inbox laden mislukt.')
+      })
   }
 
   function onDecided(id: string, status: 'confirmed' | 'declined') {
+    decidedStatus.current.set(id, status)
     setRows((current) => current.map((row) => (row.id === id ? { ...row, status } : row)))
-    refresh()
+    pullInbox(false)
   }
 
   function markMailSent(id: string) {
@@ -38,18 +56,9 @@ export function AdminShell({ pending }: Props) {
   }
 
   useEffect(() => {
-    let cancelled = false
-    loadInbox()
-      .then((next) => {
-        if (cancelled) return
-        setRows(next)
-        setInboxError(null)
-      })
-      .catch(() => {
-        if (!cancelled) setInboxError('Inbox laden mislukt.')
-      })
+    pullInbox(true)
     return () => {
-      cancelled = true
+      inboxGeneration.current += 1
     }
   }, [])
 

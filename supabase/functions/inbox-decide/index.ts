@@ -1,8 +1,8 @@
-import { applyDecision } from '../../../src/planning.ts'
+import { applyDecision, decisionMail } from '../../../src/planning.ts'
 import { serviceClient } from '../_shared/db.ts'
 import { confirmedOverlaps } from '../_shared/holds.ts'
 import { json, readJson, rejectUnlessSession, servePost } from '../_shared/http.ts'
-import { sendBookingMail, type MailKey } from '../_shared/notify.ts'
+import { sendBookingMail } from '../_shared/notify.ts'
 import { salonNow, utcToSalonWall } from '../_shared/salon.ts'
 import { loadSchedule } from '../_shared/schedule.ts'
 
@@ -44,10 +44,21 @@ servePost(async (req) => {
     schedule,
     salonNow(),
   )
-  if ('error' in decision) return json(req, 409, { ok: false, error: decision.error })
+  if (!('status' in decision)) {
+    if ('error' in decision) return json(req, 409, { ok: false, error: decision.error })
+    return json(req, 200, { ok: true, sent: false })
+  }
+  const key = decisionMail(decision, action)
+  if (!key) return json(req, 200, { ok: true, sent: false })
 
-  const updated = await db.from('bookings').update({ status: decision.status }).eq('id', id)
+  const updated = await db
+    .from('bookings')
+    .update({ status: decision.status })
+    .eq('id', id)
+    .eq('status', 'pending')
+    .select('id')
   if (updated.error) throw new Error(updated.error.message)
+  if (!updated.data?.length) return json(req, 200, { ok: true, sent: false })
   if (decision.status === 'confirmed') {
     const overlaps = await confirmedOverlaps(db, row.id, wall, row.minutes)
     if (overlaps.length > 0) {
@@ -57,7 +68,6 @@ servePost(async (req) => {
     }
   }
 
-  const key: MailKey = action === 'accept' ? 'accepted' : 'declined'
   let sent = false
   try {
     sent = (

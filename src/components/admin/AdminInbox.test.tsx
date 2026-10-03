@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { defaultSchedule } from '../../schedule'
@@ -77,6 +77,60 @@ test('pending rows offer accept and decline and the badge counts them', async ()
 
   await userEvent.click(within(pendingRow).getByRole('button', { name: 'Accepteer' }))
   expect(decideInbox).toHaveBeenCalledWith('pend-1', 'accept')
+})
+
+test('a stale inbox load after a later accept does not restore pending buttons', async () => {
+  const later = { ...pending, id: 'pend-2', name: 'Alex Late', email: 'alex@mail.nl' }
+  let resolveStale: (rows: (typeof pending)[]) => void = () => {}
+  const stale = new Promise<(typeof pending)[]>((resolve) => {
+    resolveStale = resolve
+  })
+  loadInbox
+    .mockResolvedValueOnce([pending, later])
+    .mockReturnValueOnce(stale)
+    .mockReturnValue(new Promise(() => {}))
+
+  render(<AdminShell />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Inbox 2' }))
+  await userEvent.click(within(row('Sam Pending')).getByRole('button', { name: 'Accepteer' }))
+  await waitFor(() => expect(loadInbox).toHaveBeenCalledTimes(2))
+  await userEvent.click(within(row('Alex Late')).getByRole('button', { name: 'Accepteer' }))
+  await waitFor(() => {
+    expect(within(row('Alex Late')).queryByRole('button', { name: 'Accepteer' })).not.toBeInTheDocument()
+  })
+
+  await act(async () => {
+    resolveStale([pending])
+    await stale
+  })
+
+  expect(screen.getByText('Alex Late')).toBeInTheDocument()
+  expect(within(row('Sam Pending')).queryByRole('button', { name: 'Accepteer' })).not.toBeInTheDocument()
+  expect(within(row('Alex Late')).queryByRole('button', { name: 'Accepteer' })).not.toBeInTheDocument()
+})
+
+test('a late loadInbox does not restore pending buttons after accept', async () => {
+  let resolveReload: (rows: (typeof pending)[]) => void = () => {}
+  const reload = new Promise<(typeof pending)[]>((resolve) => {
+    resolveReload = resolve
+  })
+  loadInbox.mockResolvedValueOnce([pending]).mockReturnValueOnce(reload)
+
+  render(<AdminShell />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Inbox 1' }))
+  await userEvent.click(within(row('Sam Pending')).getByRole('button', { name: 'Accepteer' }))
+
+  await waitFor(() => {
+    expect(within(row('Sam Pending')).queryByRole('button', { name: 'Accepteer' })).not.toBeInTheDocument()
+  })
+
+  await act(async () => {
+    resolveReload([pending])
+    await reload
+  })
+
+  expect(within(row('Sam Pending')).queryByRole('button', { name: 'Accepteer' })).not.toBeInTheDocument()
+  expect(within(row('Sam Pending')).queryByRole('button', { name: 'Weiger' })).not.toBeInTheDocument()
 })
 
 test('accept hides the decision buttons when the inbox reload fails', async () => {

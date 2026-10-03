@@ -244,12 +244,9 @@ export async function loadInbox(): Promise<InboxRow[]> {
   }
 }
 
-export async function loadTemplates(): Promise<TemplateSave[]> {
-  if (!supabase) return []
-  const rows = await read<{ key: string; lang: string; subject: string; body: string }>(
-    'mail_templates',
-    'key, lang, subject, body',
-  )
+type TemplateRow = { key: string; lang: string; subject: string; body: string }
+
+function toTemplates(rows: TemplateRow[]): TemplateSave[] {
   const templates: TemplateSave[] = []
   for (const row of rows) {
     if (!isTemplateKey(row.key) || !isLang(row.lang)) continue
@@ -257,6 +254,21 @@ export async function loadTemplates(): Promise<TemplateSave[]> {
     templates.push({ key: row.key, lang: row.lang, subject: row.subject, body: row.body })
   }
   return templates
+}
+
+export async function loadTemplates(): Promise<TemplateSave[]> {
+  if (!supabase) throw new Error('offline')
+  try {
+    const { data, error } = await supabase.functions.invoke('templates-list')
+    if (error) throw new Error(await invokeDetail(error))
+    const failed = failurePayload(data)
+    if (failed) throw new Error(failed)
+    if (!Array.isArray(data)) throw new Error('offline')
+    return toTemplates(data as TemplateRow[])
+  } catch (err) {
+    if (err instanceof Error) throw err
+    throw new Error('offline')
+  }
 }
 
 export function decideInbox(id: string, action: 'accept' | 'decline') {
