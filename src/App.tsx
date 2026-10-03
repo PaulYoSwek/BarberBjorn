@@ -1,30 +1,15 @@
-import { useState } from 'react'
-import { About } from './components/About'
-import { BookingForm } from './components/BookingForm'
-import { Faq } from './components/Faq'
-import { Footer } from './components/Footer'
-import { Hero } from './components/Hero'
-import { Hours } from './components/Hours'
-import { LanguageSwitch } from './components/LanguageSwitch'
-import { Services } from './components/Services'
-import { Splash } from './components/Splash'
+import { Route, Routes } from 'react-router-dom'
 import { LanguageProvider } from './language'
+import { AdminPage } from './pages/AdminPage'
+import { HomePage } from './pages/HomePage'
 
 export default function App() {
-  const [ready, setReady] = useState(false)
   return (
     <LanguageProvider>
-      {!ready && <Splash onDone={() => setReady(true)} />}
-      <LanguageSwitch hidden={!ready} />
-      <main>
-        <Hero />
-        <BookingForm />
-        <Services />
-        <Hours />
-        <About />
-        <Faq />
-        <Footer />
-      </main>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/admin" element={<AdminPage />} />
+      </Routes>
     </LanguageProvider>
   )
 }

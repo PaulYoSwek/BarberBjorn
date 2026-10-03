@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test } from 'vitest'
+import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 
 test('the page speaks Dutch and then English', async () => {
@@ -16,7 +17,11 @@ test('the page speaks Dutch and then English', async () => {
     removeEventListener: () => {},
     dispatchEvent: () => false,
   })
-  render(<App />)
+  render(
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>,
+  )
   expect(screen.getByText('Een goede knip. Zonder haast.')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'NL' })).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'EN' }))
