@@ -112,6 +112,55 @@ test('submitBook invokes book and submitCustom invokes request-custom', async ()
   expect(invoke).toHaveBeenCalledWith('request-custom', { body: custom })
 })
 
+test('submitBook prefers the function error body over the generic invoke message', async () => {
+  const invoke = vi.fn(async () => ({
+    data: null,
+    error: {
+      message: 'Edge Function returned a non-2xx status code',
+      context: new Response(JSON.stringify({ error: 'taken' }), {
+        status: 409,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    },
+  }))
+  vi.resetModules()
+  vi.doMock('./supabase', () => ({ supabase: { functions: { invoke } } }))
+  const api = await import('./planning-api')
+  const input = {
+    service: 'cut' as const,
+    name: 'Sam',
+    email: 'sam@mail.nl',
+    phone: '',
+    slot: '2026-10-06T09:00:00',
+    kind: 'slot' as const,
+    lang: 'nl' as const,
+  }
+  expect(await api.submitBook(input)).toEqual({ ok: false, error: 'taken' })
+})
+
+test('submitBook returns a 200 failure payload from data', async () => {
+  const invoke = vi.fn(async () => ({
+    data: { ok: false, error: 'Die tijd is al weg. Kies een vrije.' },
+    error: null,
+  }))
+  vi.resetModules()
+  vi.doMock('./supabase', () => ({ supabase: { functions: { invoke } } }))
+  const api = await import('./planning-api')
+  const input = {
+    service: 'cut' as const,
+    name: 'Sam',
+    email: 'sam@mail.nl',
+    phone: '',
+    slot: '2026-10-06T09:00:00',
+    kind: 'slot' as const,
+    lang: 'nl' as const,
+  }
+  expect(await api.submitBook(input)).toEqual({
+    ok: false,
+    error: 'Die tijd is al weg. Kies een vrije.',
+  })
+})
+
 test('loadPublicSchedule throws when a read fails', async () => {
   vi.resetModules()
   vi.doMock('./supabase', () => ({

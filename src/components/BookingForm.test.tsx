@@ -206,6 +206,123 @@ test('the agenda follows the loaded public schedule', async () => {
   }
 })
 
+test('a taken book error shows the Dutch taken line', async () => {
+  window.history.replaceState(null, '', '/?lang=nl')
+  localStorage.clear()
+  submitBook.mockResolvedValue({ ok: false, error: 'taken' })
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-05T12:00:00'))
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  try {
+    render(
+      <LanguageProvider>
+        <BookingForm />
+      </LanguageProvider>,
+    )
+    await user.selectOptions(screen.getByLabelText(/Dienst/), 'cut')
+    await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
+    await user.type(screen.getByLabelText('Naam'), 'Sam')
+    await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
+    await user.click(screen.getByRole('button', { name: 'Verstuur' }))
+    expect(await screen.findByText('Die tijd is al weg. Kies een vrije.')).toBeInTheDocument()
+    expect(screen.queryByText('taken')).not.toBeInTheDocument()
+    expect(screen.queryByText('Je tijd is van jou. Er gaat een mail naartoe.')).not.toBeInTheDocument()
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
+test('a successful slot book takes that start and ignores another submit', async () => {
+  window.history.replaceState(null, '', '/?lang=nl')
+  localStorage.clear()
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-05T12:00:00'))
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  try {
+    render(
+      <LanguageProvider>
+        <BookingForm />
+      </LanguageProvider>,
+    )
+    await user.selectOptions(screen.getByLabelText(/Dienst/), 'cut')
+    await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
+    await user.type(screen.getByLabelText('Naam'), 'Sam')
+    await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
+    await user.click(screen.getByRole('button', { name: 'Verstuur' }))
+    expect(await screen.findByText('Je tijd is van jou. Er gaat een mail naartoe.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'di 6 okt 09:00' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Verstuur' }))
+    expect(submitBook).toHaveBeenCalledTimes(1)
+    expect(screen.getByText('Je tijd is van jou. Er gaat een mail naartoe.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'di 6 okt 10:00' }))
+    await user.click(screen.getByRole('button', { name: 'Verstuur' }))
+    expect(submitBook).toHaveBeenCalledTimes(2)
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
+test('a second click while book is in flight does not submit twice', async () => {
+  window.history.replaceState(null, '', '/?lang=nl')
+  localStorage.clear()
+  let release: (value: { ok: true }) => void = () => {}
+  submitBook.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        release = resolve
+      }),
+  )
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-05T12:00:00'))
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  try {
+    render(
+      <LanguageProvider>
+        <BookingForm />
+      </LanguageProvider>,
+    )
+    await user.selectOptions(screen.getByLabelText(/Dienst/), 'cut')
+    await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
+    await user.type(screen.getByLabelText('Naam'), 'Sam')
+    await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
+    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }))
+    expect(submitBook).toHaveBeenCalledTimes(1)
+    release({ ok: true })
+    expect(await screen.findByText('Je tijd is van jou. Er gaat een mail naartoe.')).toBeInTheDocument()
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
+test('a successful custom request does not send twice', async () => {
+  window.history.replaceState(null, '', '/?lang=nl')
+  localStorage.clear()
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-05T12:00:00'))
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  try {
+    render(
+      <LanguageProvider>
+        <BookingForm />
+      </LanguageProvider>,
+    )
+    await user.selectOptions(screen.getByLabelText(/Dienst/), 'cut')
+    await user.click(screen.getByRole('button', { name: 'Ander tijdstip vragen' }))
+    fireEvent.change(screen.getByLabelText('Dag'), { target: { value: '2026-10-15' } })
+    fireEvent.change(screen.getByLabelText('Tijd'), { target: { value: '19:30' } })
+    await user.type(screen.getByLabelText('Naam'), 'Sam')
+    await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
+    await user.click(screen.getByRole('button', { name: 'Verstuur' }))
+    expect(await screen.findByText('Nog geen bevestiging. Je krijgt mail als Bjorn ja of nee zegt.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Verstuur' }))
+    expect(submitCustom).toHaveBeenCalledTimes(1)
+    expect(screen.getByText('Nog geen bevestiging. Je krijgt mail als Bjorn ja of nee zegt.')).toBeInTheDocument()
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
 test('the service label uses live minutes when services have loaded', async () => {
   loadServices.mockResolvedValue([
     { id: 'cut', price: '€32', minutes: 40 },

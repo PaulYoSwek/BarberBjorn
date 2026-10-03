@@ -97,14 +97,40 @@ function isServiceRow(row: ServiceRow): row is ServiceRow & { id: ServiceId } {
   return isServiceId(row.id)
 }
 
+function failurePayload(data: unknown): string | null {
+  if (!data || typeof data !== 'object') return null
+  const record = data as { ok?: unknown; error?: unknown }
+  if (record.ok === false && typeof record.error === 'string' && record.error) return record.error
+  return null
+}
+
+async function invokeDetail(error: { message?: string; context?: unknown }): Promise<string> {
+  let body: unknown = error.context
+  if (body instanceof Response) {
+    try {
+      body = await body.json()
+    } catch {
+      body = null
+    }
+  }
+  if (body && typeof body === 'object') {
+    const record = body as { error?: unknown; message?: unknown }
+    if (typeof record.error === 'string' && record.error) return record.error
+    if (typeof record.message === 'string' && record.message) return record.message
+  }
+  return error.message || 'offline'
+}
+
 async function invokeBooking(
   name: 'book' | 'request-custom',
   input: BookingInput & { lang: Lang },
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!supabase) return { ok: false, error: 'offline' }
   try {
-    const { error } = await supabase.functions.invoke(name, { body: input })
-    if (error) return { ok: false, error: error.message || 'offline' }
+    const { data, error } = await supabase.functions.invoke(name, { body: input })
+    const failed = failurePayload(data)
+    if (failed) return { ok: false, error: failed }
+    if (error) return { ok: false, error: await invokeDetail(error) }
     return { ok: true }
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : 'offline' }

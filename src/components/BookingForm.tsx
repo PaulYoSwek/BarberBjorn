@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { todayIso, validateBooking, type BookingInput } from '../booking'
-import type { ServiceId } from '../content'
+import { copy, type ServiceId } from '../content'
 import { useLang } from '../language'
 import { loadPublicSchedule, loadServices, submitBook, submitCustom } from '../planning-api'
 import { agendaDays, defaultSchedule, SERVICE_MINUTES, type AgendaDay, type Schedule } from '../schedule'
@@ -32,6 +32,12 @@ function customSlot(date: string, time: string) {
   return `${date}T${time.slice(0, 5)}:00`
 }
 
+const TAKEN_SIGNALS = new Set(['taken', 'takenError', copy.nl.takenError, copy.en.takenError])
+
+function shownSubmitError(error: string, taken: string) {
+  return TAKEN_SIGNALS.has(error) ? taken : error
+}
+
 export function BookingForm() {
   const { t, lang } = useLang()
   const [input, setInput] = useState<BookingInput>(empty)
@@ -45,6 +51,13 @@ export function BookingForm() {
   const inputRef = useRef(input)
   inputRef.current = input
   const [week, setWeek] = useState(0)
+  const [latched, setLatched] = useState(false)
+  const busy = useRef(false)
+
+  const edit = (next: BookingInput) => {
+    setLatched(false)
+    setInput(next)
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -93,23 +106,24 @@ export function BookingForm() {
   }, [t, agendaExtra])
 
   const setService = (service: BookingInput['service']) => {
-    setInput({ ...input, service, slot: input.kind === 'slot' ? '' : input.slot })
+    edit({ ...input, service, slot: input.kind === 'slot' ? '' : input.slot })
   }
 
   const chooseCustom = () => {
     setCustomDate('')
     setCustomTime('')
-    setInput({ ...input, kind: 'custom', slot: '' })
+    edit({ ...input, kind: 'custom', slot: '' })
   }
 
   const setCustom = (date: string, time: string) => {
     setCustomDate(date)
     setCustomTime(time)
-    setInput({ ...input, kind: 'custom', slot: customSlot(date, time) })
+    edit({ ...input, kind: 'custom', slot: customSlot(date, time) })
   }
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault()
+    if (busy.current || latched) return
     const result = validateBooking(input, t, todayIso(), new Date(), agendaExtra)
     if (!result.ok) {
       setErrors(result.errors)
@@ -117,16 +131,31 @@ export function BookingForm() {
       setSubmitError('')
       return
     }
+    busy.current = true
     setErrors({})
     const payload = { ...input, lang }
-    const sent = input.kind === 'custom' ? await submitCustom(payload) : await submitBook(payload)
-    if (!sent.ok) {
-      setStatus('')
-      setSubmitError(sent.error)
-      return
+    try {
+      const sent = input.kind === 'custom' ? await submitCustom(payload) : await submitBook(payload)
+      if (!sent.ok) {
+        setStatus('')
+        setSubmitError(sent.error)
+        return
+      }
+      setSubmitError('')
+      setStatus(input.kind === 'custom' ? 'request' : 'book')
+      setLatched(true)
+      if (input.kind === 'slot' && input.service) {
+        const holdMinutes = minutes?.[input.service] ?? SERVICE_MINUTES[input.service]
+        const start = input.slot
+        setSchedule((current) => ({
+          ...current,
+          bookings: [...(current.bookings ?? []), { start, minutes: holdMinutes }],
+        }))
+        setInput((current) => ({ ...current, slot: '' }))
+      }
+    } finally {
+      busy.current = false
     }
-    setSubmitError('')
-    setStatus(input.kind === 'custom' ? 'request' : 'book')
   }
 
   const duration = input.service ? (minutes?.[input.service] ?? SERVICE_MINUTES[input.service]) : 0
@@ -211,7 +240,7 @@ export function BookingForm() {
                               aria-pressed={on}
                               disabled={blocked}
                               className={on ? 'is-on' : undefined}
-                              onClick={() => setInput({ ...input, slot: slot.start })}
+                              onClick={() => edit({ ...input, slot: slot.start })}
                             >
                               {slot.time}
                             </button>
@@ -233,24 +262,24 @@ export function BookingForm() {
         <div className="booking-fields">
           <label>
             {t.nameLabel}
-            <input value={input.name} autoComplete="name" onChange={(event) => setInput({ ...input, name: event.target.value })} />
+            <input value={input.name} autoComplete="name" onChange={(event) => edit({ ...input, name: event.target.value })} />
             {errors.name && <span role="alert">{errors.name}</span>}
           </label>
           <label>
             {t.emailLabel}
-            <input type="email" value={input.email} autoComplete="email" onChange={(event) => setInput({ ...input, email: event.target.value })} />
+            <input type="email" value={input.email} autoComplete="email" onChange={(event) => edit({ ...input, email: event.target.value })} />
             {errors.email && <span role="alert">{errors.email}</span>}
           </label>
           <label>
             {t.phoneOptional}
-            <input value={input.phone} type="tel" inputMode="tel" autoComplete="tel" onChange={(event) => setInput({ ...input, phone: event.target.value })} />
+            <input value={input.phone} type="tel" inputMode="tel" autoComplete="tel" onChange={(event) => edit({ ...input, phone: event.target.value })} />
             {errors.phone && <span role="alert">{errors.phone}</span>}
           </label>
           <button type="submit">{t.sendLabel}</button>
         </div>
         {status === 'book' && <p>{t.bookSuccess}</p>}
         {status === 'request' && <p>{t.requestSuccess}</p>}
-        {submitError && <p role="alert">{submitError}</p>}
+        {submitError && <p role="alert">{shownSubmitError(submitError, t.takenError)}</p>}
       </form>
     </section>
   )
