@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   loadServices,
   loadTemplates,
@@ -9,6 +9,7 @@ import {
 } from '../../planning-api'
 import {
   serviceName,
+  TEMPLATE_SEED,
   TEMPLATE_KEYS,
   TEMPLATE_LABEL,
   TEMPLATE_LANGS,
@@ -16,12 +17,22 @@ import {
   withTemplateDefaults,
 } from './admin-defaults'
 
+function templatesToSave(loaded: TemplateSave[], current: TemplateSave[]): TemplateSave[] {
+  return current.filter((item) => {
+    const fromServer = loaded.some((row) => row.key === item.key && row.lang === item.lang)
+    if (fromServer) return true
+    const seed = TEMPLATE_SEED.find((row) => row.key === item.key && row.lang === item.lang)
+    return !seed || item.subject !== seed.subject || item.body !== seed.body
+  })
+}
+
 export function AdminSettings() {
   const [services, setServices] = useState<ServiceSave[]>([])
   const [templates, setTemplates] = useState<TemplateSave[]>([])
   const [servicesReady, setServicesReady] = useState(false)
   const [templatesReady, setTemplatesReady] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  const loadedTemplates = useRef<TemplateSave[]>([])
 
   useEffect(() => {
     let cancelled = false
@@ -34,10 +45,13 @@ export function AdminSettings() {
       } else {
         problems.push('Diensten laden mislukt.')
       }
-      if (templateResult.status === 'fulfilled') {
+      if (templateResult.status === 'fulfilled' && templateResult.value.length > 0) {
+        loadedTemplates.current = templateResult.value
         setTemplates(withTemplateDefaults(templateResult.value))
         setTemplatesReady(true)
       } else {
+        loadedTemplates.current = []
+        setTemplatesReady(false)
         problems.push('Sjablonen laden mislukt.')
       }
       setNotice(problems.length ? problems.join(' ') : null)
@@ -61,7 +75,10 @@ export function AdminSettings() {
     try {
       const jobs: Promise<{ ok: true } | { ok: false; error: string }>[] = []
       if (servicesReady) jobs.push(saveServices(services))
-      if (templatesReady) jobs.push(saveTemplates(templates))
+      if (templatesReady) {
+        const payload = templatesToSave(loadedTemplates.current, templates)
+        if (payload.length > 0) jobs.push(saveTemplates(payload))
+      }
       const results = await Promise.all(jobs)
       setNotice(results.every((result) => result.ok) ? null : 'Opslaan mislukt.')
     } catch {

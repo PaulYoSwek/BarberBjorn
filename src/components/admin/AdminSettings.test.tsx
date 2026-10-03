@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { defaultSchedule } from '../../schedule'
@@ -88,4 +88,26 @@ test('saving templates calls saveTemplates with the edited subject', async () =>
     { key: 'declined', lang: 'nl', subject: 'Afspraak niet mogelijk', body: 'Niet mogelijk' },
     { key: 'declined', lang: 'en', subject: 'Could not book that time', body: 'Not possible' },
   ])
+})
+
+test('an empty template load does not save seed templates', async () => {
+  loadTemplates.mockResolvedValue([])
+  render(<AdminShell />)
+  await userEvent.click(screen.getByRole('button', { name: 'Settings' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Sjablonen laden mislukt.')
+  await userEvent.clear(await screen.findByLabelText('Knippen minuten'))
+  await userEvent.type(screen.getByLabelText('Knippen minuten'), '50')
+  await userEvent.click(screen.getByRole('button', { name: 'Opslaan' }))
+  await waitFor(() => expect(saveServices).toHaveBeenCalled())
+  expect(saveTemplates).not.toHaveBeenCalled()
+})
+
+test('a failed template load does not save seed templates', async () => {
+  loadTemplates.mockRejectedValue(new Error('permission denied'))
+  render(<AdminShell />)
+  await userEvent.click(screen.getByRole('button', { name: 'Settings' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Sjablonen laden mislukt.')
+  await userEvent.click(await screen.findByRole('button', { name: 'Opslaan' }))
+  await waitFor(() => expect(saveServices).toHaveBeenCalled())
+  expect(saveTemplates).not.toHaveBeenCalled()
 })

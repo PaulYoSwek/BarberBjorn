@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { fillTemplate } from '../../planning'
 import { loadTemplates, sendClientMail, type InboxRow, type TemplateKey, type TemplateSave } from '../../planning-api'
-import { serviceName, TEMPLATE_SEED } from './admin-defaults'
+import { serviceName } from './admin-defaults'
 
 type Props = {
   rows: InboxRow[]
   clientId?: string | null
+  onSent: (id: string) => void
 }
 
 function mailVars(row: InboxRow) {
@@ -17,7 +18,7 @@ function mailVars(row: InboxRow) {
   }
 }
 
-export function AdminMail({ rows, clientId }: Props) {
+export function AdminMail({ rows, clientId, onSent }: Props) {
   const [templates, setTemplates] = useState<TemplateSave[]>([])
   const [selected, setSelected] = useState(clientId ?? '')
   const [key, setKey] = useState<TemplateKey | ''>('')
@@ -35,11 +36,14 @@ export function AdminMail({ rows, clientId }: Props) {
     loadTemplates()
       .then((next) => {
         if (cancelled) return
-        setTemplates(next.length ? next : TEMPLATE_SEED)
+        if (!next.length) {
+          setNotice('Sjablonen laden mislukt.')
+          return
+        }
+        setTemplates(next)
       })
       .catch(() => {
         if (cancelled) return
-        setTemplates(TEMPLATE_SEED)
         setNotice('Sjablonen laden mislukt.')
       })
     return () => {
@@ -64,7 +68,12 @@ export function AdminMail({ rows, clientId }: Props) {
     if (!selected || !key) return
     try {
       const result = await sendClientMail(selected, key, { subject, body })
-      setNotice(result.ok ? null : 'Mail versturen mislukt.')
+      if (!result.ok) {
+        setNotice('Mail versturen mislukt.')
+        return
+      }
+      setNotice(null)
+      onSent(selected)
     } catch {
       setNotice('Mail versturen mislukt.')
     }

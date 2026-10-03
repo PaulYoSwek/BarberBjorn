@@ -81,6 +81,13 @@ test('pending rows offer accept and decline and the badge counts them', async ()
   expect(decideInbox).toHaveBeenCalledWith('pend-1', 'decline')
 })
 
+test('a failed inbox load shows the Dutch error', async () => {
+  loadInbox.mockRejectedValue(new Error('permission denied'))
+  render(<AdminShell />)
+  await userEvent.click(screen.getByRole('button', { name: 'Inbox' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Inbox laden mislukt.')
+})
+
 test('unsent mail offers a resend that opens Mail for that client', async () => {
   loadInbox.mockResolvedValue([pending])
   render(<AdminShell />)

@@ -28,6 +28,10 @@ export function AdminShell({ pending }: Props) {
       .catch(() => {})
   }
 
+  function markMailSent(id: string) {
+    setRows((current) => current.map((row) => (row.id === id ? { ...row, mail_sent: true } : row)))
+  }
+
   useEffect(() => {
     let cancelled = false
     loadInbox()
@@ -61,7 +65,7 @@ export function AdminShell({ pending }: Props) {
             }}
           />
         ) : null}
-        {tab === 'mail' ? <AdminMail rows={rows} clientId={mailClientId} /> : null}
+        {tab === 'mail' ? <AdminMail rows={rows} clientId={mailClientId} onSent={markMailSent} /> : null}
         {tab === 'settings' ? <AdminSettings /> : null}
       </div>
       <nav className="admin-tabs">

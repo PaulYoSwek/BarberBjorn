@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { defaultSchedule } from '../../schedule'
@@ -63,4 +63,21 @@ test('Verstuur sends the selected client and template', async () => {
     subject: 'Hoi',
     body: 'Hoi Sam, Knippen op 2026-10-06 om 09:00.',
   })
+})
+
+test('a successful send clears Mail niet gegaan for that client', async () => {
+  loadInbox.mockResolvedValue([{ ...client, mail_sent: false }])
+  render(<AdminShell />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Inbox' }))
+  expect(screen.getByText('Mail niet gegaan')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'Opnieuw' }))
+  await userEvent.selectOptions(await screen.findByLabelText('Sjabloon'), 'thanks')
+  await waitFor(() => expect(screen.getByLabelText('Onderwerp')).toHaveValue('Hoi'))
+  await userEvent.click(screen.getByRole('button', { name: 'Verstuur' }))
+  await waitFor(() => expect(sendClientMail).toHaveBeenCalled())
+  await userEvent.click(screen.getByRole('button', { name: 'Inbox' }))
+  const sent = screen.getByText('Sam').closest('li')
+  if (!sent) throw new Error('missing row Sam')
+  await waitFor(() => expect(within(sent).queryByText('Mail niet gegaan')).not.toBeInTheDocument())
+  expect(within(sent).queryByRole('button', { name: 'Opnieuw' })).not.toBeInTheDocument()
 })

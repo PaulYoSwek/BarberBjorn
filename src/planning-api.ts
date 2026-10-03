@@ -210,12 +210,7 @@ function isLang(value: string): value is TemplateLang {
   return value === 'nl' || value === 'en'
 }
 
-export async function loadInbox(): Promise<InboxRow[]> {
-  if (!supabase) return []
-  const rows = await read<BookingRow>(
-    'bookings',
-    'id, service, name, email, phone, start, kind, status, mail_sent',
-  )
+function toInbox(rows: BookingRow[]): InboxRow[] {
   const inbox: InboxRow[] = []
   for (const row of rows) {
     if (!isServiceId(row.service) || !isKind(row.kind) || !isStatus(row.status)) continue
@@ -232,6 +227,21 @@ export async function loadInbox(): Promise<InboxRow[]> {
     })
   }
   return inbox
+}
+
+export async function loadInbox(): Promise<InboxRow[]> {
+  if (!supabase) throw new Error('offline')
+  try {
+    const { data, error } = await supabase.functions.invoke('inbox-list')
+    if (error) throw new Error(await invokeDetail(error))
+    const failed = failurePayload(data)
+    if (failed) throw new Error(failed)
+    if (!Array.isArray(data)) throw new Error('offline')
+    return toInbox(data as BookingRow[])
+  } catch (err) {
+    if (err instanceof Error) throw err
+    throw new Error('offline')
+  }
 }
 
 export async function loadTemplates(): Promise<TemplateSave[]> {

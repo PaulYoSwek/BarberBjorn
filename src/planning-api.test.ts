@@ -191,7 +191,7 @@ test('inbox mail and settings helpers fail closed without a supabase client', as
   expect(api.sendClientMail).toEqual(expect.any(Function))
   expect(api.saveServices).toEqual(expect.any(Function))
   expect(api.saveTemplates).toEqual(expect.any(Function))
-  expect(await api.loadInbox()).toEqual([])
+  await expect(api.loadInbox()).rejects.toThrow('offline')
   expect(await api.loadTemplates()).toEqual([])
   expect(await api.decideInbox('b1', 'accept')).toEqual({ ok: false, error: 'offline' })
   expect(await api.sendClientMail('b1', 'thanks')).toEqual({ ok: false, error: 'offline' })
@@ -218,46 +218,53 @@ test('decide send and save invoke the admin edge functions', async () => {
   expect(invoke).toHaveBeenCalledWith('admin-write', { body: { type: 'templates', templates } })
 })
 
-test('loadInbox maps booking rows and drops unknown services', async () => {
-  const tables: Record<string, unknown[]> = {
-    bookings: [
-      {
-        id: '1',
-        service: 'cut',
-        name: 'Sam',
-        email: 'sam@mail.nl',
-        phone: '',
-        start: '2026-10-06T12:00:00Z',
-        kind: 'custom',
-        status: 'pending',
-        mail_sent: false,
-      },
-      {
-        id: '2',
-        service: 'nope',
-        name: 'X',
-        email: 'x@mail.nl',
-        phone: '',
-        start: '2026-10-06T12:00:00',
-        kind: 'slot',
-        status: 'confirmed',
-        mail_sent: true,
-      },
-    ],
-    mail_templates: [
-      { key: 'thanks', lang: 'nl', subject: 'Hoi', body: 'Tot dan' },
-      { key: 'other', lang: 'nl', subject: 'Nee', body: 'Nee' },
-    ],
-  }
+test('loadInbox invokes inbox-list and does not select bookings', async () => {
+  const bookings = [
+    {
+      id: '1',
+      service: 'cut',
+      name: 'Sam',
+      email: 'sam@mail.nl',
+      phone: '',
+      start: '2026-10-06T12:00:00Z',
+      kind: 'custom',
+      status: 'pending',
+      mail_sent: false,
+    },
+    {
+      id: '2',
+      service: 'nope',
+      name: 'X',
+      email: 'x@mail.nl',
+      phone: '',
+      start: '2026-10-06T12:00:00',
+      kind: 'slot',
+      status: 'confirmed',
+      mail_sent: true,
+    },
+  ]
+  const invoke = vi.fn(async (name: string) => {
+    if (name === 'inbox-list') return { data: bookings, error: null }
+    return { data: null, error: { message: 'missing' } }
+  })
   const from = vi.fn((table: string) => ({
-    select: vi.fn(async () => ({ data: tables[table] ?? [], error: null })),
+    select: vi.fn(async () => ({
+      data: table === 'mail_templates'
+        ? [
+            { key: 'thanks', lang: 'nl', subject: 'Hoi', body: 'Tot dan' },
+            { key: 'other', lang: 'nl', subject: 'Nee', body: 'Nee' },
+          ]
+        : [],
+      error: null,
+    })),
   }))
   vi.resetModules()
-  vi.doMock('./supabase', () => ({ supabase: { from } }))
+  vi.doMock('./supabase', () => ({ supabase: { from, functions: { invoke } } }))
   const api = await import('./planning-api')
   const inbox = await api.loadInbox()
   const listed = await api.loadTemplates()
-  expect(from).toHaveBeenCalledWith('bookings')
+  expect(invoke).toHaveBeenCalledWith('inbox-list')
+  expect(from).not.toHaveBeenCalledWith('bookings')
   expect(from).toHaveBeenCalledWith('mail_templates')
   expect(inbox).toHaveLength(1)
   expect(inbox[0]?.id).toBe('1')
@@ -267,6 +274,25 @@ test('loadInbox maps booking rows and drops unknown services', async () => {
   expect(inbox[0]?.start).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/)
   expect(new Date(inbox[0]!.start).getTime()).toBe(new Date('2026-10-06T12:00:00Z').getTime())
   expect(listed).toEqual([{ key: 'thanks', lang: 'nl', subject: 'Hoi', body: 'Tot dan' }])
+})
+
+test('loadInbox treats an empty inbox-list payload as an empty inbox', async () => {
+  const invoke = vi.fn(async () => ({ data: [], error: null }))
+  const from = vi.fn()
+  vi.resetModules()
+  vi.doMock('./supabase', () => ({ supabase: { from, functions: { invoke } } }))
+  const api = await import('./planning-api')
+  expect(await api.loadInbox()).toEqual([])
+  expect(invoke).toHaveBeenCalledWith('inbox-list')
+  expect(from).not.toHaveBeenCalled()
+})
+
+test('loadInbox rejects when inbox-list fails', async () => {
+  const invoke = vi.fn(async () => ({ data: null, error: { message: 'permission denied' } }))
+  vi.resetModules()
+  vi.doMock('./supabase', () => ({ supabase: { functions: { invoke } } }))
+  const api = await import('./planning-api')
+  await expect(api.loadInbox()).rejects.toThrow('permission denied')
 })
 
 test('loadPublicSchedule throws when a read fails', async () => {
