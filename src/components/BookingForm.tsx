@@ -66,16 +66,19 @@ export function BookingForm() {
     }
   }, [])
 
+  const agendaExtra = useMemo(
+    () => ({
+      week: schedule.week,
+      exceptions: schedule.exceptions,
+      blocks: schedule.blocks,
+      bookings: schedule.bookings,
+      ...(minutes ? { minutes } : {}),
+    }),
+    [schedule, minutes],
+  )
   const days = useMemo(
-    () =>
-      agendaDays(input.service, new Date(), {
-        week: schedule.week,
-        exceptions: schedule.exceptions,
-        blocks: schedule.blocks,
-        bookings: schedule.bookings,
-        ...(minutes ? { minutes } : {}),
-      }),
-    [input.service, schedule, minutes],
+    () => agendaDays(input.service, new Date(), agendaExtra),
+    [input.service, agendaExtra],
   )
   const visible = days.slice(week * WEEK, week * WEEK + WEEK)
   const lastWeek = Math.ceil(days.length / WEEK) - 1
@@ -83,11 +86,11 @@ export function BookingForm() {
   useEffect(() => {
     setErrors((current) => {
       if (Object.keys(current).length === 0) return current
-      const result = validateBooking(inputRef.current, t, todayIso())
+      const result = validateBooking(inputRef.current, t, todayIso(), new Date(), agendaExtra)
       if (result.ok) return current
       return result.errors
     })
-  }, [t])
+  }, [t, agendaExtra])
 
   const setService = (service: BookingInput['service']) => {
     setInput({ ...input, service, slot: input.kind === 'slot' ? '' : input.slot })
@@ -107,7 +110,7 @@ export function BookingForm() {
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault()
-    const result = validateBooking(input, t, todayIso())
+    const result = validateBooking(input, t, todayIso(), new Date(), agendaExtra)
     if (!result.ok) {
       setErrors(result.errors)
       setStatus('')

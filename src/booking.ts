@@ -1,5 +1,5 @@
 import type { Copy, ServiceId } from './content'
-import { agendaDays } from './schedule'
+import { agendaDays, type Schedule } from './schedule'
 
 export type BookingKind = 'slot' | 'custom'
 
@@ -35,6 +35,7 @@ export function validateBooking(
   t: Copy,
   todayIso: string,
   now = new Date(),
+  extra: Partial<Schedule> = {},
 ): BookingResult {
   const errors: Partial<Record<Field, string>> = {}
   if (!isService(input.service)) errors.service = t.fieldError
@@ -49,7 +50,7 @@ export function validateBooking(
       errors.slot = t.pastError
     } else if (input.kind === 'slot' && isService(input.service)) {
       const agendaNow = dateIso(now) !== todayIso ? new Date(`${todayIso}T00:00:00`) : now
-      const day = agendaDays(input.service, agendaNow).find((item) => item.date === date)
+      const day = agendaDays(input.service, agendaNow, extra).find((item) => item.date === date)
       const found = day?.slots.find((item) => item.start === input.slot)
       if (!day || day.closed) errors.slot = t.weekendError
       else if (!found) errors.slot = t.fieldError

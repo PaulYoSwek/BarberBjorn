@@ -124,6 +124,25 @@ test('builds a Dutch mailto body with the chosen time', () => {
   }
 })
 
+test('a default hold is free when the passed-in schedule has no bookings', () => {
+  const onDefault = validateBooking(
+    { ...base, slot: '2026-10-06T14:00:00' },
+    copy.nl,
+    today,
+  )
+  expect(onDefault.ok).toBe(false)
+  if (!onDefault.ok) expect(onDefault.errors.slot).toBe(copy.nl.takenError)
+
+  const live = validateBooking(
+    { ...base, slot: '2026-10-06T14:00:00' },
+    copy.nl,
+    today,
+    new Date('2026-10-05T12:00:00'),
+    { bookings: [] },
+  )
+  expect(live.ok).toBe(true)
+})
+
 test('accepts a weekday four weeks out', () => {
   const result = validateBooking(
     { service: 'cut', name: 'Sam', email: 'sam@mail.nl', phone: '0612345678', slot: '2026-10-26T09:00:00', kind: 'slot' },
