@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { weekHoursFromDays } from '../../planning'
@@ -73,20 +73,70 @@ test('a late schedule load keeps a 12:00 block written this session', async () =
   expect(screen.getByRole('button', { name: '12:00' })).toHaveAttribute('aria-pressed', 'true')
 })
 
+function editedWeek(open = '10:00') {
+  return weekHoursFromDays(
+    weekdays.map((weekday) => ({
+      weekday,
+      hours: weekday === 'mon' ? { open, close: '18:00' } : defaultSchedule.week[weekday],
+    })),
+  )
+}
+
+test('Toepassen stays disabled until the schedule load resolves', async () => {
+  let resolveLoad: (schedule: typeof defaultSchedule) => void = () => {}
+  loadPublicSchedule.mockReturnValue(
+    new Promise((resolve) => {
+      resolveLoad = resolve
+    }),
+  )
+  sessionStorage.setItem('barber-admin', '1')
+  render(<AdminPage />)
+  const apply = screen.getByRole('button', { name: 'Toepassen op komende weken' })
+  expect(apply).toBeDisabled()
+  await act(async () => {
+    resolveLoad(defaultSchedule)
+  })
+  expect(apply).toBeEnabled()
+})
+
+test('a failed schedule load keeps Toepassen disabled and shows an error', async () => {
+  loadPublicSchedule.mockRejectedValue(new Error('offline'))
+  sessionStorage.setItem('barber-admin', '1')
+  render(<AdminPage />)
+  expect(await screen.findByRole('alert')).toHaveTextContent('Agenda laden mislukt.')
+  expect(screen.getByRole('button', { name: 'Toepassen op komende weken' })).toBeDisabled()
+})
+
 test('Toepassen op komende weken writes the edited weekday hours', async () => {
   sessionStorage.setItem('barber-admin', '1')
   render(<AdminPage />)
+  const apply = screen.getByRole('button', { name: 'Toepassen op komende weken' })
+  await waitFor(() => expect(apply).toBeEnabled())
   fireEvent.change(screen.getByLabelText('Open'), { target: { value: '10:00' } })
-  await userEvent.click(screen.getByRole('button', { name: 'Toepassen op komende weken' }))
-  expect(adminWrite).toHaveBeenCalledWith({
-    type: 'week',
-    week: weekHoursFromDays(
-      weekdays.map((weekday) => ({
-        weekday,
-        hours: weekday === 'mon' ? { open: '10:00', close: '18:00' } : defaultSchedule.week[weekday],
-      })),
-    ),
+  await userEvent.click(apply)
+  expect(adminWrite).toHaveBeenCalledWith({ type: 'week', week: editedWeek() })
+  await act(async () => {
+    await adminWrite.mock.results.at(-1)?.value
   })
+  await userEvent.click(screen.getByRole('button', { name: 'Volgende week' }))
+  expect(screen.getByLabelText('Open')).toHaveValue('10:00')
+  await userEvent.click(screen.getByRole('button', { name: 'Toepassen op komende weken' }))
+  expect(adminWrite).toHaveBeenLastCalledWith({ type: 'week', week: editedWeek() })
+})
+
+test('a failed apply shows an error and keeps the edited hours', async () => {
+  adminWrite.mockResolvedValue({ ok: false, error: 'offline' })
+  sessionStorage.setItem('barber-admin', '1')
+  render(<AdminPage />)
+  const apply = screen.getByRole('button', { name: 'Toepassen op komende weken' })
+  await waitFor(() => expect(apply).toBeEnabled())
+  fireEvent.change(screen.getByLabelText('Open'), { target: { value: '10:00' } })
+  await userEvent.click(apply)
+  expect(adminWrite).toHaveBeenCalledWith({ type: 'week', week: editedWeek() })
+  expect(await screen.findByRole('alert')).toHaveTextContent('Uren opslaan mislukt.')
+  expect(screen.getByLabelText('Open')).toHaveValue('10:00')
+  await userEvent.click(screen.getByRole('button', { name: 'Volgende week' }))
+  expect(screen.getByLabelText('Open')).toHaveValue('09:00')
 })
 
 test('day chips page a week and a booked half-hour stays shut', async () => {

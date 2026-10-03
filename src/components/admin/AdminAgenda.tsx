@@ -87,15 +87,21 @@ export function AdminAgenda() {
   const [edits, setEdits] = useState<Record<string, DayHours>>({})
   const [week, setWeek] = useState(0)
   const [picked, setPicked] = useState<string | null>(null)
+  const [ready, setReady] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
   const sessionBlocks = useRef(new Map<string, boolean>())
 
   useEffect(() => {
     let cancelled = false
     loadPublicSchedule()
       .then((next) => {
-        if (!cancelled) setSchedule(() => withSessionBlocks(next, sessionBlocks.current))
+        if (cancelled) return
+        setSchedule(() => withSessionBlocks(next, sessionBlocks.current))
+        setReady(true)
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!cancelled) setNotice('Agenda laden mislukt.')
+      })
     return () => {
       cancelled = true
     }
@@ -127,12 +133,24 @@ export function AdminAgenda() {
   }
 
   async function apply() {
-    if (!selectedDay) return
+    if (!ready || !selectedDay) return
+    const pageDates = visible.map((day) => day.date)
     const next = weekHoursFromDays(visible.map((day) => ({ weekday: day.weekday, hours: hoursFor(day) })))
     try {
-      await adminWrite({ type: 'week', week: next })
+      const result = await adminWrite({ type: 'week', week: next })
+      if (!result.ok) {
+        setNotice('Uren opslaan mislukt.')
+        return
+      }
+      setSchedule((current) => ({ ...current, week: next }))
+      setEdits((current) => {
+        const kept = { ...current }
+        for (const date of pageDates) delete kept[date]
+        return kept
+      })
+      setNotice(null)
     } catch {
-      return
+      setNotice('Uren opslaan mislukt.')
     }
   }
 
@@ -237,7 +255,8 @@ export function AdminAgenda() {
             })
           : null}
       </div>
-      <button type="button" className="admin-primary" onClick={() => { void apply() }}>
+      {notice ? <p role="alert">{notice}</p> : null}
+      <button type="button" className="admin-primary" disabled={!ready} onClick={() => { void apply() }}>
         Toepassen op komende weken
       </button>
     </div>
