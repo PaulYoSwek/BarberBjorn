@@ -252,3 +252,20 @@ img, video { max-width: 100%; display: block; }
   .rope-band img { height: 18px; }
   .rope-band.is-cut img { height: 18px; }
 }
+.admin { display: flex; flex-direction: column; }
+.admin-card { flex: 1; margin: 16px; padding: 16px; }
+.admin-week, .admin-days, .admin-slots { display: flex; flex-wrap: wrap; gap: 8px; }
+.admin-days, .admin-hours, .admin-slots { margin: 12px 0; }
+.admin-days button, .admin-slots button { min-height: 44px; border: 1px solid #2a2a2a; background: #fff; color: inherit; padding: 8px; }
+.admin-days button[aria-pressed="true"] { font-weight: 700; }
+.admin-slots button[aria-pressed="true"] { background: #1a1916; color: #fff; }
+.admin-slots button:disabled { opacity: 0.45; }
+.admin-hours { display: grid; gap: 8px; }
+.admin-hours input { min-height: 44px; border: 1px solid #2a2a2a; background: #fff; }
+.admin-primary { margin-top: 12px; }
+.admin { min-height: 100svh; background: #f4f1ea; color: #1a1916; }
+.admin-card { background: #fff; border: 1px solid #2a2a2a; }
+.admin-tabs { position: sticky; bottom: 0; display: flex; background: #efece4; border-top: 1px solid #d9d3c7; }
+.admin-tabs button { flex: 1; min-height: 44px; border: 0; background: transparent; }
+.admin-tabs button.is-on { font-weight: 700; }
+.admin-primary { background: #f5c400; color: #101010; min-height: 44px; border: 0; width: 100%; }

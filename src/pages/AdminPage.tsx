@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { AdminGate } from '../components/admin/AdminGate'
+import { AdminShell } from '../components/admin/AdminShell'
 
 export function AdminPage() {
   const [open, setOpen] = useState(() => sessionStorage.getItem('barber-admin') === '1')
-  if (open) return <p>Agenda</p>
-  return <AdminGate onSuccess={() => setOpen(true)} />
+  if (!open) return <AdminGate onSuccess={() => setOpen(true)} />
+  return <AdminShell pending={0} />
 }

@@ -161,6 +161,26 @@ test('submitBook returns a 200 failure payload from data', async () => {
   })
 })
 
+test('adminWrite fails closed without a supabase client', async () => {
+  vi.doUnmock('./supabase')
+  vi.resetModules()
+  const api = await import('./planning-api')
+  expect(await api.adminWrite({ type: 'blocks', date: '2026-10-05', time: '12:00', on: true })).toEqual({
+    ok: false,
+    error: 'offline',
+  })
+})
+
+test('adminWrite invokes admin-write with the body', async () => {
+  const invoke = vi.fn(async () => ({ data: { ok: true }, error: null }))
+  vi.resetModules()
+  vi.doMock('./supabase', () => ({ supabase: { functions: { invoke } } }))
+  const api = await import('./planning-api')
+  const body = { type: 'week' as const, week: defaultSchedule.week }
+  expect(await api.adminWrite(body)).toEqual({ ok: true })
+  expect(invoke).toHaveBeenCalledWith('admin-write', { body })
+})
+
 test('loadPublicSchedule throws when a read fails', async () => {
   vi.resetModules()
   vi.doMock('./supabase', () => ({

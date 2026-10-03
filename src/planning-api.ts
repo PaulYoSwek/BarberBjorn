@@ -144,3 +144,22 @@ export function submitBook(input: BookingInput & { lang: Lang }) {
 export function submitCustom(input: BookingInput & { lang: Lang }) {
   return invokeBooking('request-custom', input)
 }
+
+export type AdminWriteBody =
+  | { type: 'blocks'; date: string; time: string; on: boolean }
+  | { type: 'week'; week: Record<Weekday, DayHours> }
+
+export async function adminWrite(
+  body: AdminWriteBody,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!supabase) return { ok: false, error: 'offline' }
+  try {
+    const { data, error } = await supabase.functions.invoke('admin-write', { body })
+    const failed = failurePayload(data)
+    if (failed) return { ok: false, error: failed }
+    if (error) return { ok: false, error: await invokeDetail(error) }
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'offline' }
+  }
+}
