@@ -220,8 +220,9 @@ export function BookingForm() {
     }
   }
 
-  const duration = minutes?.[input.service] ?? SERVICE_MINUTES[input.service]
-  const serviceName = t.services.find((item) => item.id === input.service)?.name ?? ''
+  const service = input.service || 'both'
+  const duration = minutes?.[service] ?? SERVICE_MINUTES[service]
+  const serviceName = t.services.find((item) => item.id === service)?.name ?? ''
   const when = whenStamp(input.slot, days, t.days, t.monthShort)
 
   return (
