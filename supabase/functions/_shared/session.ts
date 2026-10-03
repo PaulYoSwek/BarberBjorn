@@ -40,7 +40,7 @@ export async function sessionCookie(): Promise<string> {
   const exp = Math.floor(Date.now() / 1000) + MAX_AGE
   const payload = String(exp)
   const token = `${payload}.${await sign(payload)}`
-  return `${COOKIE}=${token}; Max-Age=${MAX_AGE}; Secure; HttpOnly; SameSite=Lax; Path=/`
+  return `${COOKIE}=${token}; Max-Age=${MAX_AGE}; Secure; HttpOnly; SameSite=None; Path=/`
 }
 
 export async function validSession(req: Request): Promise<boolean> {

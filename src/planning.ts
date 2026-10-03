@@ -1,6 +1,33 @@
 import type { ServiceId } from './content'
 import { agendaDays, type DayHours, type Schedule, type Weekday } from './schedule'
 
+function clockMinutes(stamp: string): number {
+  const [hours, minutes] = stamp.split(':')
+  return Number(hours) * 60 + Number(minutes)
+}
+
+function rangesOverlap(startA: number, endA: number, startB: number, endB: number): boolean {
+  return startA < endB && startB < endA
+}
+
+function holdsOn(date: string, schedule: Schedule): { start: number; end: number }[] {
+  const dayBlocked = (schedule.blocks ?? []).some((block) => block.date === date && !block.time)
+  if (dayBlocked) return [{ start: 0, end: 24 * 60 }]
+  const fromBlocks = (schedule.blocks ?? [])
+    .filter((block) => block.date === date && block.time)
+    .map((block) => {
+      const start = clockMinutes(block.time!.slice(0, 5))
+      return { start, end: start + 30 }
+    })
+  const fromBookings = (schedule.bookings ?? [])
+    .filter((hold) => hold.start.startsWith(date))
+    .map((hold) => {
+      const start = clockMinutes(hold.start.slice(11, 16))
+      return { start, end: start + hold.minutes }
+    })
+  return [...fromBlocks, ...fromBookings]
+}
+
 export function weekHoursFromDays(
   days: { weekday: Weekday; hours: DayHours }[],
 ): Record<Weekday, DayHours> {
@@ -32,7 +59,9 @@ export function isFree(
       return !found.taken && !found.past
     }
   }
-  return false
+  const startMin = clockMinutes(start.slice(11, 16))
+  const endMin = startMin + minutes
+  return !holdsOn(date, schedule).some((hold) => rangesOverlap(startMin, endMin, hold.start, hold.end))
 }
 
 export function applyDecision(
