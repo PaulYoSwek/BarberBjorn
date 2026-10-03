@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { copy } from '../../content'
 import { weekHoursFromDays } from '../../planning'
 import { adminWrite, loadPublicSchedule } from '../../planning-api'
@@ -56,6 +56,23 @@ function blocked(date: string, time: string, schedule: Schedule): boolean {
   return (schedule.blocks ?? []).some((block) => block.date === date && block.time === time)
 }
 
+function blockKey(date: string, time: string): string {
+  return `${date}|${time}`
+}
+
+function withSessionBlocks(next: Schedule, session: ReadonlyMap<string, boolean>): Schedule {
+  if (session.size === 0) return next
+  let blocks = [...(next.blocks ?? [])]
+  for (const [key, on] of session) {
+    const split = key.indexOf('|')
+    const date = key.slice(0, split)
+    const time = key.slice(split + 1)
+    blocks = blocks.filter((block) => !(block.date === date && block.time === time))
+    if (on) blocks.push({ date, time })
+  }
+  return { ...next, blocks }
+}
+
 function windowDays(now: Date, schedule: Schedule): AgendaDay[] {
   return agendaDays('cut', now, {
     week: schedule.week,
@@ -70,12 +87,13 @@ export function AdminAgenda() {
   const [edits, setEdits] = useState<Record<string, DayHours>>({})
   const [week, setWeek] = useState(0)
   const [picked, setPicked] = useState<string | null>(null)
+  const sessionBlocks = useRef(new Map<string, boolean>())
 
   useEffect(() => {
     let cancelled = false
     loadPublicSchedule()
       .then((next) => {
-        if (!cancelled) setSchedule(next)
+        if (!cancelled) setSchedule(() => withSessionBlocks(next, sessionBlocks.current))
       })
       .catch(() => {})
     return () => {
@@ -97,6 +115,7 @@ export function AdminAgenda() {
     try {
       const result = await adminWrite({ type: 'blocks', date, time, on })
       if (!result.ok) return
+      sessionBlocks.current.set(blockKey(date, time), on)
       setSchedule((current) => {
         const blocks = (current.blocks ?? []).filter((block) => !(block.date === date && block.time === time))
         if (on) blocks.push({ date, time })

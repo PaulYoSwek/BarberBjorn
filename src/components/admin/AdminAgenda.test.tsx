@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { weekHoursFromDays } from '../../planning'
@@ -47,6 +47,30 @@ test('a stored session shows the agenda and a 12:00 chip writes that block', asy
     time: '12:00',
     on: true,
   })
+})
+
+test('a late schedule load keeps a 12:00 block written this session', async () => {
+  let resolveLoad: (schedule: typeof defaultSchedule) => void = () => {}
+  loadPublicSchedule.mockReturnValue(
+    new Promise((resolve) => {
+      resolveLoad = resolve
+    }),
+  )
+  sessionStorage.setItem('barber-admin', '1')
+  render(<AdminPage />)
+  const chip = screen.getByRole('button', { name: '12:00' })
+  await userEvent.click(chip)
+  expect(adminWrite).toHaveBeenCalledWith({
+    type: 'blocks',
+    date: '2026-10-05',
+    time: '12:00',
+    on: true,
+  })
+  expect(chip).toHaveAttribute('aria-pressed', 'true')
+  await act(async () => {
+    resolveLoad({ ...defaultSchedule, blocks: [] })
+  })
+  expect(screen.getByRole('button', { name: '12:00' })).toHaveAttribute('aria-pressed', 'true')
 })
 
 test('Toepassen op komende weken writes the edited weekday hours', async () => {
