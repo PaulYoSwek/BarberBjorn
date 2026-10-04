@@ -9,17 +9,23 @@ function statusOf(error: unknown): number | null {
   return typeof context?.status === 'number' ? context.status : null
 }
 
-async function localLogin(password: string): Promise<boolean> {
+async function postLogin(path: string, password: string): Promise<boolean> {
   try {
-    const response = await fetch('/__admin-login', {
+    const response = await fetch(path, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password }),
     })
-    return response.ok
+    if (!response.ok) return false
+    const body = (await response.json()) as { ok?: unknown }
+    return body.ok === true
   } catch {
     return false
   }
+}
+
+async function localLogin(password: string): Promise<boolean> {
+  return (await postLogin('/__admin-login', password)) || (await postLogin('/api/admin-login', password))
 }
 
 export function AdminGate({ onSuccess }: Props) {
@@ -28,10 +34,12 @@ export function AdminGate({ onSuccess }: Props) {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const typed = new FormData(event.currentTarget).get('password')
+    const secret = typeof typed === 'string' && typed ? typed : password
     try {
       if (supabase) {
         const { error } = await supabase.functions.invoke('admin-login', {
-          body: { password },
+          body: { password: secret },
         })
         if (!error) {
           sessionStorage.setItem('barber-admin', '1')
@@ -43,7 +51,7 @@ export function AdminGate({ onSuccess }: Props) {
           return
         }
       }
-      if (await localLogin(password)) {
+      if (await localLogin(secret)) {
         sessionStorage.setItem('barber-admin', '1')
         onSuccess()
         return
@@ -67,14 +75,18 @@ export function AdminGate({ onSuccess }: Props) {
           Wachtwoord
           <input
             type="password"
+            name="password"
             value={password}
             autoComplete="current-password"
+            enterKeyHint="go"
             onChange={(event) => setPassword(event.target.value)}
+            onInput={(event) => setPassword(event.currentTarget.value)}
           />
         </label>
         {wrong ? <p role="alert">Onjuist wachtwoord.</p> : null}
         <button type="submit">Inloggen</button>
       </form>
+      <a className="admin-gate-site" href="/">Naar de website</a>
     </div>
   )
 }

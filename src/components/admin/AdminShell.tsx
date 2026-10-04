@@ -90,9 +90,12 @@ export function AdminShell({ pending, onLogout }: Props) {
           )
         })}
         </nav>
-        <button type="button" className="admin-logout" onClick={onLogout}>
-          Uitloggen
-        </button>
+        <div className="admin-bar-end">
+          <a className="admin-site" href="/">Naar de website</a>
+          <button type="button" className="admin-logout" onClick={onLogout}>
+            Uitloggen
+          </button>
+        </div>
       </header>
       <div className="admin-card">
         {tab === 'agenda' ? <AdminAgenda clients={displayRows} /> : null}

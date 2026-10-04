@@ -409,7 +409,9 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
   display: grid;
   place-items: center;
   min-height: 100svh;
+  min-height: 100dvh;
   padding: 24px;
+  overflow-y: auto;
   background:
     radial-gradient(ellipse 90% 55% at 50% 28%, #2a2208 0%, transparent 58%),
     var(--ink-deep);
@@ -462,6 +464,7 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
   border: 1px solid #4a4638;
   background: #0c0c0c;
   color: var(--text-on-dark);
+  font-size: 16px;
 }
 .admin-gate input:focus { border-color: var(--yellow); outline: none; }
 .admin-gate [role="alert"] { margin: 0; color: var(--yellow); font-size: 0.88rem; }
@@ -474,6 +477,24 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
   cursor: pointer;
 }
 .admin-gate button[type="submit"]:hover { background: #ffd21a; }
+.admin-gate-site {
+  justify-self: center;
+  margin-top: -8px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  color: #cfc8b8;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+@media (max-width: 720px) {
+  .admin-gate {
+    place-items: start center;
+    padding: 20px 16px max(28px, env(safe-area-inset-bottom));
+  }
+  .admin-gate-card { width: min(420px, 100%); padding: 28px 20px 20px; }
+  .admin-gate-word { width: min(180px, 70%); }
+}
 .admin { display: flex; flex-direction: column; min-height: 100svh; background: #f4f1ea; color: #1a1916; }
 .admin-bar {
   position: sticky; top: 0; z-index: 8;
@@ -498,8 +519,14 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
   border: 1px solid #3a3a3a; background: transparent; color: #f4f1ea;
 }
 .admin-tabs button.is-on { background: #f5c400; border-color: #f5c400; color: #101010; font-weight: 700; }
+.admin-bar-end { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-left: auto; }
+.admin-site {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px;
+  border: 1px solid #3a3a3a; color: #f4f1ea; text-decoration: none;
+}
+.admin-site:hover { border-color: #f5c400; color: #f5c400; }
 .admin-logout {
-  min-height: 44px; padding: 0 16px; margin-left: auto;
+  min-height: 44px; padding: 0 16px;
   border: 1px solid #3a3a3a; background: transparent; color: #f4f1ea; cursor: pointer;
 }
 .admin-logout:hover { border-color: #f5c400; color: #f5c400; }
@@ -608,7 +635,8 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
 @media (max-width: 720px) {
   .admin-bar { flex-direction: column; align-items: stretch; }
   .admin-tabs { display: grid; grid-template-columns: 1fr 1fr; }
-  .admin-logout { margin-left: 0; width: 100%; }
+  .admin-bar-end { margin-left: 0; }
+  .admin-site, .admin-logout { margin-left: 0; width: 100%; justify-content: center; }
   .admin-card { margin: 0; width: 100%; border: 0; padding: 12px; }
   .admin-week { grid-template-columns: 1fr 1fr; }
   .admin-week-title { grid-column: 1 / -1; order: -1; }

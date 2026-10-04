@@ -56,6 +56,7 @@ test('admin without a session shows the password gate', () => {
   expect(screen.getByRole('img', { name: 'BarberBjorn' })).toBeInTheDocument()
   expect(screen.getByText('Dashboard')).toBeInTheDocument()
   expect(screen.getByLabelText('Wachtwoord')).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'Naar de website' })).toHaveAttribute('href', '/')
   expect(screen.queryByText('Agenda')).not.toBeInTheDocument()
 })
 
@@ -63,6 +64,7 @@ test('a stored session skips the password gate', () => {
   sessionStorage.setItem('barber-admin', '1')
   renderAt('/admin')
   expect(screen.getByText('Agenda')).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'Naar de website' })).toHaveAttribute('href', '/')
   expect(screen.queryByLabelText('Wachtwoord')).not.toBeInTheDocument()
 })
 
@@ -74,6 +76,16 @@ test('uitloggen returns to the password gate', async () => {
   expect(screen.getByLabelText('Wachtwoord')).toBeInTheDocument()
   expect(screen.queryByText('Agenda')).not.toBeInTheDocument()
   expect(sessionStorage.getItem('barber-admin')).not.toBe('1')
+})
+
+test('an autofilled password still logs in', async () => {
+  invoke.mockResolvedValue({ data: { ok: true }, error: null })
+  renderAt('/admin')
+  const field = screen.getByLabelText('Wachtwoord')
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(field, 'geheim')
+  await userEvent.click(screen.getByRole('button', { name: 'Inloggen' }))
+  expect(await screen.findByText('Agenda')).toBeInTheDocument()
+  expect(invoke).toHaveBeenCalledWith('admin-login', { body: { password: 'geheim' } })
 })
 
 test('a correct password opens the agenda and stores the session', async () => {
@@ -114,7 +126,7 @@ test('a missing login function falls back to the local login route', async () =>
     data: null,
     error: { message: 'not found', context: { status: 404 } },
   })
-  const fetchMock = vi.fn().mockResolvedValue({ ok: true })
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true }) })
   vi.stubGlobal('fetch', fetchMock)
   renderAt('/admin')
   await userEvent.type(screen.getByLabelText('Wachtwoord'), 'geheim')
@@ -123,6 +135,30 @@ test('a missing login function falls back to the local login route', async () =>
   expect(sessionStorage.getItem('barber-admin')).toBe('1')
   expect(fetchMock).toHaveBeenCalledWith(
     '/__admin-login',
+    expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ password: 'geheim' }),
+    }),
+  )
+})
+
+test('a missing login function falls back to the production login route', async () => {
+  invoke.mockResolvedValue({
+    data: null,
+    error: { message: 'not found', context: { status: 404 } },
+  })
+  const fetchMock = vi.fn(async (url: string) => {
+    if (url === '/api/admin-login') return { ok: true, json: async () => ({ ok: true }) }
+    return { ok: false, status: 405, json: async () => ({ ok: false }) }
+  })
+  vi.stubGlobal('fetch', fetchMock)
+  renderAt('/admin')
+  await userEvent.type(screen.getByLabelText('Wachtwoord'), 'geheim')
+  await userEvent.click(screen.getByRole('button', { name: 'Inloggen' }))
+  expect(await screen.findByText('Agenda')).toBeInTheDocument()
+  expect(sessionStorage.getItem('barber-admin')).toBe('1')
+  expect(fetchMock).toHaveBeenCalledWith(
+    '/api/admin-login',
     expect.objectContaining({
       method: 'POST',
       body: JSON.stringify({ password: 'geheim' }),
