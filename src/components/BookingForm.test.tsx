@@ -36,14 +36,20 @@ beforeEach(() => {
   loadPublicSchedule.mockResolvedValue(defaultSchedule)
 })
 
-test('starts on both and does not offer a service field', () => {
+test('starts on knippen + baard and lets you pick a service', async () => {
   render(
     <LanguageProvider>
       <BookingForm />
     </LanguageProvider>,
   )
-  expect(screen.queryByLabelText(/Dienst/)).not.toBeInTheDocument()
-  expect(screen.getByTestId('booking-summary')).toHaveTextContent('Allebei')
+  expect(screen.queryByText('Allebei')).not.toBeInTheDocument()
+  expect(screen.queryByText('Beide')).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Knippen + baard' })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByRole('button', { name: 'Knippen' })).toHaveAttribute('aria-pressed', 'false')
+  expect(screen.getByRole('button', { name: 'Baard' })).toHaveAttribute('aria-pressed', 'false')
+  await userEvent.click(screen.getByRole('button', { name: 'Knippen' }))
+  expect(screen.getByRole('button', { name: 'Knippen' })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByTestId('booking-summary')).toHaveTextContent('Knippen')
 })
 
 test('shows the chosen service and time above send', async () => {
@@ -60,7 +66,7 @@ test('shows the chosen service and time above send', async () => {
     )
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     const summary = screen.getByTestId('booking-summary')
-    expect(summary).toHaveTextContent('Allebei')
+    expect(summary).toHaveTextContent('Knippen + baard')
     expect(summary).toHaveTextContent('di 6 okt 09:00')
     expect(summary.compareDocumentPosition(screen.getByRole('button', { name: 'Verstuur' }))).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
@@ -120,12 +126,13 @@ test('a free slot books through submitBook', async () => {
         <BookingForm />
       </LanguageProvider>,
     )
+    await user.click(screen.getByRole('button', { name: 'Knippen' }))
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
     await user.click(screen.getByRole('button', { name: 'Verstuur' }))
     expect(submitBook).toHaveBeenCalledWith({
-      service: 'both',
+      service: 'cut',
       name: 'Sam',
       email: 'sam@mail.nl',
       phone: '',

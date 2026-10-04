@@ -22,7 +22,7 @@ test('lists the three prices with the combo marked', () => {
   expect(screen.getByText('€30')).toBeInTheDocument()
   expect(screen.getByText('€15')).toBeInTheDocument()
   expect(screen.getByText('€40')).toBeInTheDocument()
-  expect(document.querySelector('.is-both')).toHaveTextContent('Allebei')
+  expect(document.querySelector('.is-both')).toHaveTextContent('Knippen + baard')
 })
 
 test('replaces seed prices when live services are not empty', async () => {
