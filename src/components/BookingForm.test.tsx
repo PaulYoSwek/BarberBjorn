@@ -480,5 +480,5 @@ test('the service label uses live minutes when services have loaded', async () =
       <BookingForm />
     </LanguageProvider>,
   )
-  expect(await screen.findByText(/70 min/)).toBeInTheDocument()
+  expect(await screen.findByTestId('booking-summary')).toHaveTextContent('70 min')
 })

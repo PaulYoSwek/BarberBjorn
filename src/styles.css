@@ -190,11 +190,41 @@ img, video { max-width: 100%; display: block; }
 .booking h2 { font-family: var(--font-display); font-weight: 720; letter-spacing: -0.04em; margin: 0 0 6px; width: max-content; }
 .booking form {
   flex: 1; min-height: 0;
-  display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto;
+  display: flex;
+  flex-direction: column;
   gap: 16px;
+  overflow: visible;
 }
-.booking-top { display: grid; gap: 8px; }
+.booking-top { display: grid; gap: 10px; flex: 0 0 auto; }
 .booking-top p { margin: 0; max-width: 42ch; }
+.booking-services {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  position: relative;
+  z-index: 5;
+  flex: 0 0 auto;
+}
+.booking-services button {
+  width: 100%;
+  min-height: 52px;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  padding: 10px 8px;
+  cursor: pointer;
+  text-align: center;
+  font-weight: 500;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.booking-services button span { font-size: 0.78rem; font-weight: 400; opacity: 0.68; }
+.booking-services button.is-on {
+  background: var(--yellow);
+  border-color: var(--yellow);
+  font-weight: 700;
+}
 .booking-fields { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
 .booking-confirm { display: grid; gap: 10px; }
 .booking-summary { margin: 0; display: grid; gap: 2px; }
@@ -210,7 +240,7 @@ img, video { max-width: 100%; display: block; }
 .booking-confirm button[type="submit"] {
   background: var(--yellow); color: var(--ink); border-color: var(--yellow); cursor: pointer; font-weight: 500;
 }
-.agenda-wrap { min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+.agenda-wrap { min-height: 0; flex: 1 1 auto; display: flex; flex-direction: column; gap: 10px; }
 .agenda-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .agenda-month {
   margin: 0; font-family: var(--font-display); font-size: 1.55rem; font-weight: 720;
@@ -258,6 +288,8 @@ img, video { max-width: 100%; display: block; }
   .agenda-when strong { font-size: 0.72rem; }
   .agenda-slots button { min-height: 24px; font-size: 0.64rem; }
   .booking-confirm button[type="submit"] { width: 100%; }
+  .booking-services { grid-template-columns: 1fr; max-width: none; }
+  .booking-services button { min-height: 56px; font-size: 1rem; }
 }
 .services { background: var(--ink); color: var(--text-on-dark); padding: 72px 8vw 48px; }
 .services .kicker { color: var(--yellow); }
