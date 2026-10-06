@@ -513,3 +513,39 @@ test('the service label uses live minutes when services have loaded', async () =
   )
   expect(await screen.findByTestId('booking-summary')).toHaveTextContent('70 min')
 })
+
+test('the site blackens exactly the half-hours the dashboard closed', async () => {
+  window.history.replaceState(null, '', '/?lang=nl')
+  localStorage.clear()
+  loadPublicSchedule.mockResolvedValue({
+    ...defaultSchedule,
+    bookings: [],
+    blocks: [
+      { date: '2026-10-06', time: '10:30' },
+      { date: '2026-10-06', time: '11:00' },
+    ],
+  })
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-05T12:00:00'))
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  try {
+    render(
+      <LanguageProvider>
+        <BookingForm />
+      </LanguageProvider>,
+    )
+    await waitFor(() => expect(screen.getByRole('button', { name: 'di 6 okt 10:30' })).toHaveClass('is-taken'))
+    expect(screen.getByRole('button', { name: 'di 6 okt 11:00' })).toHaveClass('is-taken')
+    // Knippen + baard (60 min) from 10:00 would run into 10:30: grey, not black.
+    const ten = screen.getByRole('button', { name: 'di 6 okt 10:00' })
+    expect(ten).toBeDisabled()
+    expect(ten).toHaveClass('is-nofit')
+    expect(ten).not.toHaveClass('is-taken')
+    // A beard (20 min) fits at 10:00.
+    await user.click(screen.getByRole('button', { name: 'Baard' }))
+    expect(screen.getByRole('button', { name: 'di 6 okt 10:00' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'di 6 okt 10:30' })).toHaveClass('is-taken')
+  } finally {
+    vi.useRealTimers()
+  }
+})

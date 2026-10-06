@@ -1,43 +1,13 @@
 import { copy, type Lang, type ServiceId } from '../../../src/content.ts'
+import { humanDate, MAIL_TEMPLATES, type MailKey } from '../../../src/mail-templates.ts'
 import { fillTemplate } from '../../../src/planning.ts'
 import type { Db } from './db.ts'
 import { sendResend } from './resend.ts'
 import { utcToSalonWall } from './salon.ts'
 
-export type MailKey = 'thanks' | 'accepted' | 'declined'
+export type { MailKey }
 
-const FALLBACK: Record<MailKey, Record<Lang, { subject: string; body: string }>> = {
-  thanks: {
-    nl: {
-      subject: 'Afspraak BarberBjorn',
-      body: 'Hoi {{name}}, je {{service}} staat op {{date}} om {{time}}. Tot dan. Bjorn',
-    },
-    en: {
-      subject: 'Appointment BarberBjorn',
-      body: 'Hi {{name}}, your {{service}} is on {{date}} at {{time}}. See you then. Bjorn',
-    },
-  },
-  accepted: {
-    nl: {
-      subject: 'Afspraak bevestigd',
-      body: 'Hoi {{name}}, je {{service}} op {{date}} om {{time}} is bevestigd. Bjorn',
-    },
-    en: {
-      subject: 'Appointment confirmed',
-      body: 'Hi {{name}}, your {{service}} on {{date}} at {{time}} is confirmed. Bjorn',
-    },
-  },
-  declined: {
-    nl: {
-      subject: 'Afspraak niet mogelijk',
-      body: 'Hoi {{name}}, {{date}} om {{time}} lukt niet. Mail of bel voor een andere tijd. Bjorn',
-    },
-    en: {
-      subject: 'Could not book that time',
-      body: 'Hi {{name}}, {{date}} at {{time}} is not possible. Mail or call for another time. Bjorn',
-    },
-  },
-}
+const FALLBACK = MAIL_TEMPLATES
 
 type MailBooking = {
   id: string
@@ -79,7 +49,7 @@ export async function sendBookingMail(
     const vars = {
       name: booking.name,
       service: serviceName(lang, booking.service as ServiceId),
-      date: wall.slice(0, 10),
+      date: humanDate(wall.slice(0, 10), lang),
       time: wall.slice(11, 16),
     }
     if (!subject) subject = fillTemplate(stored?.subject || fallback.subject, vars)

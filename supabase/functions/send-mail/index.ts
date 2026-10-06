@@ -1,9 +1,10 @@
 import { serviceClient } from '../_shared/db.ts'
 import { json, readJson, rejectUnlessSession, servePost } from '../_shared/http.ts'
+import { MAIL_KEYS } from '../../../src/mail-templates.ts'
 import { sendBookingMail, type MailKey } from '../_shared/notify.ts'
 import { utcToSalonWall } from '../_shared/salon.ts'
 
-const KEYS = new Set<MailKey>(['thanks', 'accepted', 'declined'])
+const KEYS = new Set<MailKey>(MAIL_KEYS)
 
 function isKey(value: unknown): value is MailKey {
   return typeof value === 'string' && KEYS.has(value as MailKey)

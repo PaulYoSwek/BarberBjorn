@@ -29,6 +29,7 @@ export type Copy = {
   weekendError: string
   pastError: string
   takenError: string
+  noFitHint: string
   agendaHint: string
   mailFallback: string
   requestNote: string
@@ -116,6 +117,7 @@ export const copy: Record<Lang, Copy> = {
     weekendError: 'Zaterdag en zondag is de stoel dicht. Kies een weekdag.',
     pastError: 'Die dag is al geweest. Kies vandaag of later.',
     takenError: 'Die tijd is al weg. Kies een vrije.',
+    noFitHint: 'Deze dienst past hier niet voor de volgende dichte tijd.',
     agendaHint: 'Kies eerst een dienst.',
     mailFallback: 'De mail opent niet. Kopieer het adres en de aanvraag.',
     requestNote: 'Dit is een aanvraag, nog geen bevestiging.',
@@ -191,6 +193,7 @@ export const copy: Record<Lang, Copy> = {
     weekendError: 'Saturday and Sunday the chair is closed. Pick a weekday.',
     pastError: 'That day has passed. Pick today or a later day.',
     takenError: 'That time is taken. Pick a free one.',
+    noFitHint: 'This service does not fit before the next closed time.',
     agendaHint: 'Pick a service first.',
     mailFallback: 'The email did not open. Copy the address and the request.',
     requestNote: 'This is a request, not a confirmation yet.',

@@ -76,7 +76,7 @@ test('changing cut minutes to 50 and saving calls saveServices', async () => {
 test('saving templates calls saveTemplates with the edited subject', async () => {
   render(<AdminShell />)
   await userEvent.click(screen.getByRole('button', { name: 'Settings' }))
-  const subject = await screen.findByLabelText('Bedankt nl onderwerp')
+  const subject = await screen.findByLabelText('Bedankt voor je boeking nl onderwerp')
   await userEvent.clear(subject)
   await userEvent.type(subject, 'Tot zo')
   await userEvent.click(screen.getByRole('button', { name: 'Opslaan' }))

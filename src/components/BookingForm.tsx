@@ -319,12 +319,21 @@ export function BookingForm() {
                         {day.slots.map((slot) => {
                           const blocked = slot.taken || slot.past
                           const on = input.slot === slot.start
-                          const kind = slot.taken ? 'is-taken' : slot.past ? 'is-past' : undefined
+                          // Black only where the dashboard shows closed or booked; a start that is open
+                          // but too short for the chosen service is greyed out like a past time.
+                          const kind = slot.past
+                            ? 'is-past'
+                            : slot.held
+                              ? 'is-taken'
+                              : slot.taken
+                                ? 'is-nofit'
+                                : undefined
                           return (
                             <button
                               key={slot.start}
                               type="button"
                               aria-label={`${label} ${slot.time}`}
+                              title={kind === 'is-nofit' ? t.noFitHint : undefined}
                               aria-pressed={on}
                               disabled={blocked}
                               className={[on ? 'is-on' : undefined, kind].filter(Boolean).join(' ') || undefined}

@@ -27,3 +27,14 @@ test('the map box outranks the late-loading Mapbox stylesheet', () => {
   expect(css).toMatch(/\.hero-map \.map-canvas \{[^}]*position: absolute/)
   expect(css).not.toMatch(/^\.map-canvas \{/m)
 })
+
+test('the template migration carries every starting mail text', async () => {
+  const { MAIL_TEMPLATES } = await import('./mail-templates')
+  const sql = readFileSync('supabase/migrations/20261006180000_mail_templates.sql', 'utf8')
+  for (const langs of Object.values(MAIL_TEMPLATES)) {
+    for (const { subject, body } of Object.values(langs)) {
+      expect(sql).toContain(subject.replaceAll("'", "''"))
+      expect(sql).toContain(body.replaceAll("'", "''"))
+    }
+  }
+})

@@ -63,7 +63,7 @@ test('Verstuur sends the selected client and template', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'Verstuur' }))
   expect(sendClientMail).toHaveBeenCalledWith('mail-1', 'thanks', {
     subject: 'Hoi',
-    body: 'Hoi Sam, Knippen op 2026-10-06 om 09:00.',
+    body: 'Hoi Sam, Knippen op dinsdag 6 oktober om 09:00.',
   })
 })
 
@@ -84,7 +84,7 @@ test('a successful send clears Mail niet gegaan for that client', async () => {
   render(<AdminShell />)
   await userEvent.click(await screen.findByRole('button', { name: 'Inbox' }))
   expect(screen.getByText('Mail niet gegaan')).toBeInTheDocument()
-  await userEvent.click(screen.getByRole('button', { name: 'Opnieuw' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Opnieuw mailen' }))
   await userEvent.selectOptions(await screen.findByLabelText('Sjabloon'), 'thanks')
   await waitFor(() => expect(screen.getByLabelText('Onderwerp')).toHaveValue('Hoi'))
   await userEvent.click(screen.getByRole('button', { name: 'Verstuur' }))

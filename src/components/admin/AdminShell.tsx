@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { isUnauthorized, loadInbox, type InboxRow } from '../../planning-api'
+import { templateFor } from '../../mail-templates'
+import { isUnauthorized, loadInbox, type InboxRow, type TemplateKey } from '../../planning-api'
 import { AdminAgenda } from './AdminAgenda'
 import { AdminClients } from './AdminClients'
 import { AdminInbox } from './AdminInbox'
@@ -32,6 +33,7 @@ export function AdminShell({ pending, onLogout }: Props) {
   const [inboxLoaded, setInboxLoaded] = useState(false)
   const [inboxError, setInboxError] = useState<string | null>(null)
   const [mailClientId, setMailClientId] = useState<string | null>(null)
+  const [mailKey, setMailKey] = useState<TemplateKey | null>(null)
   const inboxGeneration = useRef(0)
   const decidedStatus = useRef(new Map<string, 'confirmed' | 'declined'>())
   const logout = useRef(onLogout)
@@ -65,6 +67,14 @@ export function AdminShell({ pending, onLogout }: Props) {
   function onDecided(id: string, status: 'confirmed' | 'declined') {
     decidedStatus.current.set(id, status)
     setRows((current) => current.map((row) => (row.id === id ? { ...row, status } : row)))
+    pullInbox(false)
+  }
+
+  function onMoved(id: string, start: string, sent: boolean) {
+    decidedStatus.current.set(id, 'confirmed')
+    setRows((current) =>
+      current.map((row) => (row.id === id ? { ...row, start, status: 'confirmed', mail_sent: sent } : row)),
+    )
     pullInbox(false)
   }
 
@@ -127,14 +137,17 @@ export function AdminShell({ pending, onLogout }: Props) {
             loading={!inboxLoaded}
             error={inboxError}
             onChanged={onDecided}
+            onMoved={onMoved}
             onResend={(id) => {
+              const row = rows.find((item) => item.id === id)
+              setMailKey(row ? templateFor(row) : null)
               setMailClientId(id)
               setTab('mail')
             }}
           />
         ) : null}
         {tab === 'klanten' ? <AdminClients rows={rows} /> : null}
-        {tab === 'mail' ? <AdminMail rows={rows} clientId={mailClientId} onSent={markMailSent} /> : null}
+        {tab === 'mail' ? <AdminMail rows={rows} clientId={mailClientId} templateKey={mailKey} onSent={markMailSent} /> : null}
         {tab === 'settings' ? <AdminSettings /> : null}
       </div>
     </div>

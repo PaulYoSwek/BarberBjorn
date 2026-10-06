@@ -1,13 +1,15 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { defaultSchedule } from '../../schedule'
 import { AdminShell } from './AdminShell'
 
-const { loadInbox, decideInbox, loadPublicSchedule } = vi.hoisted(() => ({
+const { loadInbox, decideInbox, loadPublicSchedule, moveBooking, loadTemplates } = vi.hoisted(() => ({
   loadInbox: vi.fn(),
   decideInbox: vi.fn(),
   loadPublicSchedule: vi.fn(),
+  moveBooking: vi.fn(),
+  loadTemplates: vi.fn(),
 }))
 
 vi.mock('../../planning-api', async (importOriginal) => {
@@ -17,6 +19,8 @@ vi.mock('../../planning-api', async (importOriginal) => {
     loadInbox,
     decideInbox,
     loadPublicSchedule,
+    moveBooking,
+    loadTemplates,
   }
 })
 
@@ -60,6 +64,9 @@ beforeEach(() => {
   loadPublicSchedule.mockReset()
   decideInbox.mockResolvedValue({ ok: true })
   loadPublicSchedule.mockResolvedValue(defaultSchedule)
+  moveBooking.mockReset()
+  loadTemplates.mockReset()
+  loadTemplates.mockResolvedValue([])
 })
 
 test('pending rows offer accept and decline and the badge counts them', async () => {
@@ -200,7 +207,7 @@ test('unsent mail offers a resend that opens Mail for that client', async () => 
   await userEvent.click(await screen.findByRole('button', { name: 'Inbox' }))
   const card = row('Kim Confirmed')
   expect(within(card).getByText('Mail niet gegaan')).toBeInTheDocument()
-  await userEvent.click(within(card).getByRole('button', { name: 'Opnieuw' }))
+  await userEvent.click(within(card).getByRole('button', { name: 'Opnieuw mailen' }))
   expect(screen.getByRole('button', { name: 'Mail' })).toHaveAttribute('aria-current', 'page')
   expect(screen.getByLabelText('Klant')).toHaveValue('conf-1')
 })
@@ -212,4 +219,54 @@ test('a pending request is not flagged as unsent mail and sits under Te beoordel
   expect(within(row('Sam Pending')).queryByText('Mail niet gegaan')).not.toBeInTheDocument()
   expect(within(screen.getByRole('region', { name: 'Te beoordelen' })).getByText('Sam Pending')).toBeInTheDocument()
   expect(screen.getByText('1 nieuw')).toBeInTheDocument()
+})
+
+const TEMPLATES = [
+  { key: 'thanks', lang: 'nl', subject: 'Je afspraak staat vast', body: 'Hoi {{name}}, {{service}} op {{date}} om {{time}}.' },
+  { key: 'accepted', lang: 'nl', subject: 'Bevestigd', body: 'Ja {{name}}' },
+  { key: 'declined', lang: 'nl', subject: 'Helaas', body: 'Nee {{name}}' },
+  { key: 'moved', lang: 'nl', subject: 'Verplaatst', body: 'Nieuw: {{date}} om {{time}}' },
+]
+
+test('Opnieuw mailen opens Mail with the booking template already filled in', async () => {
+  loadTemplates.mockResolvedValue(TEMPLATES)
+  loadInbox.mockResolvedValue([{ ...confirmed, mail_sent: false }])
+  render(<AdminShell />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Inbox' }))
+  await userEvent.click(within(row('Kim Confirmed')).getByRole('button', { name: 'Opnieuw mailen' }))
+  expect(screen.getByLabelText('Sjabloon')).toHaveValue('thanks')
+  await waitFor(() => expect(screen.getByLabelText('Onderwerp')).toHaveValue('Je afspraak staat vast'))
+  expect(screen.getByLabelText('Bericht')).toHaveValue('Hoi Kim Confirmed, Baard op dinsdag 6 oktober om 10:00.')
+})
+
+test('Ander tijdstip moves the booking, confirms it and reports the mail', async () => {
+  moveBooking.mockResolvedValue({ ok: true, sent: true })
+  loadInbox.mockResolvedValueOnce([pending]).mockResolvedValue([
+    { ...pending, start: '2027-01-12T11:00:00', status: 'confirmed', mail_sent: true },
+  ])
+  render(<AdminShell />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Inbox 1' }))
+  await userEvent.click(within(row('Sam Pending')).getByRole('button', { name: 'Ander tijdstip' }))
+  const form = screen.getByRole('form', { name: 'Sam Pending verplaatsen' })
+  expect(within(form).getByLabelText('Nieuwe dag')).toHaveValue('2026-10-08')
+  fireEvent.change(within(form).getByLabelText('Nieuwe dag'), { target: { value: '2027-01-12' } })
+  fireEvent.change(within(form).getByLabelText('Tijd'), { target: { value: '11:00' } })
+  await userEvent.click(within(form).getByRole('button', { name: 'Verplaats en mail' }))
+  expect(moveBooking).toHaveBeenCalledWith('pend-1', '2027-01-12T11:00:00')
+  expect(await screen.findByRole('status')).toHaveTextContent(
+    'Sam Pending staat nu op di 12 jan om 11:00. De klant heeft een mail gekregen.',
+  )
+  await waitFor(() => expect(within(row('Sam Pending')).getByText('Bevestigd')).toBeInTheDocument())
+  expect(screen.getByText('Alles bij')).toBeInTheDocument()
+})
+
+test('moving onto a taken time explains it and keeps the form open', async () => {
+  moveBooking.mockResolvedValue({ ok: false, error: 'overlap' })
+  loadInbox.mockResolvedValue([pending])
+  render(<AdminShell />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Inbox 1' }))
+  await userEvent.click(within(row('Sam Pending')).getByRole('button', { name: 'Ander tijdstip' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Verplaats en mail' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Die tijd is al bezet')
+  expect(screen.getByRole('form', { name: 'Sam Pending verplaatsen' })).toBeInTheDocument()
 })

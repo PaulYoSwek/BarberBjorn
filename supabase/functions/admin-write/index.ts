@@ -1,3 +1,4 @@
+import { MAIL_KEYS } from '../../../src/mail-templates.ts'
 import { addDaysIso, weeklyBlockRows } from '../../../src/planning.ts'
 import type { DayHours, Weekday } from '../../../src/schedule.ts'
 import { serviceClient } from '../_shared/db.ts'
@@ -5,7 +6,7 @@ import { json, readJson, rejectUnlessSession, servePost } from '../_shared/http.
 
 const WEEKDAYS: Weekday[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 const SERVICES = new Set(['cut', 'beard', 'both'])
-const TEMPLATE_KEYS = new Set(['thanks', 'accepted', 'declined'])
+const TEMPLATE_KEYS = new Set<string>(MAIL_KEYS)
 const LANGS = new Set(['nl', 'en'])
 const CLOCK = /^\d{2}:\d{2}$/
 const DATE = /^\d{4}-\d{2}-\d{2}$/

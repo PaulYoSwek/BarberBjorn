@@ -1,6 +1,7 @@
 import { storeAdminSession } from './admin-session'
 import type { BookingInput, BookingKind } from './booking'
 import type { ClientRecord } from './clients'
+import { MAIL_KEYS, type MailKey } from './mail-templates'
 import type { Lang, ServiceId } from './content'
 import {
   AGENDA_DAYS,
@@ -287,7 +288,7 @@ export type InboxRow = {
 
 export type ServiceSave = { id: ServiceId; price: string; minutes: number }
 
-export type TemplateKey = 'thanks' | 'accepted' | 'declined'
+export type TemplateKey = MailKey
 export type TemplateLang = 'nl' | 'en'
 export type TemplateSave = {
   key: TemplateKey
@@ -320,7 +321,7 @@ function isStatus(value: string): value is InboxRow['status'] {
 }
 
 function isTemplateKey(value: string): value is TemplateKey {
-  return value === 'thanks' || value === 'accepted' || value === 'declined'
+  return (MAIL_KEYS as string[]).includes(value)
 }
 
 function isLang(value: string): value is TemplateLang {
@@ -454,4 +455,21 @@ export type ClientSave = { id?: string; name: string; email: string; phone: stri
 
 export function saveClient(client: ClientSave) {
   return invokeOk('admin-write', { type: 'client', ...client })
+}
+
+export type MoveResult = { ok: true; sent: boolean } | { ok: false; error: string }
+
+/** Move a booking to another moment (confirmed there) and mail the client. */
+export async function moveBooking(id: string, start: string): Promise<MoveResult> {
+  if (!supabase) return { ok: false, error: 'offline' }
+  try {
+    const { data, error } = await supabase.functions.invoke('booking-move', { body: { id, start } })
+    const failed = failurePayload(data)
+    if (failed) return { ok: false, error: failed }
+    if (error) return { ok: false, error: await invokeDetail(error) }
+    const sent = Boolean(data && typeof data === 'object' && (data as { sent?: unknown }).sent === true)
+    return { ok: true, sent }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'offline' }
+  }
 }

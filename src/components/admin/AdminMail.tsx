@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
+import { humanDate } from '../../mail-templates'
 import { fillTemplate } from '../../planning'
 import { loadTemplates, sendClientMail, type InboxRow, type TemplateKey, type TemplateSave } from '../../planning-api'
-import { serviceName } from './admin-defaults'
+import { serviceName, TEMPLATE_KEYS, TEMPLATE_LABEL } from './admin-defaults'
 
 type Props = {
   rows: InboxRow[]
   clientId?: string | null
+  /** Template to open with, chosen to fit the booking ("Opnieuw mailen"). */
+  templateKey?: TemplateKey | null
   onSent: (id: string) => void
 }
 
@@ -13,15 +16,15 @@ function mailVars(row: InboxRow) {
   return {
     name: row.name,
     service: serviceName(row.service),
-    date: row.start.slice(0, 10),
+    date: humanDate(row.start.slice(0, 10), row.lang),
     time: row.start.slice(11, 16),
   }
 }
 
-export function AdminMail({ rows, clientId, onSent }: Props) {
+export function AdminMail({ rows, clientId, templateKey, onSent }: Props) {
   const [templates, setTemplates] = useState<TemplateSave[]>([])
   const [selected, setSelected] = useState(clientId ?? '')
-  const [key, setKey] = useState<TemplateKey | ''>('')
+  const [key, setKey] = useState<TemplateKey | ''>(templateKey ?? '')
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
@@ -31,7 +34,8 @@ export function AdminMail({ rows, clientId, onSent }: Props) {
 
   useEffect(() => {
     if (clientId) setSelected(clientId)
-  }, [clientId])
+    if (templateKey) setKey(templateKey)
+  }, [clientId, templateKey])
 
   useEffect(() => {
     let cancelled = false
@@ -123,9 +127,11 @@ export function AdminMail({ rows, clientId, onSent }: Props) {
           onChange={(event) => setKey(event.target.value as TemplateKey | '')}
         >
           <option value="">Kies een sjabloon</option>
-          <option value="thanks">Bedankt</option>
-          <option value="accepted">Bevestigd</option>
-          <option value="declined">Geweigerd</option>
+          {TEMPLATE_KEYS.map((item) => (
+            <option key={item} value={item}>
+              {TEMPLATE_LABEL[item]}
+            </option>
+          ))}
         </select>
       </label>
       <label>

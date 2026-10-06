@@ -25,7 +25,10 @@ export type Schedule = {
 export type Slot = {
   start: string
   time: string
+  /** The chosen service would overlap a closed or booked time: not bookable. */
   taken: boolean
+  /** This half-hour itself is closed or booked, exactly as the dashboard shows it. */
+  held: boolean
   past: boolean
 }
 
@@ -150,11 +153,13 @@ export function agendaDays(
     for (let start = open; start + minutes <= close; start += 30) {
       const end = start + minutes
       const taken = held.some((hold) => overlaps(start, end, hold.start, hold.end))
+      const own = held.some((hold) => overlaps(start, start + 30, hold.start, hold.end))
       const past = date < today || (date === today && start <= nowMinutes)
       slots.push({
         start: `${date}T${clock(start)}:00`,
         time: clock(start),
         taken,
+        held: own,
         past,
       })
     }

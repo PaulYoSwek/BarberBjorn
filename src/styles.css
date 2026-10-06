@@ -838,7 +838,8 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
   background: #e3f0e6; color: #1d6b3a;
 }
 .inbox-count.is-new { background: #f5c400; color: #101010; }
-.inbox-group { display: grid; gap: 8px; }
+.admin-inbox { grid-template-columns: minmax(0, 1fr); }
+.inbox-group { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
 .inbox-group-title {
   margin: 4px 0 0; display: flex; align-items: center; gap: 8px;
   font-family: var(--font-body); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em;
@@ -882,7 +883,7 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
 .inbox-card.is-pending .inbox-status { background: #f5c400; color: #101010; }
 .inbox-card.is-declined .inbox-status { background: #ebe6db; color: #5c574e; }
 .inbox-tags { margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
-.inbox-tag { padding: 3px 8px; font-size: 0.78rem; background: #f4f1ea; color: #3d3a33; border: 1px solid #e4dfd4; }
+.inbox-tag { max-width: 100%; overflow-wrap: anywhere; padding: 3px 8px; font-size: 0.78rem; background: #f4f1ea; color: #3d3a33; border: 1px solid #e4dfd4; }
 .inbox-tag.is-service { font-weight: 600; color: #101010; }
 .inbox-tag.is-custom { background: #fff6cc; border-color: #f0d76a; color: #6b5300; }
 .inbox-contact { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.86rem; }
@@ -907,7 +908,20 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
 }
 .inbox-actions .inbox-resend { min-height: 32px; padding: 0 10px; font-size: 0.8rem; }
 @media (max-width: 720px) {
-  .inbox-list { grid-template-columns: 1fr; }
+  .inbox-list { grid-template-columns: minmax(0, 1fr); }
   .inbox-card { grid-template-columns: 56px minmax(0, 1fr); }
   .inbox-actions .inbox-accept, .inbox-actions .inbox-decline { min-height: 44px; }
 }
+.inbox-actions .inbox-move-open { min-height: 32px; padding: 0 10px; font-size: 0.8rem; }
+.inbox-move {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px;
+  padding: 10px; background: #f7f4ec; border: 1px solid #e4dfd4;
+}
+.inbox-move label { display: grid; gap: 4px; font-size: 0.78rem; font-weight: 600; color: #3d3a33; }
+.inbox-move input { min-height: 40px; padding: 0 8px; border: 1px solid #2a2a2a; background: #fff; font-size: 16px; min-width: 0; }
+.inbox-move-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+.inbox-move-actions button {
+  min-height: 40px; padding: 0 14px; font-weight: 700; font-size: 0.86rem; cursor: pointer;
+  border: 1px solid #2a2a2a; background: #fff; color: #101010;
+}
+.inbox-move-actions .inbox-accept { background: #f5c400; border-color: #f5c400; flex: 1 1 auto; }

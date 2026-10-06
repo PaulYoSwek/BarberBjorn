@@ -76,3 +76,20 @@ test('pending-only extra bookings are not used — only the bookings array occup
   const days = agendaDays('cut', saturday, { bookings: [] })
   expect(days[7].slots.find((slot) => slot.time === '10:00')?.taken).toBe(false)
 })
+
+test('a start that runs into a closed half-hour is not bookable but is not itself held', () => {
+  const days = agendaDays('both', saturday, {
+    blocks: [
+      { date: '2026-10-05', time: '10:30' },
+      { date: '2026-10-05', time: '11:00' },
+    ],
+  })
+  const monday = days[7]
+  const at = (time: string) => monday.slots.find((slot) => slot.time === time)!
+  // 60 minutes from 10:00 reaches into 10:30: not bookable, but 10:00 itself is open.
+  expect(at('10:00')).toMatchObject({ taken: true, held: false })
+  expect(at('10:30')).toMatchObject({ taken: true, held: true })
+  expect(at('11:00')).toMatchObject({ taken: true, held: true })
+  expect(at('09:30')).toMatchObject({ taken: false, held: false })
+  expect(at('11:30')).toMatchObject({ taken: false, held: false })
+})
