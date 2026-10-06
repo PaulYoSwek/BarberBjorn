@@ -69,6 +69,15 @@ export function AdminSettings() {
     setServices((current) => current.map((item) => (item.id === id ? { ...item, ...patch } : item)))
   }
 
+  /** The agenda runs in quarter-hours, so a length snaps to the nearest one (at least 15). */
+  function snapMinutes(id: ServiceSave['id']) {
+    setServices((current) =>
+      current.map((item) =>
+        item.id === id ? { ...item, minutes: Math.max(15, Math.round(item.minutes / 15) * 15) } : item,
+      ),
+    )
+  }
+
   function patchTemplate(key: TemplateSave['key'], lang: TemplateSave['lang'], patch: Partial<Pick<TemplateSave, 'subject' | 'body'>>) {
     setTemplates((current) =>
       current.map((item) => (item.key === key && item.lang === lang ? { ...item, ...patch } : item)),
@@ -81,7 +90,11 @@ export function AdminSettings() {
     setDone(null)
     try {
       const jobs: Promise<{ ok: true } | { ok: false; error: string }>[] = []
-      if (servicesReady) jobs.push(saveServices(services))
+      const snapped = services.map((item) => ({ ...item, minutes: Math.max(15, Math.round(item.minutes / 15) * 15) }))
+      if (servicesReady) {
+        setServices(snapped)
+        jobs.push(saveServices(snapped))
+      }
       if (templatesReady) {
         const payload = templatesToSave(loadedTemplates.current, templates)
         if (payload.length > 0) jobs.push(saveTemplates(payload))
@@ -136,7 +149,9 @@ export function AdminSettings() {
                   const next = Number(event.target.value)
                   if (Number.isFinite(next)) patchService(service.id, { minutes: next })
                 }}
+                onBlur={() => snapMinutes(service.id)}
               />
+              <span className="admin-field-hint">Per kwartier: 15, 30, 45, 60, 75 …</span>
             </label>
           </fieldset>
         )

@@ -41,14 +41,17 @@ test('fillTemplate substitutes the four tokens', () => {
 })
 
 test('weekly block rows stamp each weekday pattern onto every later week', () => {
-  const rows = weeklyBlockRows('2026-10-12', 2, { mon: ['12:00', '12:30'], wed: ['15:00'] })
+  const rows = weeklyBlockRows('2026-10-12', 2, {
+    mon: [{ time: '12:00', reason: 'Lunch', color: 'green' }, { time: '12:15', reason: 'Lunch', color: 'green' }],
+    wed: [{ time: '15:00' }],
+  })
   expect(rows).toEqual([
-    { date: '2026-10-12', time: '12:00' },
-    { date: '2026-10-12', time: '12:30' },
-    { date: '2026-10-14', time: '15:00' },
-    { date: '2026-10-19', time: '12:00' },
-    { date: '2026-10-19', time: '12:30' },
-    { date: '2026-10-21', time: '15:00' },
+    { date: '2026-10-12', time: '12:00', reason: 'Lunch', color: 'green' },
+    { date: '2026-10-12', time: '12:15', reason: 'Lunch', color: 'green' },
+    { date: '2026-10-14', time: '15:00', reason: '', color: '' },
+    { date: '2026-10-19', time: '12:00', reason: 'Lunch', color: 'green' },
+    { date: '2026-10-19', time: '12:15', reason: 'Lunch', color: 'green' },
+    { date: '2026-10-21', time: '15:00', reason: '', color: '' },
   ])
 })
 

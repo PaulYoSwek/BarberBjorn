@@ -1,9 +1,30 @@
 import type { ServiceId } from './content.ts'
 
+/** Every length is a whole number of quarter-hours. */
+export const SLOT_MINUTES = 15
+
 export const SERVICE_MINUTES: Record<ServiceId, number> = {
   cut: 45,
-  beard: 20,
-  both: 60,
+  beard: 30,
+  both: 75,
+}
+
+/** How many quarter-hour cells a service covers (a length not on the grid rounds up). */
+export function spanCells(minutes: number): number {
+  return Math.max(1, Math.ceil(minutes / SLOT_MINUTES))
+}
+
+/** The slot starts an appointment covers: its own start and the cells after it. */
+export function spanStarts(start: string, minutes: number): string[] {
+  const date = start.slice(0, 10)
+  const first = minutesOf(start.slice(11, 16))
+  const starts: string[] = []
+  for (let cell = 0; cell < spanCells(minutes); cell++) {
+    const at = first + cell * SLOT_MINUTES
+    if (at >= 24 * 60) break
+    starts.push(`${date}T${clock(at)}:00`)
+  }
+  return starts
 }
 
 export type Weekday = 'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat'
@@ -12,7 +33,8 @@ export type DayHours = { closed: true } | { open: string; close: string }
 
 export type BookingHold = { start: string; minutes: number }
 
-export type ScheduleBlock = { date: string; time?: string }
+/** A closed date (no time) or a closed quarter-hour. `reason` and `color` are Bjorn's notes. */
+export type ScheduleBlock = { date: string; time?: string; reason?: string; color?: string }
 
 export type Schedule = {
   week: Record<Weekday, DayHours>
@@ -110,7 +132,7 @@ function holdsOn(date: string, schedule: Schedule): { start: number; end: number
     .filter((block) => block.date === date && block.time)
     .map((block) => {
       const start = minutesOf(block.time!)
-      return { start, end: start + 30 }
+      return { start, end: start + SLOT_MINUTES }
     })
   const fromBookings = (schedule.bookings ?? [])
     .filter((hold) => hold.start.startsWith(date))
@@ -135,6 +157,8 @@ export function agendaDays(
     minutes: extra.minutes,
   }
   const minutes = (schedule.minutes ?? SERVICE_MINUTES)[service || 'cut']
+  // The grid works in whole cells, so a length off the grid rounds up to the next quarter-hour.
+  const span = spanCells(minutes) * SLOT_MINUTES
   const today = dateIso(now)
   const origin = mondayOf(now)
   const nowMinutes = now.getHours() * 60 + now.getMinutes()
@@ -150,10 +174,10 @@ export function agendaDays(
     const close = minutesOf(hours.close)
     const held = holdsOn(date, schedule)
     const slots: Slot[] = []
-    for (let start = open; start + minutes <= close; start += 30) {
-      const end = start + minutes
+    for (let start = open; start + span <= close; start += SLOT_MINUTES) {
+      const end = start + span
       const taken = held.some((hold) => overlaps(start, end, hold.start, hold.end))
-      const own = held.some((hold) => overlaps(start, start + 30, hold.start, hold.end))
+      const own = held.some((hold) => overlaps(start, start + SLOT_MINUTES, hold.start, hold.end))
       const past = date < today || (date === today && start <= nowMinutes)
       slots.push({
         start: `${date}T${clock(start)}:00`,

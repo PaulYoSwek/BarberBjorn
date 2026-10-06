@@ -368,7 +368,9 @@ test('a successful slot book takes that start and ignores another submit', async
     await user.click(screen.getByRole('button', { name: 'Boeken' }))
     expect(submitBook).toHaveBeenCalledTimes(1)
     expect(screen.getByText('Je tijd is van jou. Er gaat een mail naartoe.')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'di 6 okt 10:00' }))
+    // The 75-minute booking at 09:00 holds 09:00 to 10:15, so 10:15 is the next free start.
+    expect(screen.getByRole('button', { name: 'di 6 okt 10:00' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'di 6 okt 10:15' }))
     await user.click(screen.getByRole('button', { name: 'Boeken' }))
     expect(submitBook).toHaveBeenCalledTimes(2)
   } finally {
@@ -582,6 +584,67 @@ test('booking without a phone number is stopped with a hint at the field', async
     expect(phone.closest('label')).toHaveTextContent('Dit nummer klopt niet. Gebruik minstens 8 cijfers.')
     expect(submitBook).not.toHaveBeenCalled()
     expect(screen.getByRole('link', { name: 'Privacyverklaring' })).toHaveAttribute('href', '/privacy')
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
+test('choosing a start shows the whole appointment and the end time', async () => {
+  window.history.replaceState(null, '', '/?lang=nl')
+  localStorage.clear()
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-05T12:00:00'))
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  try {
+    render(
+      <LanguageProvider>
+        <BookingForm />
+      </LanguageProvider>,
+    )
+    // Knippen + baard: 75 minutes = five quarter-hours.
+    await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
+    expect(screen.getByRole('button', { name: 'di 6 okt 09:00' })).toHaveClass('is-on')
+    for (const time of ['09:15', '09:30', '09:45', '10:00']) {
+      expect(screen.getByRole('button', { name: `di 6 okt ${time}` })).toHaveClass('is-span')
+    }
+    expect(screen.getByRole('button', { name: 'di 6 okt 10:15' })).not.toHaveClass('is-span')
+    expect(screen.getByTestId('booking-summary')).toHaveTextContent('di 6 okt 09:00–10:15')
+    // Switching to a 45-minute cut narrows the span and asks for a start again.
+    await user.click(screen.getByRole('button', { name: 'Knippen' }))
+    expect(screen.getByTestId('booking-summary')).toHaveTextContent('Nog geen tijd gekozen')
+    await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
+    expect(screen.getByRole('button', { name: 'di 6 okt 09:30' })).toHaveClass('is-span')
+    expect(screen.getByRole('button', { name: 'di 6 okt 09:45' })).not.toHaveClass('is-span')
+    expect(screen.getByTestId('booking-summary')).toHaveTextContent('di 6 okt 09:00–09:45')
+    // The last starts of the day only offer what still fits before closing at 18:00.
+    expect(screen.getByRole('button', { name: 'di 6 okt 17:15' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: 'di 6 okt 17:30' })).not.toBeInTheDocument()
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
+test('a chosen start is let go when a reload shows it taken', async () => {
+  window.history.replaceState(null, '', '/?lang=nl')
+  localStorage.clear()
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-05T12:00:00'))
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  try {
+    render(
+      <LanguageProvider>
+        <BookingForm />
+      </LanguageProvider>,
+    )
+    await user.click(screen.getByRole('button', { name: 'di 6 okt 11:00' }))
+    expect(screen.getByTestId('booking-summary')).toHaveTextContent('di 6 okt 11:00')
+    loadPublicSchedule.mockResolvedValue({
+      ...defaultSchedule,
+      bookings: [...(defaultSchedule.bookings ?? []), { start: '2026-10-06T11:30:00', minutes: 45 }],
+    })
+    publishLiveSchedule()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'di 6 okt 11:00' })).toBeDisabled())
+    expect(screen.getByTestId('booking-summary')).toHaveTextContent('Nog geen tijd gekozen')
   } finally {
     vi.useRealTimers()
   }

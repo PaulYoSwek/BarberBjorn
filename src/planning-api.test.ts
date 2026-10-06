@@ -55,7 +55,7 @@ test('maps live week blocks and occupancy into a schedule', async () => {
       { weekday: 'sat', closed: true, open: null, close: null },
       { weekday: 'sun', closed: true, open: null, close: null },
     ],
-    schedule_blocks: [
+    schedule_blocks_public: [
       { date: '2026-10-12', time: null },
       { date: '2026-10-13', time: '12:00:00' },
     ],
@@ -76,7 +76,7 @@ test('maps live week blocks and occupancy into a schedule', async () => {
   const blockFilters: string[] = []
   const from = vi.fn((table: string) => ({
     select: vi.fn(() =>
-      query({ data: tables[table] ?? [], error: null }, table === 'schedule_blocks' ? blockFilters : []),
+      query({ data: tables[table] ?? [], error: null }, table === 'schedule_blocks_public' ? blockFilters : []),
     ),
   }))
 
@@ -93,7 +93,8 @@ test('maps live week blocks and occupancy into a schedule', async () => {
   const zoned = schedule.bookings?.[1]
 
   expect(from).toHaveBeenCalledWith('schedule_week')
-  expect(from).toHaveBeenCalledWith('schedule_blocks')
+  expect(from).toHaveBeenCalledWith('schedule_blocks_public')
+  expect(from).not.toHaveBeenCalledWith('schedule_blocks')
   expect(from).toHaveBeenCalledWith('booking_occupancy')
   expect(from).toHaveBeenCalledWith('services')
   expect(from).toHaveBeenCalledWith('schedule_exceptions')

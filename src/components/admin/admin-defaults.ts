@@ -4,8 +4,8 @@ import type { ServiceSave, TemplateKey, TemplateLang, TemplateSave } from '../..
 
 export const SERVICE_SEED: ServiceSave[] = [
   { id: 'cut', price: '€30', minutes: 45 },
-  { id: 'beard', price: '€15', minutes: 20 },
-  { id: 'both', price: '€40', minutes: 60 },
+  { id: 'beard', price: '€15', minutes: 30 },
+  { id: 'both', price: '€40', minutes: 75 },
 ]
 
 export const TEMPLATE_KEYS: TemplateKey[] = MAIL_KEYS

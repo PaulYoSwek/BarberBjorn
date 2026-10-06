@@ -15,6 +15,7 @@ import {
   defaultSchedule,
   firstBookableWeek,
   SERVICE_MINUTES,
+  spanStarts,
   type AgendaDay,
   type BookingHold,
   type Schedule,
@@ -48,20 +49,28 @@ function customSlot(date: string, time: string) {
   return `${date}T${time.slice(0, 5)}:00`
 }
 
+function endClock(time: string, minutes: number): string {
+  const [hours, mins] = time.split(':').map(Number)
+  const total = hours * 60 + mins + minutes
+  return `${String(Math.floor(total / 60) % 24).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
+}
+
 function whenStamp(
   slot: string,
   days: AgendaDay[],
   labels: { key: string; label: string }[],
   short: string[],
+  minutes: number,
 ) {
   if (!slot) return ''
   const date = slot.slice(0, 10)
   const time = slot.slice(11, 16)
+  const span = minutes > 0 ? `${time}–${endClock(time, minutes)}` : time
   const day = days.find((item) => item.date === date)
-  if (day) return `${dayStamp(day, labels, short)} ${time}`
+  if (day) return `${dayStamp(day, labels, short)} ${span}`
   const weekday = WEEKDAYS[new Date(`${date}T12:00:00`).getDay()]
   const name = labels.find((item) => item.key === weekday)?.label ?? weekday
-  return `${name} ${Number(date.slice(8, 10))} ${short[monthIndex(date)]} ${time}`
+  return `${name} ${Number(date.slice(8, 10))} ${short[monthIndex(date)]} ${span}`
 }
 
 const TAKEN_SIGNALS = new Set(['taken', 'takenError', copy.nl.takenError, copy.en.takenError])
@@ -92,6 +101,7 @@ export function BookingForm() {
   const inputRef = useRef(input)
   inputRef.current = input
   const [week, setWeek] = useState(0)
+  const [hover, setHover] = useState('')
   const [latched, setLatched] = useState(false)
   const busy = useRef(false)
   const [sending, setSending] = useState(false)
@@ -164,6 +174,16 @@ export function BookingForm() {
       return open ? current : firstBookableWeek(days, WEEK)
     })
   }, [days])
+
+  // A chosen start that no longer fits (someone else booked, hours changed) is let go.
+  useEffect(() => {
+    if (input.kind !== 'slot' || !input.slot) return
+    const day = days.find((item) => item.date === input.slot.slice(0, 10))
+    const found = day?.slots.find((item) => item.start === input.slot)
+    if (!found || found.taken || found.past) {
+      setInput((current) => (current.slot === input.slot ? { ...current, slot: '' } : current))
+    }
+  }, [days, input.kind, input.slot])
 
   useEffect(() => {
     setErrors((current) => {
@@ -241,7 +261,10 @@ export function BookingForm() {
   const service = input.service || 'both'
   const duration = minutes?.[service] ?? SERVICE_MINUTES[service]
   const serviceName = t.services.find((item) => item.id === service)?.name ?? ''
-  const when = whenStamp(input.slot, days, t.days, t.monthShort)
+  const when = whenStamp(input.slot, days, t.days, t.monthShort, duration)
+  // The cells an appointment would cover: the chosen start, or the start under the pointer.
+  const covered = new Set(input.kind === 'slot' && input.slot ? spanStarts(input.slot, duration) : [])
+  const previewed = new Set(hover && hover !== input.slot ? spanStarts(hover, duration) : [])
 
   return (
     <section id="afspraak" className="booking">
@@ -319,6 +342,8 @@ export function BookingForm() {
                         {day.slots.map((slot) => {
                           const blocked = slot.taken || slot.past
                           const on = input.slot === slot.start
+                          const inSpan = !on && covered.has(slot.start)
+                          const inPreview = !on && !inSpan && previewed.has(slot.start)
                           // Black only where the dashboard shows closed or booked; a start that is open
                           // but too short for the chosen service is greyed out like a past time.
                           const kind = slot.past
@@ -336,7 +361,19 @@ export function BookingForm() {
                               title={kind === 'is-nofit' ? t.noFitHint : undefined}
                               aria-pressed={on}
                               disabled={blocked}
-                              className={[on ? 'is-on' : undefined, kind].filter(Boolean).join(' ') || undefined}
+                              className={
+                                [on ? 'is-on' : undefined, inSpan ? 'is-span' : undefined, inPreview ? 'is-preview' : undefined, kind]
+                                  .filter(Boolean)
+                                  .join(' ') || undefined
+                              }
+                              onMouseEnter={() => {
+                                if (!blocked) setHover(slot.start)
+                              }}
+                              onMouseLeave={() => setHover('')}
+                              onFocus={() => {
+                                if (!blocked) setHover(slot.start)
+                              }}
+                              onBlur={() => setHover('')}
                               onClick={() => edit({ ...input, slot: slot.start })}
                             >
                               {slot.time}

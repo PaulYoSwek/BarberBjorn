@@ -1,5 +1,6 @@
+import { isBlockColor, REASON_MAX } from '../../../src/block-colors.ts'
 import { MAIL_KEYS } from '../../../src/mail-templates.ts'
-import { addDaysIso, weeklyBlockRows } from '../../../src/planning.ts'
+import { addDaysIso, weeklyBlockRows, type BlockPattern } from '../../../src/planning.ts'
 import type { DayHours, Weekday } from '../../../src/schedule.ts'
 import { isSchemaMissing } from '../_shared/clients.ts'
 import { serviceClient } from '../_shared/db.ts'
@@ -11,6 +12,15 @@ const TEMPLATE_KEYS = new Set<string>(MAIL_KEYS)
 const LANGS = new Set(['nl', 'en'])
 const CLOCK = /^\d{2}:\d{2}$/
 const DATE = /^\d{4}-\d{2}-\d{2}$/
+
+/** Bjorn's note on a closed time. Returns null when the body is malformed. */
+function parseNote(value: Record<string, unknown>): { reason: string; color: string } | null {
+  const reason = value.reason === undefined ? '' : value.reason
+  const color = value.color === undefined ? '' : value.color
+  if (typeof reason !== 'string' || reason.length > REASON_MAX) return null
+  if (!isBlockColor(color)) return null
+  return { reason: reason.trim(), color }
+}
 
 function parseHours(value: unknown): DayHours | null {
   if (!value || typeof value !== 'object') return null
@@ -109,14 +119,28 @@ servePost(async (req) => {
     if (!DATE.test(from) || weeks < 1 || weeks > 104) return json(req, 400, { ok: false, error: 'invalid' })
     if (!record.pattern || typeof record.pattern !== 'object') return json(req, 400, { ok: false, error: 'invalid' })
     const given = record.pattern as Record<string, unknown>
-    const pattern: Partial<Record<Weekday, string[]>> = {}
+    const pattern: Partial<Record<Weekday, BlockPattern[]>> = {}
     for (const weekday of WEEKDAYS) {
-      const times = given[weekday]
-      if (times === undefined) continue
-      if (!Array.isArray(times) || times.some((time) => typeof time !== 'string' || !CLOCK.test(time))) {
-        return json(req, 400, { ok: false, error: 'invalid' })
+      const entries = given[weekday]
+      if (entries === undefined) continue
+      if (!Array.isArray(entries)) return json(req, 400, { ok: false, error: 'invalid' })
+      const seen = new Set<string>()
+      const parsed: BlockPattern[] = []
+      for (const entry of entries) {
+        // Older dashboards send plain times; current ones send { time, reason, color }.
+        const item = typeof entry === 'string' ? { time: entry } : (entry as Record<string, unknown> | null)
+        if (!item || typeof item.time !== 'string' || !CLOCK.test(item.time)) {
+          return json(req, 400, { ok: false, error: 'invalid' })
+        }
+        const note = parseNote(item)
+        if (!note || seen.has(item.time)) {
+          if (!note) return json(req, 400, { ok: false, error: 'invalid' })
+          continue
+        }
+        seen.add(item.time)
+        parsed.push({ time: item.time, ...note })
       }
-      pattern[weekday] = [...new Set(times as string[])]
+      pattern[weekday] = parsed
     }
     const to = addDaysIso(from, weeks * 7 - 1)
     // Replace closed half-hours on the later dates; whole closed days (holidays) stay.
@@ -159,12 +183,14 @@ servePost(async (req) => {
     if (!DATE.test(date) || typeof record.on !== 'boolean') return json(req, 400, { ok: false, error: 'invalid' })
     const time = typeof record.time === 'string' && record.time ? record.time.slice(0, 5) : null
     if (time && !CLOCK.test(time)) return json(req, 400, { ok: false, error: 'invalid' })
+    const note = parseNote(record)
+    if (!note) return json(req, 400, { ok: false, error: 'invalid' })
     const deleted = time
       ? await db.from('schedule_blocks').delete().eq('date', date).eq('time', time)
       : await db.from('schedule_blocks').delete().eq('date', date).is('time', null)
     if (deleted.error) throw new Error(deleted.error.message)
     if (record.on) {
-      const inserted = await db.from('schedule_blocks').insert({ date, time })
+      const inserted = await db.from('schedule_blocks').insert({ date, time, ...note })
       if (inserted.error) throw new Error(inserted.error.message)
     }
     return json(req, 200, { ok: true })
@@ -181,6 +207,8 @@ servePost(async (req) => {
       if (typeof service.minutes !== 'number' || !Number.isInteger(service.minutes) || service.minutes <= 0 || service.minutes > 480) {
         return json(req, 400, { ok: false, error: 'invalid' })
       }
+      // The agenda runs in quarter-hours, so every length must be a whole number of them.
+      if (service.minutes % 15 !== 0) return json(req, 400, { ok: false, error: 'minutes' })
       rows.push({ id: service.id, price: service.price.trim(), minutes: service.minutes })
     }
     if (rows.length > 0) {

@@ -2,6 +2,7 @@ import { storeAdminSession } from './admin-session'
 import type { BookingInput, BookingKind } from './booking'
 import type { ClientRecord } from './clients'
 import { MAIL_KEYS, type MailKey } from './mail-templates'
+import type { BlockPattern } from './planning'
 import type { Lang, ServiceId } from './content'
 import {
   AGENDA_DAYS,
@@ -28,6 +29,8 @@ type WeekRow = {
 type BlockRow = {
   date: string
   time: string | null
+  reason?: string | null
+  color?: string | null
 }
 
 type ExceptionRow = {
@@ -71,8 +74,12 @@ function localStart(value: string): string {
 
 function toBlock(row: BlockRow): ScheduleBlock {
   const date = String(row.date).slice(0, 10)
-  if (!row.time) return { date }
-  return { date, time: row.time.slice(0, 5) }
+  const note = {
+    ...(row.reason ? { reason: row.reason } : {}),
+    ...(row.color ? { color: row.color } : {}),
+  }
+  if (!row.time) return { date, ...note }
+  return { date, time: row.time.slice(0, 5), ...note }
 }
 
 async function read<T>(table: string, columns: string): Promise<T[]> {
@@ -142,7 +149,7 @@ export async function loadPublicSchedule(): Promise<Schedule> {
   const range = agendaRange()
   const [weekRows, blockRows, occupancy, exceptions] = await Promise.all([
     read<WeekRow>('schedule_week', 'weekday, closed, open, close'),
-    readDates<BlockRow>('schedule_blocks', 'date, time', range.from, range.to),
+    readDates<BlockRow>('schedule_blocks_public', 'date, time', range.from, range.to),
     read<OccupancyRow>('booking_occupancy', 'start, minutes'),
     readExceptions(),
   ])
@@ -228,10 +235,10 @@ export function submitCustom(input: BookingInput & { lang: Lang }) {
 }
 
 export type AdminWriteBody =
-  | { type: 'blocks'; date: string; time: string; on: boolean }
+  | { type: 'blocks'; date: string; time: string; on: boolean; reason?: string; color?: string }
   | { type: 'week'; week: Record<Weekday, DayHours>; clearDates?: string[] }
   | { type: 'exception'; date: string; hours: DayHours | null }
-  | { type: 'copyBlocks'; from: string; weeks: number; pattern: Partial<Record<Weekday, string[]>> }
+  | { type: 'copyBlocks'; from: string; weeks: number; pattern: Partial<Record<Weekday, BlockPattern[]>> }
 
 export type LoginResult = 'ok' | 'wrong' | 'unavailable'
 
@@ -482,4 +489,16 @@ export function deleteClient(client: { id?: string | null; email: string; phone:
     email: client.email,
     phone: client.phone,
   })
+}
+
+/** Closed times with Bjorn's reasons and colours. Dashboard only (needs the session). */
+export async function loadAdminBlocks(): Promise<ScheduleBlock[]> {
+  if (!supabase) throw new Error('offline')
+  const { data, error } = await supabase.functions.invoke('blocks-list', { body: {} })
+  if (error) throw new Error(await invokeDetail(error))
+  const failed = failurePayload(data)
+  if (failed) throw new Error(failed)
+  const record = (data ?? {}) as { blocks?: unknown }
+  if (!Array.isArray(record.blocks)) throw new Error('offline')
+  return (record.blocks as BlockRow[]).map(toBlock)
 }

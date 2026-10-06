@@ -28,8 +28,8 @@ vi.mock('../../planning-api', async (importOriginal) => {
 
 const services = [
   { id: 'cut' as const, price: '€30', minutes: 45 },
-  { id: 'beard' as const, price: '€15', minutes: 20 },
-  { id: 'both' as const, price: '€40', minutes: 60 },
+  { id: 'beard' as const, price: '€15', minutes: 30 },
+  { id: 'both' as const, price: '€40', minutes: 75 },
 ]
 
 const templates = [
@@ -56,20 +56,22 @@ beforeEach(() => {
   loadPublicSchedule.mockResolvedValue(defaultSchedule)
 })
 
-test('changing cut minutes to 50 and saving calls saveServices', async () => {
+test('changing cut minutes to 50 snaps to 45 and saving calls saveServices', async () => {
   render(<AdminShell />)
   await userEvent.click(screen.getByRole('button', { name: 'Settings' }))
   const minutes = await screen.findByLabelText('Knippen minuten')
   const price = screen.getByLabelText('Knippen prijs')
   await userEvent.clear(minutes)
   await userEvent.type(minutes, '50')
+  await userEvent.tab()
+  expect(minutes).toHaveValue('45')
   await userEvent.clear(price)
   await userEvent.type(price, '€32')
   await userEvent.click(screen.getByRole('button', { name: 'Opslaan' }))
   expect(saveServices).toHaveBeenCalledWith([
-    { id: 'cut', price: '€32', minutes: 50 },
-    { id: 'beard', price: '€15', minutes: 20 },
-    { id: 'both', price: '€40', minutes: 60 },
+    { id: 'cut', price: '€32', minutes: 45 },
+    { id: 'beard', price: '€15', minutes: 30 },
+    { id: 'both', price: '€40', minutes: 75 },
   ])
 })
 

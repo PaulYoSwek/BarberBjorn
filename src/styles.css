@@ -967,3 +967,40 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
   border: 1px solid #8a1600; background: #fff; color: #8a1600; font-weight: 600;
 }
 .admin-danger-confirm { background: #8a1600 !important; border-color: #8a1600 !important; color: #fff !important; font-weight: 700; }
+
+/* Quarter-hour agenda */
+.agenda-slots button { min-height: 28px; font-size: 0.72rem; padding: 0 2px; }
+.agenda-slots button.is-span { background: #ffe680; border-color: #f5c400; color: var(--ink); opacity: 1; }
+.agenda-slots button.is-preview { background: #fff3b8; border-color: #e8cf6a; }
+.agenda-slots button.is-nofit { opacity: 0.34; background: #efece4; }
+@media (max-width: 800px) {
+  .agenda-slots button { min-height: 32px; font-size: 0.72rem; }
+}
+.agenda-slots .admin-cell { min-height: 32px; padding: 2px 6px; gap: 0; line-height: 1.15; }
+.admin-cell-time { font-size: 0.72rem; font-weight: 600; }
+.agenda-slots .admin-cell.is-vrij .admin-cell-time { font-weight: 400; color: #5c574e; }
+.agenda-slots .admin-cell.is-shut { color: #f4f1ea; }
+.agenda-slots .admin-cell.is-cont { border-top-color: rgba(255, 255, 255, 0.25); }
+.agenda-slots .admin-cell.is-booked.is-cont { border-top-color: rgba(16, 16, 16, 0.18); }
+.agenda-slots .admin-cell.is-cont .admin-cell-time { opacity: 0.7; font-weight: 400; }
+.admin-cell-name { font-size: 0.66rem; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-day-reason {
+  display: block; margin-top: 4px; padding: 2px 6px; font-size: 0.66rem; font-weight: 600; color: #f4f1ea;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.admin-note { display: grid; gap: 8px; }
+.admin-note-row { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; }
+.admin-note-row label { display: grid; gap: 4px; font-size: 0.8rem; flex: 1 1 220px; }
+.admin-note-row input { min-height: 44px; border: 1px solid #2a2a2a; background: #fff; padding: 0 8px; font-size: 16px; }
+.admin-swatches { display: flex; gap: 6px; }
+.admin-swatches button {
+  width: 36px; height: 36px; border: 2px solid transparent; cursor: pointer; padding: 0;
+  outline-offset: 2px;
+}
+.admin-swatches button.is-on { border-color: #f5c400; box-shadow: 0 0 0 2px #fff inset; }
+.admin-note-clear { min-height: 36px; padding: 0 10px; border: 1px solid #2a2a2a; background: #fff; font-size: 0.8rem; }
+.admin-legend { flex-wrap: wrap; }
+.admin-legend-pick { width: 14px; height: 14px; border: 1px solid #2a2a2a; padding: 0; cursor: pointer; }
+.admin-legend li.is-shut::before { display: none; }
+.admin-legend li.is-shut { gap: 6px; }
+.admin-field-hint { display: block; font-size: 0.74rem; color: #6b665c; margin-top: 2px; }

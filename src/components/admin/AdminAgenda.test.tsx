@@ -7,10 +7,11 @@ import { AdminPage } from '../../pages/AdminPage'
 import { AdminShell } from './AdminShell'
 import { DEMO_INBOX, DEMO_SCHEDULE } from './demo'
 
-const { adminWrite, loadPublicSchedule, loadInbox } = vi.hoisted(() => ({
+const { adminWrite, loadPublicSchedule, loadInbox, loadAdminBlocks } = vi.hoisted(() => ({
   adminWrite: vi.fn(),
   loadPublicSchedule: vi.fn(),
   loadInbox: vi.fn(),
+  loadAdminBlocks: vi.fn(),
 }))
 
 vi.mock('../../planning-api', async (importOriginal) => {
@@ -20,6 +21,7 @@ vi.mock('../../planning-api', async (importOriginal) => {
     adminWrite,
     loadPublicSchedule,
     loadInbox,
+    loadAdminBlocks,
   }
 })
 
@@ -35,6 +37,8 @@ beforeEach(() => {
   loadPublicSchedule.mockResolvedValue(DEMO_SCHEDULE)
   loadInbox.mockReset()
   loadInbox.mockResolvedValue(DEMO_INBOX)
+  loadAdminBlocks.mockReset()
+  loadAdminBlocks.mockRejectedValue(new Error('offline'))
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date('2026-10-05T08:00:00'))
 })
@@ -63,11 +67,13 @@ test('a stored session shows the week and a 12:00 chip writes that block', async
     date: '2026-10-05',
     time: '12:00',
     on: true,
+    reason: '',
+    color: '',
   })
   expect(screen.getByRole('button', { name: 'ma 5 okt 12:00 dicht' })).toHaveAttribute('aria-pressed', 'true')
 })
 
-test('15:00 and 18:00 can be closed on their own', async () => {
+test('15:00 and the last quarter 17:45 can be closed on their own', async () => {
   await openAdmin()
   await userEvent.click(screen.getByRole('button', { name: 'ma 5 okt 15:00 vrij' }))
   expect(adminWrite).toHaveBeenCalledWith({
@@ -75,13 +81,18 @@ test('15:00 and 18:00 can be closed on their own', async () => {
     date: '2026-10-05',
     time: '15:00',
     on: true,
+    reason: '',
+    color: '',
   })
-  await userEvent.click(screen.getByRole('button', { name: 'ma 5 okt 18:00 vrij' }))
+  expect(screen.queryByRole('button', { name: 'ma 5 okt 18:00 vrij' })).not.toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'ma 5 okt 17:45 vrij' }))
   expect(adminWrite).toHaveBeenCalledWith({
     type: 'blocks',
     date: '2026-10-05',
-    time: '18:00',
+    time: '17:45',
     on: true,
+    reason: '',
+    color: '',
   })
 })
 
@@ -122,6 +133,8 @@ test('a late schedule load keeps a 12:00 block written this session', async () =
     date: '2026-10-05',
     time: '12:00',
     on: true,
+    reason: '',
+    color: '',
   })
   expect(chip).toHaveAttribute('aria-pressed', 'true')
   await act(async () => {
@@ -258,7 +271,7 @@ test('Kopieer naar aankomende weken writes the edited weekday hours and clears t
   )
 })
 
-test('Kopieer naar aankomende weken copies closed half-hours and says it worked', async () => {
+test('Kopieer naar aankomende weken copies closed quarter-hours and says it worked', async () => {
   loadPublicSchedule.mockResolvedValue({
     ...DEMO_SCHEDULE,
     // A one-off close next Tuesday that the copy replaces, and a holiday it keeps.
@@ -274,16 +287,24 @@ test('Kopieer naar aankomende weken copies closed half-hours and says it worked'
       type: 'copyBlocks',
       from: '2026-10-12',
       weeks: 52,
-      pattern: { mon: ['12:00', '12:30'], tue: [], wed: ['16:00'], thu: [], fri: [], sat: [], sun: [] },
+      pattern: {
+        mon: [{ time: '12:00', reason: '', color: '' }, { time: '12:30', reason: '', color: '' }],
+        tue: [],
+        wed: [{ time: '16:00', reason: '', color: '' }],
+        thu: [],
+        fri: [],
+        sat: [],
+        sun: [],
+      },
     }),
   )
   const status = await screen.findByRole('status')
   expect(status).toHaveTextContent('Gekopieerd naar de komende 52 weken')
-  expect(status).toHaveTextContent('3 dichte tijden per week')
+  expect(status).toHaveTextContent('3 dichte kwartieren per week')
   await userEvent.click(screen.getByRole('button', { name: 'Volgende week' }))
   expect(screen.getByRole('button', { name: 'ma 12 okt 12:00 dicht' })).toHaveAttribute('aria-pressed', 'true')
   expect(screen.getByRole('button', { name: 'ma 12 okt 12:30 dicht' })).toHaveAttribute('aria-pressed', 'true')
-  expect(screen.getByRole('button', { name: 'ma 12 okt 13:00 vrij' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'ma 12 okt 12:15 vrij' })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'di 13 okt 15:00 vrij' })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /wo 14 okt dicht/ })).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'Volgende week' }))
@@ -310,7 +331,7 @@ test('each day column can close the whole day', async () => {
   expect(screen.getByRole('button', { name: /ma 5 okt dicht/ })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'ma 5 okt hele dag dicht' })).toHaveAttribute('aria-pressed', 'true')
   expect(screen.getByRole('button', { name: 'di 6 okt 09:00 vrij' })).toBeInTheDocument()
-  expect(adminWrite).toHaveBeenCalledWith({ type: 'blocks', date: '2026-10-05', time: '', on: true })
+  expect(adminWrite).toHaveBeenCalledWith({ type: 'blocks', date: '2026-10-05', time: '', on: true, reason: '', color: '' })
   await userEvent.click(screen.getByRole('button', { name: 'Volgende week' }))
   expect(screen.getByRole('button', { name: /ma 12 okt 09:00–18:00/ })).toBeInTheDocument()
 })
@@ -383,4 +404,60 @@ test('shell marks the active tab at the top and shows the inbox badge', async ()
   expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'Naar de website' })).toHaveAttribute('href', '/')
   expect(screen.queryByRole('button', { name: 'Kopieer naar aankomende weken' })).not.toBeInTheDocument()
+})
+
+test('a closed quarter-hour can carry a reason and colour, shown in the cell, the legend and later weeks', async () => {
+  await openReady()
+  await userEvent.type(screen.getByLabelText('Reden (mag leeg)'), 'Schoonmaker')
+  await userEvent.click(screen.getByRole('radio', { name: 'Blauw' }))
+  await userEvent.click(screen.getByRole('button', { name: 'ma 5 okt 12:00 vrij' }))
+  await userEvent.click(screen.getByRole('button', { name: 'ma 5 okt 12:15 vrij' }))
+  expect(adminWrite).toHaveBeenCalledWith({
+    type: 'blocks',
+    date: '2026-10-05',
+    time: '12:00',
+    on: true,
+    reason: 'Schoonmaker',
+    color: 'blue',
+  })
+  const first = screen.getByRole('button', { name: 'ma 5 okt 12:00 dicht Schoonmaker' })
+  const second = screen.getByRole('button', { name: 'ma 5 okt 12:15 dicht Schoonmaker' })
+  expect(first).toHaveStyle({ background: '#2f6fb5' })
+  expect(first).toHaveTextContent('Schoonmaker')
+  // The second cell of the same run only shows its time.
+  expect(second).toHaveClass('is-cont')
+  expect(second).not.toHaveTextContent('Schoonmaker')
+  expect(screen.getByRole('button', { name: 'Reden kiezen: Schoonmaker' })).toBeInTheDocument()
+  // Tapping once more reopens the quarter-hour.
+  await userEvent.click(first)
+  expect(adminWrite).toHaveBeenLastCalledWith({ type: 'blocks', date: '2026-10-05', time: '12:00', on: false })
+  expect(screen.getByRole('button', { name: 'ma 5 okt 12:00 vrij' })).toBeInTheDocument()
+  // Copying carries the reason and colour.
+  await userEvent.click(screen.getByRole('button', { name: 'Kopieer naar aankomende weken' }))
+  await waitFor(() =>
+    expect(adminWrite).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'copyBlocks',
+        pattern: expect.objectContaining({ mon: [{ time: '12:15', reason: 'Schoonmaker', color: 'blue' }] }),
+      }),
+    ),
+  )
+  await userEvent.click(screen.getByRole('button', { name: 'Volgende week' }))
+  expect(screen.getByRole('button', { name: 'ma 12 okt 12:15 dicht Schoonmaker' })).toHaveStyle({ background: '#2f6fb5' })
+})
+
+test('a whole closed day keeps its reason and the dashboard shows it', async () => {
+  await openReady()
+  await userEvent.type(screen.getByLabelText('Reden (mag leeg)'), 'Vakantie')
+  await userEvent.click(screen.getByRole('radio', { name: 'Rood' }))
+  await userEvent.click(screen.getByRole('button', { name: 'wo 7 okt hele dag dicht' }))
+  expect(adminWrite).toHaveBeenCalledWith({ type: 'blocks', date: '2026-10-07', time: '', on: true, reason: 'Vakantie', color: 'red' })
+  expect(screen.getByRole('button', { name: 'wo 7 okt dicht Vakantie' })).toHaveTextContent('Vakantie')
+})
+
+test('reasons from the dashboard read replace the public blocks, which have none', async () => {
+  loadPublicSchedule.mockResolvedValue({ ...DEMO_SCHEDULE, blocks: [{ date: '2026-10-06', time: '09:00' }] })
+  loadAdminBlocks.mockResolvedValue([{ date: '2026-10-06', time: '09:00', reason: 'Pauze', color: 'green' }])
+  await openReady()
+  expect(await screen.findByRole('button', { name: 'di 6 okt 09:00 dicht Pauze' })).toHaveStyle({ background: '#2e8b57' })
 })

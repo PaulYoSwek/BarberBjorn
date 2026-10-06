@@ -1,13 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { BLOCK_COLORS, blockHex, REASON_MAX, type BlockColor } from '../../block-colors'
 import { copy } from '../../content'
-import { addDaysIso, COPY_WEEKS, weekHoursFromDays } from '../../planning'
-import { adminWrite, loadPublicSchedule, publishLiveSchedule, type InboxRow } from '../../planning-api'
-import { agendaDays, defaultSchedule, type AgendaDay, type DayHours, type Schedule, type Weekday } from '../../schedule'
+import { addDaysIso, COPY_WEEKS, weekHoursFromDays, type BlockPattern } from '../../planning'
+import { adminWrite, loadAdminBlocks, loadPublicSchedule, publishLiveSchedule, type InboxRow } from '../../planning-api'
+import {
+  agendaDays,
+  defaultSchedule,
+  SLOT_MINUTES,
+  type AgendaDay,
+  type DayHours,
+  type Schedule,
+  type ScheduleBlock,
+  type Weekday,
+} from '../../schedule'
 import { serviceName } from './admin-defaults'
 
 const WEEK = 7
 const DEFAULT_OPEN: DayHours = { open: '09:00', close: '18:00' }
 const SAVE_FAILED = 'Opslaan mislukt. Controleer de verbinding en probeer het nog eens.'
+
+type Note = { reason: string; color: BlockColor }
+const NO_NOTE: Note = { reason: '', color: '' }
 
 function minutesOf(stamp: string): number {
   const [hours, minutes] = stamp.split(':').map(Number)
@@ -20,13 +33,14 @@ function clock(minutes: number): string {
   return `${h}:${m}`
 }
 
+/** Every quarter-hour from opening up to (not including) closing time. */
 function daySlotTimes(hours: DayHours): string[] {
   if ('closed' in hours) return []
   const open = minutesOf(hours.open)
   const close = minutesOf(hours.close)
-  if (!Number.isFinite(open) || !Number.isFinite(close) || close < open) return []
+  if (!Number.isFinite(open) || !Number.isFinite(close) || close <= open) return []
   const times: string[] = []
-  for (let start = open; start <= close; start += 30) times.push(clock(start))
+  for (let start = open; start < close; start += SLOT_MINUTES) times.push(clock(start))
   return times
 }
 
@@ -53,39 +67,41 @@ function weekTitle(days: AgendaDay[]): string {
   return `${a} – ${b}`
 }
 
-function booked(date: string, time: string, schedule: Schedule): boolean {
-  const start = minutesOf(time)
-  const end = start + 30
-  return (schedule.bookings ?? []).some((hold) => {
-    if (!hold.start.startsWith(date)) return false
-    const holdStart = minutesOf(hold.start.slice(11, 16))
-    return start < holdStart + hold.minutes && holdStart < end
-  })
-}
-
-function blocked(date: string, time: string, schedule: Schedule): boolean {
-  return (schedule.blocks ?? []).some((block) => block.date === date && block.time === time)
+function blockAt(date: string, time: string | undefined, schedule: Schedule): ScheduleBlock | undefined {
+  return (schedule.blocks ?? []).find((block) => block.date === date && (block.time ?? '') === (time ?? ''))
 }
 
 function blockKey(date: string, time: string): string {
   return `${date}|${time}`
 }
 
+function sameNote(a: ScheduleBlock | undefined, b: ScheduleBlock | undefined): boolean {
+  return (a?.reason ?? '') === (b?.reason ?? '') && (a?.color ?? '') === (b?.color ?? '')
+}
+
 /** Edits made on this device that are layered over whatever the cloud returned. */
+type LocalBlock = { on: false } | { on: true; reason: string; color: string }
 type LocalEdits = {
-  blocks: Map<string, boolean>
+  blocks: Map<string, LocalBlock>
   exceptions: Map<string, DayHours | null>
   week: Record<Weekday, DayHours> | null
 }
 
 function withLocal(next: Schedule, local: LocalEdits): Schedule {
   let blocks = [...(next.blocks ?? [])]
-  for (const [key, on] of local.blocks) {
+  for (const [key, edit] of local.blocks) {
     const split = key.indexOf('|')
     const date = key.slice(0, split)
     const time = key.slice(split + 1)
     blocks = blocks.filter((block) => !(block.date === date && (block.time ?? '') === time))
-    if (on) blocks.push(time ? { date, time } : { date })
+    if (edit.on) {
+      blocks.push({
+        date,
+        ...(time ? { time } : {}),
+        ...(edit.reason ? { reason: edit.reason } : {}),
+        ...(edit.color ? { color: edit.color } : {}),
+      })
+    }
   }
   const exceptions = { ...(next.exceptions ?? {}) }
   for (const [date, hours] of local.exceptions) {
@@ -108,9 +124,19 @@ function withClientHolds(schedule: Schedule, people: InboxRow[]): Schedule {
   return { ...schedule, bookings }
 }
 
+function booked(date: string, time: string, schedule: Schedule): boolean {
+  const start = minutesOf(time)
+  const end = start + SLOT_MINUTES
+  return (schedule.bookings ?? []).some((hold) => {
+    if (!hold.start.startsWith(date)) return false
+    const holdStart = minutesOf(hold.start.slice(11, 16))
+    return start < holdStart + hold.minutes && holdStart < end
+  })
+}
+
 function clientAt(date: string, time: string, people: InboxRow[]): InboxRow | undefined {
   const start = minutesOf(time)
-  const end = start + 30
+  const end = start + SLOT_MINUTES
   return people.find((row) => {
     if (row.status !== 'confirmed') return false
     if (!row.start.startsWith(date)) return false
@@ -147,6 +173,7 @@ export function AdminAgenda({ clients = [] }: Props) {
   const [done, setDone] = useState<string | null>(null)
   const [copying, setCopying] = useState(false)
   const [detail, setDetail] = useState<InboxRow | null>(null)
+  const [note, setNote] = useState<Note>(NO_NOTE)
   const local = useRef<LocalEdits>({ blocks: new Map(), exceptions: new Map(), week: null })
 
   function touch() {
@@ -160,6 +187,12 @@ export function AdminAgenda({ clients = [] }: Props) {
         if (cancelled) return
         setCloud(next)
         setReady(true)
+        // The public read has no reasons; the dashboard read does. Fall back quietly.
+        loadAdminBlocks()
+          .then((blocks) => {
+            if (!cancelled) setCloud((current) => ({ ...current, blocks }))
+          })
+          .catch(() => {})
       })
       .catch(() => {
         if (!cancelled) setNotice('Agenda laden mislukt.')
@@ -168,6 +201,12 @@ export function AdminAgenda({ clients = [] }: Props) {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    if (!done) return
+    const timer = window.setTimeout(() => setDone(null), 8000)
+    return () => window.clearTimeout(timer)
+  }, [done])
 
   // `edition` is part of the dependency list so local edits re-render the view.
   const view = useMemo(
@@ -180,9 +219,7 @@ export function AdminAgenda({ clients = [] }: Props) {
   const lastWeek = Math.ceil(days.length / WEEK) - 1
 
   function hoursFor(day: { date: string; weekday: Weekday }): DayHours {
-    if ((view.blocks ?? []).some((block) => block.date === day.date && !block.time)) {
-      return { closed: true }
-    }
+    if (blockAt(day.date, undefined, view)) return { closed: true }
     return view.exceptions?.[day.date] ?? view.week[day.weekday]
   }
 
@@ -191,6 +228,19 @@ export function AdminAgenda({ clients = [] }: Props) {
   const selectedDates = selected.length > 0 ? selected : fallback ? [fallback] : []
   const selectedDays = visible.filter((day) => selectedDates.includes(day.date))
   const hoursDay = selectedDays.find((day) => !('closed' in hoursFor(day))) ?? selectedDays[0]
+
+  /** Every reason + colour in use this week, for the legend. */
+  const legend = useMemo(() => {
+    const seen = new Map<string, { reason: string; color: string }>()
+    for (const day of visible) {
+      for (const block of view.blocks ?? []) {
+        if (block.date !== day.date) continue
+        const key = `${block.color ?? ''}|${block.reason ?? ''}`
+        if (!seen.has(key)) seen.set(key, { reason: block.reason ?? '', color: block.color ?? '' })
+      }
+    }
+    return [...seen.values()]
+  }, [visible, view.blocks])
 
   function saved(ok: boolean, revert: () => void, success?: string) {
     if (ok) {
@@ -205,12 +255,6 @@ export function AdminAgenda({ clients = [] }: Props) {
     setNotice(SAVE_FAILED)
   }
 
-  useEffect(() => {
-    if (!done) return
-    const timer = window.setTimeout(() => setDone(null), 8000)
-    return () => window.clearTimeout(timer)
-  }, [done])
-
   async function write(body: Parameters<typeof adminWrite>[0], revert: () => void) {
     try {
       const result = await adminWrite(body)
@@ -220,12 +264,17 @@ export function AdminAgenda({ clients = [] }: Props) {
     }
   }
 
+  function currentNote(): { reason: string; color: string } {
+    return { reason: note.reason.trim().slice(0, REASON_MAX), color: note.color }
+  }
+
   function toggle(date: string, time: string, on: boolean) {
     const key = blockKey(date, time)
     const before = local.current.blocks.get(key)
-    local.current.blocks.set(key, on)
+    const with_ = currentNote()
+    local.current.blocks.set(key, on ? { on: true, ...with_ } : { on: false })
     touch()
-    void write({ type: 'blocks', date, time, on }, () => {
+    void write({ type: 'blocks', date, time, on, ...(on ? with_ : {}) }, () => {
       if (before === undefined) local.current.blocks.delete(key)
       else local.current.blocks.set(key, before)
     })
@@ -236,7 +285,8 @@ export function AdminAgenda({ clients = [] }: Props) {
     const key = blockKey(date, '')
     const beforeBlock = local.current.blocks.get(key)
     const beforeException = local.current.exceptions.get(date)
-    local.current.blocks.set(key, on)
+    const with_ = currentNote()
+    local.current.blocks.set(key, on ? { on: true, ...with_ } : { on: false })
     // Reopening a day whose template or one-off hours say "closed" needs real hours.
     const underlying = view.exceptions?.[date] ?? view.week[weekday]
     const needsHours = !on && 'closed' in underlying
@@ -256,7 +306,7 @@ export function AdminAgenda({ clients = [] }: Props) {
     }
     void (async () => {
       try {
-        const first = await adminWrite({ type: 'blocks', date, time: '', on })
+        const first = await adminWrite({ type: 'blocks', date, time: '', on, ...(on ? with_ : {}) })
         if (!first.ok) return saved(false, revert)
         if (needsHours) {
           const second = await adminWrite({ type: 'exception', date, hours: DEFAULT_OPEN })
@@ -295,17 +345,23 @@ export function AdminAgenda({ clients = [] }: Props) {
 
   /**
    * The viewed week becomes the repeating Monday–Sunday template: its hours go
-   * into the weekday template and its closed half-hours are stamped onto the
-   * same weekdays for COPY_WEEKS weeks ahead.
+   * into the weekday template and its closed quarter-hours, with their reasons
+   * and colours, are stamped onto the same weekdays for COPY_WEEKS weeks ahead.
    */
   function apply() {
     if (!ready || visible.length === 0 || copying) return
     const pageDates = visible.map((day) => day.date)
     const next = weekHoursFromDays(visible.map((day) => ({ weekday: day.weekday, hours: hoursFor(day) })))
-    const pattern: Partial<Record<Weekday, string[]>> = {}
+    const pattern: Partial<Record<Weekday, BlockPattern[]>> = {}
     for (const day of visible) {
       const dayHours = hoursFor(day)
-      pattern[day.weekday] = 'closed' in dayHours ? [] : daySlotTimes(dayHours).filter((time) => blocked(day.date, time, view))
+      pattern[day.weekday] =
+        'closed' in dayHours
+          ? []
+          : daySlotTimes(dayHours).flatMap((time) => {
+              const block = blockAt(day.date, time, view)
+              return block ? [{ time, reason: block.reason ?? '', color: block.color ?? '' }] : []
+            })
     }
     const from = addDaysIso(pageDates[pageDates.length - 1], 1)
 
@@ -318,9 +374,15 @@ export function AdminAgenda({ clients = [] }: Props) {
     for (const day of days) {
       if (day.date < from) continue
       for (const block of view.blocks ?? []) {
-        if (block.date === day.date && block.time) local.current.blocks.set(blockKey(day.date, block.time), false)
+        if (block.date === day.date && block.time) local.current.blocks.set(blockKey(day.date, block.time), { on: false })
       }
-      for (const time of pattern[day.weekday] ?? []) local.current.blocks.set(blockKey(day.date, time), true)
+      for (const entry of pattern[day.weekday] ?? []) {
+        local.current.blocks.set(blockKey(day.date, entry.time), {
+          on: true,
+          reason: entry.reason ?? '',
+          color: entry.color ?? '',
+        })
+      }
     }
     touch()
     const revert = () => {
@@ -331,10 +393,10 @@ export function AdminAgenda({ clients = [] }: Props) {
         else local.current.exceptions.set(date, hours)
       }
     }
-    const closedCount = Object.values(pattern).reduce((sum, times) => sum + (times?.length ?? 0), 0)
+    const closedCount = Object.values(pattern).reduce((sum, entries) => sum + (entries?.length ?? 0), 0)
     const success =
       `Gekopieerd naar de komende ${COPY_WEEKS} weken: openingstijden` +
-      (closedCount > 0 ? ` en ${closedCount} dichte ${closedCount === 1 ? 'tijd' : 'tijden'} per week.` : '.')
+      (closedCount > 0 ? ` en ${closedCount} dichte ${closedCount === 1 ? 'kwartier' : 'kwartieren'} per week.` : '.')
     setDone(null)
     setCopying(true)
     void (async () => {
@@ -352,12 +414,6 @@ export function AdminAgenda({ clients = [] }: Props) {
   }
 
   const hours = hoursDay ? hoursFor(hoursDay) : null
-
-  function slotState(date: string, time: string): 'booked' | 'shut' | 'vrij' {
-    if (booked(date, time, view)) return 'booked'
-    if (blocked(date, time, view)) return 'shut'
-    return 'vrij'
-  }
 
   function togglePick(date: string) {
     setPicked((current) => {
@@ -377,10 +433,23 @@ export function AdminAgenda({ clients = [] }: Props) {
           <p className="admin-kicker">Planning</p>
           <h1>Weekoverzicht</h1>
         </div>
-        <ul className="admin-legend">
+        <ul className="admin-legend" aria-label="Legenda">
           <li className="is-vrij">vrij</li>
-          <li className="is-shut">dicht</li>
           <li className="is-booked">geboekt</li>
+          {legend.length === 0 ? <li className="is-shut">dicht</li> : null}
+          {legend.map((item) => (
+            <li key={`${item.color}|${item.reason}`} className="is-shut">
+              <button
+                type="button"
+                className="admin-legend-pick"
+                style={{ background: blockHex(item.color) }}
+                aria-label={`Reden kiezen: ${item.reason || 'dicht'}`}
+                title="Gebruik deze reden en kleur"
+                onClick={() => setNote({ reason: item.reason, color: item.color as BlockColor })}
+              />
+              {item.reason || 'dicht'}
+            </li>
+          ))}
         </ul>
       </header>
       <div className="admin-toolbar">
@@ -405,6 +474,7 @@ export function AdminAgenda({ clients = [] }: Props) {
                     Open
                     <input
                       type="time"
+                      step={SLOT_MINUTES * 60}
                       value={hours.open}
                       disabled={!ready}
                       onChange={(event) => remember({ open: event.target.value, close: hours.close })}
@@ -414,6 +484,7 @@ export function AdminAgenda({ clients = [] }: Props) {
                     Sluit
                     <input
                       type="time"
+                      step={SLOT_MINUTES * 60}
                       value={hours.close}
                       disabled={!ready}
                       onChange={(event) => remember({ open: hours.open, close: event.target.value })}
@@ -424,6 +495,44 @@ export function AdminAgenda({ clients = [] }: Props) {
             </div>
           </section>
         ) : null}
+        <section className="admin-note" aria-label="Reden voor dichte tijden">
+          <p className="admin-hours-title">Dichtzetten met reden</p>
+          <div className="admin-note-row">
+            <label>
+              Reden (mag leeg)
+              <input
+                value={note.reason}
+                maxLength={REASON_MAX}
+                placeholder="Bijv. schoonmaker, pauze, privé"
+                onChange={(event) => setNote({ ...note, reason: event.target.value })}
+              />
+            </label>
+            <div className="admin-swatches" role="radiogroup" aria-label="Kleur">
+              {BLOCK_COLORS.map((item) => (
+                <button
+                  key={item.id || 'default'}
+                  type="button"
+                  role="radio"
+                  aria-checked={note.color === item.id}
+                  aria-label={item.label}
+                  title={item.label}
+                  className={note.color === item.id ? 'is-on' : undefined}
+                  style={{ background: item.hex }}
+                  onClick={() => setNote({ ...note, color: item.id })}
+                />
+              ))}
+            </div>
+            {note.reason || note.color ? (
+              <button type="button" className="admin-note-clear" onClick={() => setNote(NO_NOTE)}>
+                Wissen
+              </button>
+            ) : null}
+          </div>
+          <p className="admin-hint">
+            Tik op een kwartier om het dicht te zetten met deze reden en kleur. Tik nog eens om het weer open te
+            zetten. Dag dicht gebruikt dezelfde reden.
+          </p>
+        </section>
         <button
           type="button"
           className="admin-copy-week"
@@ -461,7 +570,8 @@ export function AdminAgenda({ clients = [] }: Props) {
             </p>
           ) : null}
           <p>
-            {detail.start.slice(0, 10)} {detail.start.slice(11, 16)}
+            {detail.start.slice(0, 10)} {detail.start.slice(11, 16)} –{' '}
+            {clock(minutesOf(detail.start.slice(11, 16)) + detail.minutes)}
           </p>
           <p>{STATUS_LABEL[detail.status]}</p>
           <p>{detail.kind === 'custom' ? 'Ander tijdstip' : 'Slot'}</p>
@@ -475,7 +585,9 @@ export function AdminAgenda({ clients = [] }: Props) {
         {visible.map((day) => {
           const dayHours = hoursFor(day)
           const closed = 'closed' in dayHours
+          const dayBlock = blockAt(day.date, undefined, view)
           const stamp = dayStamp(day)
+          const times = daySlotTimes(dayHours)
           return (
             <div
               key={day.date}
@@ -485,11 +597,16 @@ export function AdminAgenda({ clients = [] }: Props) {
                 type="button"
                 className="agenda-when admin-col-head"
                 aria-pressed={selectedDates.includes(day.date)}
-                aria-label={dayChip(day, dayHours)}
+                aria-label={dayChip(day, dayHours) + (dayBlock?.reason ? ` ${dayBlock.reason}` : '')}
                 onClick={() => togglePick(day.date)}
               >
                 <strong>{stamp}</strong>
                 <span>{closed ? 'dicht' : `${dayHours.open}–${dayHours.close}`}</span>
+                {dayBlock?.reason ? (
+                  <span className="admin-day-reason" style={{ background: blockHex(dayBlock.color) }}>
+                    {dayBlock.reason}
+                  </span>
+                ) : null}
               </button>
               <button
                 type="button"
@@ -497,24 +614,36 @@ export function AdminAgenda({ clients = [] }: Props) {
                 aria-pressed={closed}
                 aria-label={`${stamp} hele dag dicht`}
                 disabled={!ready}
+                style={closed && dayBlock?.color ? { background: blockHex(dayBlock.color), borderColor: blockHex(dayBlock.color) } : undefined}
                 onClick={() => closeDay(day.date, day.weekday, !closed)}
               >
                 Dag dicht
               </button>
               {!closed ? (
                 <div className="agenda-slots admin-col-slots">
-                  {daySlotTimes(dayHours).map((time) => {
-                    const state = slotState(day.date, time)
-                    const client = state === 'booked' ? clientAt(day.date, time, people) : undefined
+                  {times.map((time, index) => {
+                    const client = clientAt(day.date, time, people)
+                    const isBooked = client !== undefined || booked(day.date, time, view)
+                    const block = isBooked ? undefined : blockAt(day.date, time, view)
+                    const state: 'booked' | 'shut' | 'vrij' = isBooked ? 'booked' : block ? 'shut' : 'vrij'
+                    const previous = index > 0 ? times[index - 1] : null
+                    const continues =
+                      state === 'booked'
+                        ? client !== undefined && client.start !== `${day.date}T${time}:00`
+                        : state === 'shut' && previous !== null && sameNote(block, blockAt(day.date, previous, view)) && blockAt(day.date, previous, view) !== undefined
                     const label = state === 'booked' ? 'geboekt' : state === 'shut' ? 'dicht' : 'vrij'
                     const who = client ? ` ${client.name}` : ''
+                    const why = block?.reason ? ` ${block.reason}` : ''
+                    const tint = state === 'shut' ? blockHex(block?.color) : undefined
                     return (
                       <button
                         key={time}
                         type="button"
-                        className={`admin-cell is-${state}`}
+                        className={`admin-cell is-${state}${continues ? ' is-cont' : ''}`}
                         aria-pressed={state === 'shut'}
-                        aria-label={`${stamp} ${time} ${label}${who}`}
+                        aria-label={`${stamp} ${time} ${label}${who}${why}`}
+                        title={block?.reason || client?.name || undefined}
+                        style={tint ? { background: tint, borderColor: tint } : undefined}
                         onClick={() => {
                           if (state === 'booked') {
                             if (client) setDetail(client)
@@ -523,8 +652,13 @@ export function AdminAgenda({ clients = [] }: Props) {
                           toggle(day.date, time, state !== 'shut')
                         }}
                       >
-                        <span>{time}</span>
-                        {client ? <span className="admin-cell-name">{client.name}</span> : <span>{label}</span>}
+                        <span className="admin-cell-time">{time}</span>
+                        {state === 'booked' && client && !continues ? (
+                          <span className="admin-cell-name">{client.name}</span>
+                        ) : null}
+                        {state === 'shut' && !continues ? (
+                          <span className="admin-cell-name">{block?.reason || 'dicht'}</span>
+                        ) : null}
                       </button>
                     )
                   })}

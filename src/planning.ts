@@ -1,5 +1,5 @@
 import type { ServiceId } from './content.ts'
-import { agendaDays, type DayHours, type Schedule, type Weekday } from './schedule.ts'
+import { agendaDays, SLOT_MINUTES, type DayHours, type Schedule, type Weekday } from './schedule.ts'
 
 function clockMinutes(stamp: string): number {
   const [hours, minutes] = stamp.split(':')
@@ -17,7 +17,7 @@ function holdsOn(date: string, schedule: Schedule): { start: number; end: number
     .filter((block) => block.date === date && block.time)
     .map((block) => {
       const start = clockMinutes(block.time!.slice(0, 5))
-      return { start, end: start + 30 }
+      return { start, end: start + SLOT_MINUTES }
     })
   const fromBookings = (schedule.bookings ?? [])
     .filter((hold) => hold.start.startsWith(date))
@@ -112,20 +112,27 @@ export function addDaysIso(date: string, count: number): string {
   return day.toISOString().slice(0, 10)
 }
 
+/** One closed quarter-hour in a weekly pattern, with Bjorn's note and colour. */
+export type BlockPattern = { time: string; reason?: string; color?: string }
+
+export type BlockRow = { date: string; time: string; reason: string; color: string }
+
 /**
- * Closed half-hours for every date from `from` for `weeks` weeks, following a
- * per-weekday pattern (e.g. mon: ['12:00', '12:30'] for a lunch break).
+ * Closed quarter-hours for every date from `from` for `weeks` weeks, following a
+ * per-weekday pattern (e.g. mon: [{ time: '12:00', reason: 'Lunch' }, ...]).
  */
 export function weeklyBlockRows(
   from: string,
   weeks: number,
-  pattern: Partial<Record<Weekday, string[]>>,
-): { date: string; time: string }[] {
-  const rows: { date: string; time: string }[] = []
+  pattern: Partial<Record<Weekday, BlockPattern[]>>,
+): BlockRow[] {
+  const rows: BlockRow[] = []
   for (let index = 0; index < weeks * 7; index++) {
     const date = addDaysIso(from, index)
     const weekday = WEEKDAY_ORDER[new Date(`${date}T12:00:00Z`).getUTCDay()]
-    for (const time of pattern[weekday] ?? []) rows.push({ date, time })
+    for (const entry of pattern[weekday] ?? []) {
+      rows.push({ date, time: entry.time, reason: entry.reason ?? '', color: entry.color ?? '' })
+    }
   }
   return rows
 }

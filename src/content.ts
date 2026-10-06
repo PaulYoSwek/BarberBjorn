@@ -159,7 +159,7 @@ export const copy: Record<Lang, Copy> = {
     ],
     faq: [
       { q: 'Moet ik een afspraak maken?', a: 'Ja. Zo blijft de stoel echt van jou. Gebruik het formulier, of bel.' },
-      { q: 'Hoe lang duurt het?', a: 'Knippen zo’n 45 minuten, een baard 20 minuten, knippen + baard rond een uur. Hij werkt niet op de klok.' },
+      { q: 'Hoe lang duurt het?', a: 'Knippen 45 minuten, een baard 30 minuten, knippen + baard vijf kwartier. Hij werkt niet op de klok.' },
       { q: 'Mag ik de muziek kiezen?', a: 'Ja. Zeg een artiest of een sfeer. Liever stil, dan blijft het stil.' },
       { q: 'Geeft hij advies?', a: 'Ja. Hij zegt het als een andere lengte of een andere lijn je beter staat.' },
       { q: 'Waar zit Bjorn’s Barber?', a: 'Ferdinandstraat 21 in Axel. De kaart bovenaan wijst de deur.' },
@@ -238,7 +238,7 @@ export const copy: Record<Lang, Copy> = {
     ],
     faq: [
       { q: 'Do I need an appointment?', a: 'Yes. That way the chair is actually yours. Use the form, or call.' },
-      { q: 'How long does it take?', a: "A cut takes about 45 minutes, a beard 20 minutes, cut + beard around an hour. He doesn't work to the clock." },
+      { q: 'How long does it take?', a: "A cut takes 45 minutes, a beard 30 minutes, cut + beard an hour and a quarter. He doesn't work to the clock." },
       { q: 'Can I choose the music?', a: "Yes. Name an artist or a mood. If you'd rather have quiet, it stays quiet." },
       { q: 'Does he give advice?', a: "Yes. He'll say so if a different length or line would suit you better." },
       { q: 'Where is Bjorn’s Barber?', a: 'Ferdinandstraat 21 in Axel. The map at the top points to the door.' },
