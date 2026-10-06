@@ -59,3 +59,14 @@ business, opening hours and prices). `src/seo.ts` keeps the title, description a
 active language and marks `/admin` and unknown routes `noindex`. `public/robots.txt` and `public/sitemap.xml`
 point at the production domain in `SITE_URL` (`src/content.ts`). Change that constant, the sitemap and robots
 if the site moves to another domain.
+
+## Privacy
+
+The privacy and cookie statement is `/privacy`, with its text in `src/privacy.ts` (NL and EN). Update
+`PRIVACY_UPDATED` and the dates in that file whenever it changes, and keep it in line with what the site
+does: no tracking cookies, self-hosted fonts, Mapbox statistics off. Adding analytics or another
+third party means updating the statement and possibly adding a consent banner.
+
+The statement promises that client data is deleted at most 2 years after a client's last appointment.
+Deleting is manual for now: Klanten, edit the client, "Klant en afspraken verwijderen". The same button
+handles deletion requests.
