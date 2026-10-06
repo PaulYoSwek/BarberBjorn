@@ -77,12 +77,12 @@ const services = {
   nl: [
     { id: 'cut' as const, name: 'Knippen', price: '€30', detail: 'Haar, op jouw tempo' },
     { id: 'beard' as const, name: 'Baard', price: '€15', detail: 'Lijn en vorm' },
-    { id: 'both' as const, name: 'Allebei', price: '€40', detail: 'Knippen + baard' },
+    { id: 'both' as const, name: 'Knippen + baard', price: '€40', detail: 'Haar en baard' },
   ],
   en: [
     { id: 'cut' as const, name: 'Cut', price: '€30', detail: 'Hair, at your pace' },
     { id: 'beard' as const, name: 'Beard', price: '€15', detail: 'Line and shape' },
-    { id: 'both' as const, name: 'Both', price: '€40', detail: 'Cut and beard' },
+    { id: 'both' as const, name: 'Cut + beard', price: '€40', detail: 'Hair and beard' },
   ],
 }
 
@@ -96,7 +96,7 @@ export const copy: Record<Lang, Copy> = {
     bookCta: 'Afspraak maken',
     bookKicker: 'DE STOEL',
     bookTitle: 'Afspraak maken',
-    bookIntro: 'Kies een vrije tijd. Je krijgt meteen een bevestiging per mail.',
+    bookIntro: 'Kies wat je wilt en een vrije tijd. Je krijgt meteen een bevestiging per mail.',
     serviceLabel: 'Dienst',
     nameLabel: 'Naam',
     phoneLabel: 'Telefoon',
@@ -150,7 +150,7 @@ export const copy: Record<Lang, Copy> = {
     ],
     faq: [
       { q: 'Moet ik een afspraak maken?', a: 'Ja. Zo blijft de stoel echt van jou. Gebruik het formulier, of bel.' },
-      { q: 'Hoe lang duurt het?', a: 'Knippen zo’n 45 minuten, een baard 20 minuten, allebei rond een uur. Hij werkt niet op de klok.' },
+      { q: 'Hoe lang duurt het?', a: 'Knippen zo’n 45 minuten, een baard 20 minuten, knippen + baard rond een uur. Hij werkt niet op de klok.' },
       { q: 'Mag ik de muziek kiezen?', a: 'Ja. Zeg een artiest of een sfeer. Liever stil, dan blijft het stil.' },
       { q: 'Geeft hij advies?', a: 'Ja. Hij zegt het als een andere lengte of een andere lijn je beter staat.' },
       { q: 'Waar zit BarberBjorn?', a: 'Ferdinandstraat 8 in Axel. De kaart bovenaan wijst de deur.' },
@@ -171,7 +171,7 @@ export const copy: Record<Lang, Copy> = {
     bookCta: 'Book a visit',
     bookKicker: 'THE CHAIR',
     bookTitle: 'Book a visit',
-    bookIntro: 'Pick a free time. You get a confirmation by mail right away.',
+    bookIntro: 'Pick what you want and a free time. You get a confirmation by mail right away.',
     serviceLabel: 'Service',
     nameLabel: 'Name',
     phoneLabel: 'Phone',
@@ -225,7 +225,7 @@ export const copy: Record<Lang, Copy> = {
     ],
     faq: [
       { q: 'Do I need an appointment?', a: 'Yes. That way the chair is actually yours. Use the form, or call.' },
-      { q: 'How long does it take?', a: "A cut takes about 45 minutes, a beard 20 minutes, both around an hour. He doesn't work to the clock." },
+      { q: 'How long does it take?', a: "A cut takes about 45 minutes, a beard 20 minutes, cut + beard around an hour. He doesn't work to the clock." },
       { q: 'Can I choose the music?', a: "Yes. Name an artist or a mood. If you'd rather have quiet, it stays quiet." },
       { q: 'Does he give advice?', a: "Yes. He'll say so if a different length or line would suit you better." },
       { q: 'Where is BarberBjorn?', a: 'Ferdinandstraat 8 in Axel. The map at the top points to the door.' },

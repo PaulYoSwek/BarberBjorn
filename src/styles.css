@@ -185,6 +185,8 @@ img, video { max-width: 100%; display: block; }
 }
 @media (max-width: 800px) {
   .map-fallback { padding-inline-start: max(24px, 12%); }
+  /* The fixed NL | EN switch sits top right; keep the address clear of it. */
+  .map-address { left: 16px; right: auto; }
 }
 .booking {
   position: relative; background: var(--ink); color: var(--text);
@@ -200,11 +202,41 @@ img, video { max-width: 100%; display: block; }
 .booking h2 { font-family: var(--font-display); font-weight: 720; letter-spacing: -0.04em; margin: 0 0 6px; width: max-content; }
 .booking form {
   flex: 1; min-height: 0;
-  display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto;
+  display: flex;
+  flex-direction: column;
   gap: 16px;
+  overflow: visible;
 }
-.booking-top { display: grid; gap: 8px; }
+.booking-top { display: grid; gap: 10px; flex: 0 0 auto; }
 .booking-top p { margin: 0; max-width: 42ch; }
+.booking-services {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  position: relative;
+  z-index: 5;
+  flex: 0 0 auto;
+}
+.booking-services button {
+  width: 100%;
+  min-height: 52px;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  padding: 10px 8px;
+  cursor: pointer;
+  text-align: center;
+  font-weight: 500;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.booking-services button span { font-size: 0.78rem; font-weight: 400; opacity: 0.68; }
+.booking-services button.is-on {
+  background: var(--yellow);
+  border-color: var(--yellow);
+  font-weight: 700;
+}
 .booking-fields { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
 .booking-confirm { display: grid; gap: 10px; }
 .booking-summary { margin: 0; display: grid; gap: 2px; }
@@ -220,7 +252,7 @@ img, video { max-width: 100%; display: block; }
 .booking-confirm button[type="submit"] {
   background: var(--yellow); color: var(--ink); border-color: var(--yellow); cursor: pointer; font-weight: 500;
 }
-.agenda-wrap { min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+.agenda-wrap { min-height: 0; flex: 1 1 auto; display: flex; flex-direction: column; gap: 10px; }
 .agenda-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .agenda-month {
   margin: 0; font-family: var(--font-display); font-size: 1.55rem; font-weight: 720;
@@ -275,6 +307,8 @@ img, video { max-width: 100%; display: block; }
   .agenda-slots button { min-height: 36px; font-size: 0.74rem; padding: 0 2px; }
   .agenda-week button { min-width: 44px; min-height: 44px; }
   .booking-confirm button[type="submit"] { width: 100%; min-height: 48px; }
+  .booking-services { grid-template-columns: 1fr; max-width: none; }
+  .booking-services button { min-height: 56px; font-size: 1rem; }
 }
 .services { background: var(--ink); color: var(--text-on-dark); padding: 72px 8vw 48px; }
 .services .kicker { color: var(--yellow); }
@@ -448,7 +482,9 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
   display: grid;
   place-items: center;
   min-height: 100svh;
+  min-height: 100dvh;
   padding: 24px;
+  overflow-y: auto;
   background:
     radial-gradient(ellipse 90% 55% at 50% 28%, #2a2208 0%, transparent 58%),
     var(--ink-deep);
@@ -501,6 +537,7 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
   border: 1px solid #4a4638;
   background: #0c0c0c;
   color: var(--text-on-dark);
+  font-size: 16px;
 }
 .admin-gate input:focus { border-color: var(--yellow); outline: none; }
 .admin-gate [role="alert"] { margin: 0; color: var(--yellow); font-size: 0.88rem; }
@@ -513,6 +550,25 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
   cursor: pointer;
 }
 .admin-gate button[type="submit"]:hover { background: #ffd21a; }
+.admin-gate { grid-auto-rows: max-content; align-content: center; gap: 12px; }
+.admin-gate-site {
+  justify-self: center;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  color: #cfc8b8;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+@media (max-width: 720px) {
+  .admin-gate {
+    place-items: start center;
+    align-content: start;
+    padding: 20px 16px max(28px, env(safe-area-inset-bottom));
+  }
+  .admin-gate-card { width: min(420px, 100%); padding: 28px 20px 20px; }
+  .admin-gate-word { width: min(180px, 70%); }
+}
 .admin { display: flex; flex-direction: column; min-height: 100svh; background: #f4f1ea; color: #1a1916; }
 .admin-bar {
   position: sticky; top: 0; z-index: 8;
@@ -545,8 +601,14 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
 .admin-done { margin: 0; padding: 10px 12px; background: #101010; color: #f4f1ea; font-size: 0.9rem; }
 .admin-done::before { content: '✓ '; color: #f5c400; font-weight: 700; }
 .admin [role="alert"] { margin: 0; padding: 10px 12px; background: #fff; border: 1px solid #8a1600; color: #8a1600; font-size: 0.9rem; }
+.admin-bar-end { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-left: auto; }
+.admin-site {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px;
+  border: 1px solid #3a3a3a; color: #f4f1ea; text-decoration: none;
+}
+.admin-site:hover { border-color: #f5c400; color: #f5c400; }
 .admin-logout {
-  min-height: 44px; padding: 0 16px; margin-left: auto;
+  min-height: 44px; padding: 0 16px;
   border: 1px solid #3a3a3a; background: transparent; color: #f4f1ea; cursor: pointer;
 }
 .admin-logout:hover { border-color: #f5c400; color: #f5c400; }
@@ -654,8 +716,10 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
 .admin-primary { margin-top: 0; background: #f5c400; color: #101010; min-height: 44px; border: 0; width: 100%; }
 @media (max-width: 720px) {
   .admin { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
-  .admin-bar { padding: 8px 12px; }
-  .admin-logout { padding: 0 12px; font-size: 0.86rem; }
+  .admin-bar { padding: 8px 12px; gap: 8px; }
+  .admin-brand-name { display: none; }
+  .admin-bar-end { gap: 6px; flex-wrap: nowrap; }
+  .admin-site, .admin-logout { padding: 0 12px; font-size: 0.86rem; }
   .admin-tabs {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 9;
     display: grid; grid-template-columns: repeat(4, 1fr); gap: 0;

@@ -186,6 +186,10 @@ export function BookingForm() {
     edit({ ...input, kind: 'custom', slot: customSlot(date, time) })
   }
 
+  const setService = (next: ServiceId) => {
+    edit({ ...input, service: next, slot: input.kind === 'slot' ? '' : input.slot })
+  }
+
   const backToAgenda = () => {
     setCustomDate('')
     setCustomTime('')
@@ -234,8 +238,9 @@ export function BookingForm() {
     }
   }
 
-  const duration = input.service ? (minutes?.[input.service] ?? SERVICE_MINUTES[input.service]) : 0
-  const serviceName = t.services.find((item) => item.id === input.service)?.name ?? ''
+  const service = input.service || 'both'
+  const duration = minutes?.[service] ?? SERVICE_MINUTES[service]
+  const serviceName = t.services.find((item) => item.id === service)?.name ?? ''
   const when = whenStamp(input.slot, days, t.days, t.monthShort)
 
   return (
@@ -245,6 +250,25 @@ export function BookingForm() {
           <p className="kicker">{t.bookKicker}</p>
           <h2>{t.bookTitle}</h2>
           <p>{t.bookIntro}</p>
+          <div className="booking-services" role="group" aria-label={t.serviceLabel}>
+            {t.services.map((item) => {
+              const mins = minutes?.[item.id] ?? SERVICE_MINUTES[item.id]
+              const on = input.service === item.id
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-label={item.name}
+                  aria-pressed={on}
+                  className={on ? 'is-on' : undefined}
+                  onClick={() => setService(item.id)}
+                >
+                  {item.name}
+                  <span aria-hidden="true">{mins} min</span>
+                </button>
+              )
+            })}
+          </div>
         </div>
         <div className="agenda-wrap">
           {input.kind === 'custom' ? (

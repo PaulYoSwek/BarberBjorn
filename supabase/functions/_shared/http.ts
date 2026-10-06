@@ -1,6 +1,11 @@
 import { validSession } from './session.ts'
 
-const VITE_ORIGINS = new Set(['http://localhost:5173', 'http://127.0.0.1:5173'])
+const VITE_ORIGINS = new Set([
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'https://barberbjorn.nl',
+  'https://www.barberbjorn.nl',
+])
 
 export function corsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get('Origin') ?? ''
