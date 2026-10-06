@@ -7,7 +7,7 @@ servePost(async (req) => {
   const db = serviceClient()
   const listed = await db
     .from('bookings')
-    .select('id, service, name, email, phone, start, kind, status, mail_sent')
+    .select('id, service, name, email, phone, start, minutes, kind, status, lang, mail_sent')
     .order('created_at', { ascending: false })
   if (listed.error) throw new Error(listed.error.message)
   return json(req, 200, listed.data ?? [])

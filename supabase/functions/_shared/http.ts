@@ -4,10 +4,14 @@ const VITE_ORIGINS = new Set(['http://localhost:5173', 'http://127.0.0.1:5173'])
 
 export function corsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get('Origin') ?? ''
-  const site = Deno.env.get('SITE_ORIGIN') ?? ''
-  const allowed = VITE_ORIGINS.has(origin) || (site !== '' && origin === site)
+  // SITE_ORIGIN may list several origins, comma separated (www, bare domain, vercel.app).
+  const sites = (Deno.env.get('SITE_ORIGIN') ?? '')
+    .split(',')
+    .map((item) => item.trim().replace(/\/+$/, ''))
+    .filter(Boolean)
+  const allowed = VITE_ORIGINS.has(origin) || sites.includes(origin)
   const headers: Record<string, string> = {
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-admin-session',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
   }
   if (allowed) {

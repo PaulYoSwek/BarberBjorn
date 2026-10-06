@@ -13,6 +13,7 @@ import { utcToSalonWall } from './salon.ts'
 const WEEKDAYS: Weekday[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 
 type WeekRow = { weekday: string; closed: boolean; open: string | null; close: string | null }
+type ExceptionRow = { date: string; closed: boolean; open: string | null; close: string | null }
 type BlockRow = { date: string; time: string | null }
 type HoldRow = { id: string; start: string; minutes: number }
 type ServiceRow = { id: string; minutes: number }
@@ -37,20 +38,28 @@ function toBlock(row: BlockRow): ScheduleBlock {
 }
 
 export async function loadSchedule(db: Db, exceptId?: string): Promise<Schedule> {
-  const [weekRes, blockRes, holdRes, serviceRes] = await Promise.all([
+  const [weekRes, blockRes, holdRes, serviceRes, exceptionRes] = await Promise.all([
     db.from('schedule_week').select('weekday, closed, open, close'),
     db.from('schedule_blocks').select('date, time'),
     db.from('bookings').select('id, start, minutes').eq('status', 'confirmed'),
     db.from('services').select('id, minutes'),
+    db.from('schedule_exceptions').select('date, closed, open, close'),
   ])
   if (weekRes.error) throw new Error(weekRes.error.message)
   if (blockRes.error) throw new Error(blockRes.error.message)
   if (holdRes.error) throw new Error(holdRes.error.message)
   if (serviceRes.error) throw new Error(serviceRes.error.message)
+  // The exceptions table may not be migrated yet; treat that as "no exceptions".
+  const exceptionRows = exceptionRes.error ? [] : ((exceptionRes.data ?? []) as ExceptionRow[])
 
   const week = { ...defaultSchedule.week }
   for (const row of (weekRes.data ?? []) as WeekRow[]) {
     if (isWeekday(row.weekday)) week[row.weekday] = dayHours(row)
+  }
+
+  const exceptions: Record<string, DayHours> = {}
+  for (const row of exceptionRows) {
+    exceptions[String(row.date).slice(0, 10)] = dayHours({ ...row, weekday: '' })
   }
 
   const minutes = { ...SERVICE_MINUTES }
@@ -67,6 +76,7 @@ export async function loadSchedule(db: Db, exceptId?: string): Promise<Schedule>
 
   return {
     week,
+    exceptions,
     blocks: ((blockRes.data ?? []) as BlockRow[]).map(toBlock),
     bookings,
     minutes,

@@ -24,7 +24,7 @@ export function Services() {
 
   return (
     <section className="services">
-      <p className="kicker">{t.servicesKicker}</p>
+      <h2 className="kicker">{t.servicesKicker}</h2>
       <div className="plates">
         {t.services.map((item) => (
           <article key={item.id} className={item.id === 'both' ? 'is-both' : undefined}>

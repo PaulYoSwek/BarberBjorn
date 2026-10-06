@@ -44,22 +44,29 @@ export function Hero() {
         <video
           className="hero-video"
           src="/hero.mp4"
+          poster="/hero-poster.jpg"
           muted
           loop
           playsInline
           autoPlay
+          disablePictureInPicture
+          aria-hidden="true"
+          tabIndex={-1}
           onError={() => setVideoOn(false)}
         />
       )}
       <div className="hero-scrim" />
-      <img className="hero-stamp" src="/logo-mark.png?v=2" alt="" />
+      <img className="hero-stamp" src="/logo-mark.png?v=2" alt="" width="68" height="68" decoding="async" />
       <div className="hero-copy">
-        <img className="hero-name" src="/logo-name.png?v=2" alt="BarberBjorn" />
+        <h1 className="hero-title">
+          <img className="hero-name" src="/logo-name.png?v=2" alt="BarberBjorn" width="460" height="150" fetchPriority="high" />
+          <span className="sr-only">{t.heroHidden}</span>
+        </h1>
         <p>{t.tagline}</p>
         <a className="book-link" href="#afspraak">{t.bookCta}</a>
       </div>
       <div className="hero-map-wrap" ref={seamWrap}>
-        <img className="hero-seam" src="/rope-seam.png?v=13" alt="" style={seam} />
+        <img className="hero-seam" src="/rope-seam.png?v=13" alt="" style={seam} decoding="async" />
         <div className="hero-map">
           <MapPanel />
           <p className="map-address">

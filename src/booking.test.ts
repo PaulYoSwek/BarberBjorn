@@ -3,6 +3,7 @@ import { mailtoHref, validateBooking } from './booking'
 import { copy } from './content'
 
 const today = '2026-10-05'
+const HELD = { bookings: [{ start: '2026-10-05T10:00:00', minutes: 45 }, { start: '2026-10-06T14:00:00', minutes: 60 }] }
 
 const base = {
   service: 'cut' as const,
@@ -46,6 +47,8 @@ test('rejects empty fields, past slots, closed days, and taken times', () => {
     { service: 'cut', name: 'Bjorn', email: 'sam@mail.nl', phone: '0612345678', slot: '2026-10-05T10:00:00', kind: 'slot' },
     copy.nl,
     today,
+    new Date('2026-10-05T08:00:00'),
+    HELD,
   )
   expect(taken.ok).toBe(false)
   if (!taken.ok) expect(taken.errors.slot).toBe('Die tijd is al weg. Kies een vrije.')
@@ -64,6 +67,7 @@ test('rejects empty fields, past slots, closed days, and taken times', () => {
     copy.nl,
     today,
     new Date('2026-10-05T12:00:00'),
+    HELD,
   )
   expect(sameDayTaken.ok).toBe(false)
   if (!sameDayTaken.ok) expect(sameDayTaken.errors.slot).toBe('Die tijd is al weg. Kies een vrije.')
@@ -124,14 +128,16 @@ test('builds a Dutch mailto body with the chosen time', () => {
   }
 })
 
-test('a default hold is free when the passed-in schedule has no bookings', () => {
-  const onDefault = validateBooking(
+test('a hold blocks only when the passed-in schedule carries it', () => {
+  const onHeld = validateBooking(
     { ...base, slot: '2026-10-06T14:00:00' },
     copy.nl,
     today,
+    new Date('2026-10-05T12:00:00'),
+    HELD,
   )
-  expect(onDefault.ok).toBe(false)
-  if (!onDefault.ok) expect(onDefault.errors.slot).toBe(copy.nl.takenError)
+  expect(onHeld.ok).toBe(false)
+  if (!onHeld.ok) expect(onHeld.errors.slot).toBe(copy.nl.takenError)
 
   const live = validateBooking(
     { ...base, slot: '2026-10-06T14:00:00' },

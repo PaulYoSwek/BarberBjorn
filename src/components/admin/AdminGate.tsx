@@ -1,14 +1,10 @@
 import { useState, type FormEvent } from 'react'
-import { supabase } from '../../supabase'
+import { storeAdminSession } from '../../admin-session'
+import { adminLogin } from '../../planning-api'
 
 type Props = { onSuccess: () => void }
 
-function statusOf(error: unknown): number | null {
-  if (!error || typeof error !== 'object' || !('context' in error)) return null
-  const context = (error as { context?: { status?: unknown } }).context
-  return typeof context?.status === 'number' ? context.status : null
-}
-
+/** Dev-only fallback: the Vite server checks ADMIN_PASSWORD from .env. */
 async function localLogin(password: string): Promise<boolean> {
   try {
     const response = await fetch('/__admin-login', {
@@ -25,40 +21,40 @@ async function localLogin(password: string): Promise<boolean> {
 export function AdminGate({ onSuccess }: Props) {
   const [password, setPassword] = useState('')
   const [wrong, setWrong] = useState(false)
+  const [busy, setBusy] = useState(false)
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (busy) return
+    setBusy(true)
     try {
-      if (supabase) {
-        const { error } = await supabase.functions.invoke('admin-login', {
-          body: { password },
-        })
-        if (!error) {
-          sessionStorage.setItem('barber-admin', '1')
-          onSuccess()
-          return
-        }
-        if (statusOf(error) === 401) {
-          setWrong(true)
-          return
-        }
-      }
-      if (await localLogin(password)) {
-        sessionStorage.setItem('barber-admin', '1')
+      const result = await adminLogin(password)
+      if (result === 'ok') {
         onSuccess()
         return
       }
+      if (result === 'wrong') {
+        setWrong(true)
+        return
+      }
+      if (await localLogin(password)) {
+        storeAdminSession(null)
+        onSuccess()
+        return
+      }
+      setWrong(true)
     } catch {
-      /* stay on the gate */
+      setWrong(true)
+    } finally {
+      setBusy(false)
     }
-    setWrong(true)
   }
 
   return (
     <div className="admin-gate">
       <form className="admin-gate-card" onSubmit={onSubmit}>
         <div className="admin-gate-brand">
-          <img className="admin-gate-word" src="/logo-wordmark.png?v=2" alt="BarberBjorn" />
+          <img className="admin-gate-word" src="/logo-wordmark.png?v=2" alt="BarberBjorn" width="220" height="231" />
           <span className="admin-gate-rule" aria-hidden="true" />
           <p className="admin-gate-kicker">Dashboard</p>
         </div>
@@ -69,11 +65,16 @@ export function AdminGate({ onSuccess }: Props) {
             type="password"
             value={password}
             autoComplete="current-password"
-            onChange={(event) => setPassword(event.target.value)}
+            onChange={(event) => {
+              setWrong(false)
+              setPassword(event.target.value)
+            }}
           />
         </label>
         {wrong ? <p role="alert">Onjuist wachtwoord.</p> : null}
-        <button type="submit">Inloggen</button>
+        <button type="submit" disabled={busy}>
+          {busy ? 'Even geduld…' : 'Inloggen'}
+        </button>
       </form>
     </div>
   )

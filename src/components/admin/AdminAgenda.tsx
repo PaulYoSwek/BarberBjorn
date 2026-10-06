@@ -1,19 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { copy } from '../../content'
-import { copyWeekClosures, weekHoursFromDays } from '../../planning'
+import { weekHoursFromDays } from '../../planning'
 import { adminWrite, loadPublicSchedule, publishLiveSchedule, type InboxRow } from '../../planning-api'
-import {
-  agendaDays,
-  defaultSchedule,
-  SERVICE_MINUTES,
-  type AgendaDay,
-  type DayHours,
-  type Schedule,
-  type Weekday,
-} from '../../schedule'
-import { DEMO_INBOX, serviceName } from './admin-defaults'
+import { agendaDays, defaultSchedule, type AgendaDay, type DayHours, type Schedule, type Weekday } from '../../schedule'
+import { serviceName } from './admin-defaults'
 
 const WEEK = 7
+const DEFAULT_OPEN: DayHours = { open: '09:00', close: '18:00' }
+const SAVE_FAILED = 'Opslaan mislukt. Controleer de verbinding en probeer het nog eens.'
 
 function minutesOf(stamp: string): number {
   const [hours, minutes] = stamp.split(':').map(Number)
@@ -77,71 +71,34 @@ function blockKey(date: string, time: string): string {
   return `${date}|${time}`
 }
 
-const BLOCKS_KEY = 'barber-admin-blocks'
-const WEEK_KEY = 'barber-admin-week'
-const EDITS_KEY = 'barber-admin-edits'
-
-function readStoredWeek(): Record<Weekday, DayHours> | null {
-  try {
-    const raw = sessionStorage.getItem(WEEK_KEY)
-    return raw ? (JSON.parse(raw) as Record<Weekday, DayHours>) : null
-  } catch {
-    return null
-  }
+/** Edits made on this device that are layered over whatever the cloud returned. */
+type LocalEdits = {
+  blocks: Map<string, boolean>
+  exceptions: Map<string, DayHours | null>
+  week: Record<Weekday, DayHours> | null
 }
 
-function writeStoredWeek(week: Record<Weekday, DayHours>) {
-  sessionStorage.setItem(WEEK_KEY, JSON.stringify(week))
-}
-
-function readStoredEdits(): Record<string, DayHours> {
-  try {
-    const raw = sessionStorage.getItem(EDITS_KEY)
-    return raw ? (JSON.parse(raw) as Record<string, DayHours>) : {}
-  } catch {
-    return {}
-  }
-}
-
-function writeStoredEdits(edits: Record<string, DayHours>) {
-  sessionStorage.setItem(EDITS_KEY, JSON.stringify(edits))
-}
-
-function withSessionWeek(next: Schedule, week: Record<Weekday, DayHours> | null): Schedule {
-  return week ? { ...next, week } : next
-}
-
-function readStoredBlocks(): Map<string, boolean> {
-  try {
-    const raw = sessionStorage.getItem(BLOCKS_KEY)
-    if (!raw) return new Map()
-    return new Map(JSON.parse(raw) as [string, boolean][])
-  } catch {
-    return new Map()
-  }
-}
-
-function writeStoredBlocks(map: Map<string, boolean>) {
-  sessionStorage.setItem(BLOCKS_KEY, JSON.stringify([...map]))
-}
-
-function withSessionBlocks(next: Schedule, session: ReadonlyMap<string, boolean>): Schedule {
-  if (session.size === 0) return next
+function withLocal(next: Schedule, local: LocalEdits): Schedule {
   let blocks = [...(next.blocks ?? [])]
-  for (const [key, on] of session) {
+  for (const [key, on] of local.blocks) {
     const split = key.indexOf('|')
     const date = key.slice(0, split)
     const time = key.slice(split + 1)
-    blocks = blocks.filter((block) => !(block.date === date && block.time === time))
-    if (on) blocks.push({ date, time })
+    blocks = blocks.filter((block) => !(block.date === date && (block.time ?? '') === time))
+    if (on) blocks.push(time ? { date, time } : { date })
   }
-  return { ...next, blocks }
+  const exceptions = { ...(next.exceptions ?? {}) }
+  for (const [date, hours] of local.exceptions) {
+    if (hours) exceptions[date] = hours
+    else delete exceptions[date]
+  }
+  return { ...next, blocks, exceptions, week: local.week ?? next.week }
 }
 
 function withClientHolds(schedule: Schedule, people: InboxRow[]): Schedule {
   const extra = people
     .filter((row) => row.status === 'confirmed')
-    .map((row) => ({ start: row.start, minutes: SERVICE_MINUTES[row.service] }))
+    .map((row) => ({ start: row.start, minutes: row.minutes }))
   if (extra.length === 0) return schedule
   const bookings = [...(schedule.bookings ?? [])]
   const seen = new Set(bookings.map((item) => item.start))
@@ -158,8 +115,7 @@ function clientAt(date: string, time: string, people: InboxRow[]): InboxRow | un
     if (row.status !== 'confirmed') return false
     if (!row.start.startsWith(date)) return false
     const holdStart = minutesOf(row.start.slice(11, 16))
-    const minutes = SERVICE_MINUTES[row.service]
-    return start < holdStart + minutes && holdStart < end
+    return start < holdStart + row.minutes && holdStart < end
   })
 }
 
@@ -181,31 +137,26 @@ const STATUS_LABEL: Record<InboxRow['status'], string> = {
 type Props = { clients?: InboxRow[] }
 
 export function AdminAgenda({ clients = [] }: Props) {
-  const people = clients.length ? clients : DEMO_INBOX
-  const [schedule, setSchedule] = useState<Schedule>(() =>
-    withSessionBlocks(
-      withSessionWeek(withClientHolds(defaultSchedule, people), readStoredWeek()),
-      readStoredBlocks(),
-    ),
-  )
-  const [edits, setEdits] = useState<Record<string, DayHours>>(readStoredEdits)
+  const people = clients
+  const [cloud, setCloud] = useState<Schedule>(defaultSchedule)
+  const [edition, setEdition] = useState(0)
   const [week, setWeek] = useState(0)
   const [picked, setPicked] = useState<string[]>([])
   const [ready, setReady] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [detail, setDetail] = useState<InboxRow | null>(null)
-  const sessionBlocks = useRef(readStoredBlocks())
+  const local = useRef<LocalEdits>({ blocks: new Map(), exceptions: new Map(), week: null })
+
+  function touch() {
+    setEdition((count) => count + 1)
+  }
 
   useEffect(() => {
     let cancelled = false
     loadPublicSchedule()
       .then((next) => {
         if (cancelled) return
-        const seeded = next.bookings?.length ? next : { ...next, bookings: defaultSchedule.bookings }
-        setSchedule(() =>
-          withSessionBlocks(withSessionWeek(seeded, readStoredWeek()), sessionBlocks.current),
-        )
-        setEdits(readStoredEdits())
+        setCloud(next)
         setReady(true)
       })
       .catch(() => {
@@ -216,77 +167,139 @@ export function AdminAgenda({ clients = [] }: Props) {
     }
   }, [])
 
-  const view = useMemo(() => withClientHolds(schedule, people), [people, schedule])
+  // `edition` is part of the dependency list so local edits re-render the view.
+  const view = useMemo(
+    () => withLocal(withClientHolds(cloud, people), local.current),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [cloud, people, edition],
+  )
   const days = useMemo(() => windowDays(new Date(), view), [view])
-
-  useEffect(() => {
-    publishLiveSchedule({
-      week: schedule.week,
-      blocks: view.blocks,
-      exceptions: edits,
-      bookings: view.bookings,
-    })
-  }, [edits, schedule, view])
   const visible = days.slice(week * WEEK, week * WEEK + WEEK)
   const lastWeek = Math.ceil(days.length / WEEK) - 1
+
   function hoursFor(day: { date: string; weekday: Weekday }): DayHours {
     if ((view.blocks ?? []).some((block) => block.date === day.date && !block.time)) {
       return { closed: true }
     }
-    return edits[day.date] ?? schedule.week[day.weekday]
+    return view.exceptions?.[day.date] ?? view.week[day.weekday]
   }
+
   const fallback = visible.find((day) => !('closed' in hoursFor(day)))?.date ?? visible[0]?.date
   const selected = picked.filter((date) => visible.some((day) => day.date === date))
   const selectedDates = selected.length > 0 ? selected : fallback ? [fallback] : []
   const selectedDays = visible.filter((day) => selectedDates.includes(day.date))
   const hoursDay = selectedDays.find((day) => !('closed' in hoursFor(day))) ?? selectedDays[0]
 
-  async function toggle(date: string, time: string, on: boolean) {
-    sessionBlocks.current.set(blockKey(date, time), on)
-    writeStoredBlocks(sessionBlocks.current)
-    setSchedule((current) => {
-      const blocks = (current.blocks ?? []).filter((block) => !(block.date === date && block.time === time))
-      if (on) blocks.push({ date, time })
-      return { ...current, blocks }
-    })
-    try {
-      const result = await adminWrite({ type: 'blocks', date, time, on })
-      if (!result.ok) {
-        setNotice('Lokaal dichtgezet. Cloud opslaan lukt nog niet.')
-        return
-      }
+  function saved(ok: boolean, revert: () => void) {
+    if (ok) {
       setNotice(null)
+      publishLiveSchedule()
+      return
+    }
+    revert()
+    touch()
+    setNotice(SAVE_FAILED)
+  }
+
+  async function write(body: Parameters<typeof adminWrite>[0], revert: () => void) {
+    try {
+      const result = await adminWrite(body)
+      saved(result.ok, revert)
     } catch {
-      setNotice('Lokaal dichtgezet. Cloud opslaan lukt nog niet.')
+      saved(false, revert)
     }
   }
 
-  async function apply() {
+  function toggle(date: string, time: string, on: boolean) {
+    const key = blockKey(date, time)
+    const before = local.current.blocks.get(key)
+    local.current.blocks.set(key, on)
+    touch()
+    void write({ type: 'blocks', date, time, on }, () => {
+      if (before === undefined) local.current.blocks.delete(key)
+      else local.current.blocks.set(key, before)
+    })
+  }
+
+  function closeDay(date: string, weekday: Weekday, on: boolean) {
+    if (!ready) return
+    const key = blockKey(date, '')
+    const beforeBlock = local.current.blocks.get(key)
+    const beforeException = local.current.exceptions.get(date)
+    local.current.blocks.set(key, on)
+    // Reopening a day whose template or one-off hours say "closed" needs real hours.
+    const underlying = view.exceptions?.[date] ?? view.week[weekday]
+    const needsHours = !on && 'closed' in underlying
+    if (needsHours) local.current.exceptions.set(date, DEFAULT_OPEN)
+    setPicked((current) => {
+      const inView = current.filter((item) => visible.some((row) => row.date === item))
+      return inView.includes(date) ? inView : [...inView, date]
+    })
+    touch()
+    const revert = () => {
+      if (beforeBlock === undefined) local.current.blocks.delete(key)
+      else local.current.blocks.set(key, beforeBlock)
+      if (needsHours) {
+        if (beforeException === undefined) local.current.exceptions.delete(date)
+        else local.current.exceptions.set(date, beforeException)
+      }
+    }
+    void (async () => {
+      try {
+        const first = await adminWrite({ type: 'blocks', date, time: '', on })
+        if (!first.ok) return saved(false, revert)
+        if (needsHours) {
+          const second = await adminWrite({ type: 'exception', date, hours: DEFAULT_OPEN })
+          return saved(second.ok, revert)
+        }
+        saved(true, revert)
+      } catch {
+        saved(false, revert)
+      }
+    })()
+  }
+
+  /** One-off hours for every selected day. The weekday template stays as it is. */
+  function remember(next: DayHours) {
+    if (!ready || selectedDates.length === 0) return
+    const before = new Map(selectedDates.map((date) => [date, local.current.exceptions.get(date)] as const))
+    for (const date of selectedDates) local.current.exceptions.set(date, next)
+    touch()
+    const revert = () => {
+      for (const [date, hours] of before) {
+        if (hours === undefined) local.current.exceptions.delete(date)
+        else local.current.exceptions.set(date, hours)
+      }
+    }
+    void (async () => {
+      try {
+        const results = await Promise.all(
+          selectedDates.map((date) => adminWrite({ type: 'exception', date, hours: next })),
+        )
+        saved(results.every((result) => result.ok), revert)
+      } catch {
+        saved(false, revert)
+      }
+    })()
+  }
+
+  /** The viewed week becomes the repeating Monday–Sunday template. */
+  function apply() {
     if (!ready || visible.length === 0) return
     const pageDates = visible.map((day) => day.date)
-    const later = days.filter((day) => !pageDates.includes(day.date))
     const next = weekHoursFromDays(visible.map((day) => ({ weekday: day.weekday, hours: hoursFor(day) })))
-    const blocks = copyWeekClosures(visible, later, schedule.blocks ?? [])
-    sessionBlocks.current = new Map(blocks.map((block) => [blockKey(block.date, block.time ?? ''), true]))
-    writeStoredBlocks(sessionBlocks.current)
-    writeStoredWeek(next)
-    setSchedule((current) => ({ ...current, week: next, blocks }))
-    setEdits((current) => {
-      const kept = { ...current }
-      for (const date of pageDates) delete kept[date]
-      writeStoredEdits(kept)
-      return kept
-    })
-    try {
-      const result = await adminWrite({ type: 'week', week: next })
-      if (!result.ok) {
-        setNotice('Lokaal opgeslagen. Cloud opslaan lukt nog niet.')
-        return
+    const beforeWeek = local.current.week
+    const beforeExceptions = new Map(pageDates.map((date) => [date, local.current.exceptions.get(date)] as const))
+    local.current.week = next
+    for (const date of pageDates) local.current.exceptions.set(date, null)
+    touch()
+    void write({ type: 'week', week: next, clearDates: pageDates }, () => {
+      local.current.week = beforeWeek
+      for (const [date, hours] of beforeExceptions) {
+        if (hours === undefined) local.current.exceptions.delete(date)
+        else local.current.exceptions.set(date, hours)
       }
-      setNotice(null)
-    } catch {
-      setNotice('Lokaal opgeslagen. Cloud opslaan lukt nog niet.')
-    }
+    })
   }
 
   const hours = hoursDay ? hoursFor(hoursDay) : null
@@ -295,23 +308,6 @@ export function AdminAgenda({ clients = [] }: Props) {
     if (booked(date, time, view)) return 'booked'
     if (blocked(date, time, view)) return 'shut'
     return 'vrij'
-  }
-
-  function remember(next: DayHours) {
-    if (!ready || selectedDates.length === 0) return
-    const weekHours = { ...schedule.week }
-    for (const day of selectedDays) weekHours[day.weekday] = next
-    setEdits((current) => {
-      const merged = { ...current }
-      for (const date of selectedDates) merged[date] = next
-      writeStoredEdits(merged)
-      return merged
-    })
-    setSchedule((current) => ({ ...current, week: weekHours }))
-    writeStoredWeek(weekHours)
-    void adminWrite({ type: 'week', week: weekHours }).then((result) => {
-      if (!result.ok) setNotice('Lokaal op de site gezet. Cloud opslaan lukt nog niet.')
-    })
   }
 
   function togglePick(date: string) {
@@ -323,28 +319,6 @@ export function AdminAgenda({ clients = [] }: Props) {
       }
       return [...basis, date]
     })
-  }
-
-  function closeDay(date: string, on: boolean) {
-    if (!ready) return
-    const hours = on ? ({ closed: true } as const) : { open: '09:00', close: '18:00' }
-    setPicked((current) => {
-      const inView = current.filter((item) => visible.some((row) => row.date === item))
-      return inView.includes(date) ? inView : [...inView, date]
-    })
-    setEdits((current) => {
-      const merged = { ...current, [date]: hours }
-      writeStoredEdits(merged)
-      return merged
-    })
-    sessionBlocks.current.set(blockKey(date, ''), on)
-    writeStoredBlocks(sessionBlocks.current)
-    setSchedule((current) => {
-      const blocks = (current.blocks ?? []).filter((block) => !(block.date === date && !block.time))
-      if (on) blocks.push({ date })
-      return { ...current, blocks }
-    })
-    void adminWrite({ type: 'blocks', date, time: '', on })
   }
 
   return (
@@ -370,16 +344,6 @@ export function AdminAgenda({ clients = [] }: Props) {
             Volgende week
           </button>
         </div>
-        <button
-          type="button"
-          className="admin-copy-week"
-          disabled={!ready}
-          onClick={() => {
-            void apply()
-          }}
-        >
-          Kopieer naar aankomende weken
-        </button>
         {hoursDay && hours ? (
           <section className="admin-hours">
             <p className="admin-hours-title">Opening {selectedDays.map((day) => dayStamp(day)).join(', ')}</p>
@@ -411,19 +375,31 @@ export function AdminAgenda({ clients = [] }: Props) {
             </div>
           </section>
         ) : null}
+        <button type="button" className="admin-copy-week" disabled={!ready} onClick={apply}>
+          Kopieer naar aankomende weken
+        </button>
       </div>
       <p className="admin-hint">
-        Tik dagen aan om ze samen in te stellen. Kopieer naar aankomende weken zet deze week als standaard. Geboekt
-        opent de klant.
+        Tik dagen aan om ze samen in te stellen. Uren gelden alleen voor die dag. Kopieer naar aankomende weken zet
+        deze week als vaste standaard. Geboekt opent de klant.
       </p>
+      {!ready && !notice ? <p className="admin-hint">Agenda laden…</p> : null}
       {notice ? <p role="alert">{notice}</p> : null}
       {detail ? (
         <div className="admin-booking" role="dialog" aria-label="Boeking">
           <p className="admin-kicker">Boeking</p>
           <h2>{detail.name}</h2>
-          <p>{serviceName(detail.service)}</p>
-          <p>{detail.email}</p>
-          {detail.phone ? <p>{detail.phone}</p> : null}
+          <p>
+            {serviceName(detail.service)} · {detail.minutes} min
+          </p>
+          <p>
+            <a href={`mailto:${detail.email}`}>{detail.email}</a>
+          </p>
+          {detail.phone ? (
+            <p>
+              <a href={`tel:${detail.phone.replace(/\s+/g, '')}`}>{detail.phone}</a>
+            </p>
+          ) : null}
           <p>
             {detail.start.slice(0, 10)} {detail.start.slice(11, 16)}
           </p>
@@ -461,7 +437,7 @@ export function AdminAgenda({ clients = [] }: Props) {
                 aria-pressed={closed}
                 aria-label={`${stamp} hele dag dicht`}
                 disabled={!ready}
-                onClick={() => closeDay(day.date, !closed)}
+                onClick={() => closeDay(day.date, day.weekday, !closed)}
               >
                 Dag dicht
               </button>
@@ -484,7 +460,7 @@ export function AdminAgenda({ clients = [] }: Props) {
                             if (client) setDetail(client)
                             return
                           }
-                          void toggle(day.date, time, state !== 'shut')
+                          toggle(day.date, time, state !== 'shut')
                         }}
                       >
                         <span>{time}</span>

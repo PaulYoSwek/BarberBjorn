@@ -1,32 +1,61 @@
-# React + TypeScript + Vite
+# BarberBjorn
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Landing page and booking system for BarberBjorn, kapper en barbier in Axel.
+Built by [TurboTurtle](https://turboturtle.nl).
 
-Currently, two official plugins are available:
+- `/` — the public site (NL/EN) with live booking.
+- `/admin` — Bjorn's dashboard: agenda, inbox, mail, settings.
+- Supabase (Postgres + edge functions) holds hours, bookings, prices and mail templates. Resend sends mail.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Run locally
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Copy `.env.example` to `.env`. Leave `VITE_SUPABASE_*` empty to run the site without a backend
+(the agenda then shows the default week and bookings fail with "offline"). Set `ADMIN_PASSWORD` to log in
+to `/admin` on the dev server without Supabase.
+
+```bash
+npm test        # vitest
+npm run build   # tsc + vite build (what Vercel runs)
+npx oxlint src  # lint
+```
+
+## Deploy
+
+The frontend deploys on Vercel from `master` (`vercel.json` holds the SPA rewrite and cache/security headers).
+Vercel needs `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` and `VITE_MAPBOX_TOKEN`.
+
+The backend lives in `supabase/` (project `qzpgrfshccokpuznhdxe`). After changing anything there:
+
+```bash
+npx supabase db push
+```
+
+```bash
+npx supabase functions deploy --project-ref qzpgrfshccokpuznhdxe
+```
+
+Function secrets (Supabase dashboard, Edge Functions, Secrets; never in git):
+
+| Secret | What it does |
+| --- | --- |
+| `ADMIN_PASSWORD` | Password for `/admin`. Without it nobody can log in. |
+| `ADMIN_SESSION_SECRET` | Optional extra key for signing admin sessions. Changing it logs everyone out. |
+| `RESEND_API_KEY` | Sends booking mails. Without it bookings still save, marked "Mail niet gegaan". |
+| `RESEND_FROM` | Sender, e.g. `BarberBjorn <hallo@barberbjorn.nl>`. The domain must be verified in Resend. |
+| `SITE_ORIGIN` | Comma-separated origins allowed to call the functions (CORS). |
+
+Shared code in `src/` that the functions import must use explicit `.ts` import extensions, or the
+Supabase bundler fails.
+
+## SEO
+
+Static tags live in `index.html` (title, description, Open Graph, Twitter, hreflang, JSON-LD for the
+business, opening hours and prices). `src/seo.ts` keeps the title, description and canonical in step with the
+active language and marks `/admin` and unknown routes `noindex`. `public/robots.txt` and `public/sitemap.xml`
+point at the production domain in `SITE_URL` (`src/content.ts`). Change that constant, the sitemap and robots
+if the site moves to another domain.

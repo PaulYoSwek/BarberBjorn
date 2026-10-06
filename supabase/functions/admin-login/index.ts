@@ -1,5 +1,5 @@
 import { json, readJson, servePost } from '../_shared/http.ts'
-import { safeEqual, sessionCookie } from '../_shared/session.ts'
+import { safeEqual, sessionCookieFor, sessionToken } from '../_shared/session.ts'
 
 servePost(async (req) => {
   const body = await readJson(req)
@@ -11,5 +11,6 @@ servePost(async (req) => {
   const expected = Deno.env.get('ADMIN_PASSWORD') ?? ''
   const matches = safeEqual(password, expected)
   if (!matches || expected.length === 0) return json(req, 401, { ok: false, error: 'unauthorized' })
-  return json(req, 200, { ok: true }, { 'Set-Cookie': await sessionCookie() })
+  const { token, exp } = await sessionToken()
+  return json(req, 200, { ok: true, token, exp }, { 'Set-Cookie': sessionCookieFor(token) })
 })

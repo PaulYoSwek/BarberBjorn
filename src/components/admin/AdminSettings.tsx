@@ -32,6 +32,9 @@ export function AdminSettings() {
   const [servicesReady, setServicesReady] = useState(false)
   const [templatesReady, setTemplatesReady] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  const [done, setDone] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [loaded, setLoaded] = useState(false)
   const loadedTemplates = useRef<TemplateSave[]>([])
 
   useEffect(() => {
@@ -55,6 +58,7 @@ export function AdminSettings() {
         problems.push('Sjablonen laden mislukt.')
       }
       setNotice(problems.length ? problems.join(' ') : null)
+      setLoaded(true)
     })
     return () => {
       cancelled = true
@@ -72,6 +76,9 @@ export function AdminSettings() {
   }
 
   async function save() {
+    if (busy) return
+    setBusy(true)
+    setDone(null)
     try {
       const jobs: Promise<{ ok: true } | { ok: false; error: string }>[] = []
       if (servicesReady) jobs.push(saveServices(services))
@@ -80,19 +87,31 @@ export function AdminSettings() {
         if (payload.length > 0) jobs.push(saveTemplates(payload))
       }
       const results = await Promise.all(jobs)
-      setNotice(results.every((result) => result.ok) ? null : 'Opslaan mislukt.')
+      const ok = results.every((result) => result.ok)
+      setNotice(ok ? null : 'Opslaan mislukt.')
+      if (ok) setDone('Opgeslagen. De site gebruikt de nieuwe prijzen en tijden meteen.')
     } catch {
       setNotice('Opslaan mislukt.')
+    } finally {
+      setBusy(false)
     }
   }
 
   if (!servicesReady && !templatesReady) {
+    if (!loaded) return <p className="admin-hint">Instellingen laden…</p>
     return notice ? <p role="alert">{notice}</p> : null
   }
 
   return (
     <div className="admin-form">
+      <header className="admin-agenda-head">
+        <div>
+          <p className="admin-kicker">Prijzen, tijden en mail</p>
+          <h1>Settings</h1>
+        </div>
+      </header>
       {notice ? <p role="alert">{notice}</p> : null}
+      {done ? <p className="admin-done" role="status">{done}</p> : null}
       {servicesReady
         ? services.map((service) => {
         const name = serviceName(service.id)
@@ -145,6 +164,7 @@ export function AdminSettings() {
                   Bericht {lang}
                   <textarea
                     aria-label={`${label} ${lang} bericht`}
+                    rows={4}
                     value={item.body}
                     onChange={(event) => patchTemplate(key, lang, { body: event.target.value })}
                   />
@@ -155,8 +175,8 @@ export function AdminSettings() {
         </fieldset>
       ))
         : null}
-      <button type="button" className="admin-primary" disabled={!servicesReady && !templatesReady} onClick={() => { void save() }}>
-        Opslaan
+      <button type="button" className="admin-primary" disabled={(!servicesReady && !templatesReady) || busy} onClick={() => { void save() }}>
+        {busy ? 'Opslaan…' : 'Opslaan'}
       </button>
     </div>
   )

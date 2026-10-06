@@ -1,4 +1,4 @@
-import type { ServiceId } from './content'
+import type { ServiceId } from './content.ts'
 
 export const SERVICE_MINUTES: Record<ServiceId, number> = {
   cut: 45,
@@ -50,13 +50,7 @@ export const defaultSchedule: Schedule = {
     sat: { closed: true },
     sun: { closed: true },
   },
-  bookings: [
-    { start: '2026-10-05T10:00:00', minutes: 45 },
-    { start: '2026-10-06T14:00:00', minutes: 60 },
-    { start: '2026-10-07T09:00:00', minutes: 20 },
-    { start: '2026-10-08T11:30:00', minutes: 45 },
-    { start: '2026-10-09T16:00:00', minutes: 45 },
-  ],
+  bookings: [],
 }
 
 export function mondayOf(now: Date): Date {
@@ -134,7 +128,7 @@ export function agendaDays(
     week: extra.week ?? defaultSchedule.week,
     exceptions: extra.exceptions ?? defaultSchedule.exceptions,
     blocks: extra.blocks,
-    bookings: extra.bookings ?? defaultSchedule.bookings,
+    bookings: extra.bookings ?? [],
     minutes: extra.minutes,
   }
   const minutes = (schedule.minutes ?? SERVICE_MINUTES)[service || 'cut']

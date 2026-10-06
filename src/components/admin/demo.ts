@@ -1,0 +1,93 @@
+import type { InboxRow } from '../../planning-api'
+import { defaultSchedule, type Schedule } from '../../schedule'
+
+/** Sample clients for tests and local demos. Never shown in production. */
+export const DEMO_INBOX: InboxRow[] = [
+  {
+    id: 'demo-jan',
+    service: 'cut',
+    name: 'Jan de Vries',
+    email: 'jan@example.com',
+    phone: '06 12345678',
+    start: '2026-10-05T10:00:00',
+    minutes: 45,
+    kind: 'slot',
+    status: 'confirmed',
+    lang: 'nl',
+    mail_sent: true,
+  },
+  {
+    id: 'demo-sara',
+    service: 'both',
+    name: 'Sara Meijer',
+    email: 'sara@example.com',
+    phone: '06 87654321',
+    start: '2026-10-06T14:00:00',
+    minutes: 60,
+    kind: 'slot',
+    status: 'confirmed',
+    lang: 'nl',
+    mail_sent: true,
+  },
+  {
+    id: 'demo-omar',
+    service: 'beard',
+    name: 'Omar Hassan',
+    email: 'omar@example.com',
+    phone: '',
+    start: '2026-10-07T09:00:00',
+    minutes: 20,
+    kind: 'slot',
+    status: 'confirmed',
+    lang: 'en',
+    mail_sent: true,
+  },
+  {
+    id: 'demo-lisa',
+    service: 'cut',
+    name: 'Lisa Bakker',
+    email: 'lisa@example.com',
+    phone: '06 11223344',
+    start: '2026-10-08T11:30:00',
+    minutes: 45,
+    kind: 'slot',
+    status: 'confirmed',
+    lang: 'nl',
+    mail_sent: true,
+  },
+  {
+    id: 'demo-thomas',
+    service: 'cut',
+    name: 'Thomas Visser',
+    email: 'thomas@example.com',
+    phone: '06 33445566',
+    start: '2026-10-09T16:00:00',
+    minutes: 45,
+    kind: 'slot',
+    status: 'confirmed',
+    lang: 'nl',
+    mail_sent: true,
+  },
+  {
+    id: 'demo-tom',
+    service: 'cut',
+    name: 'Tom Peeters',
+    email: 'tom@example.com',
+    phone: '06 55667788',
+    start: '2026-10-09T13:00:00',
+    minutes: 45,
+    kind: 'custom',
+    status: 'pending',
+    lang: 'nl',
+    mail_sent: false,
+  },
+]
+
+/** The default week with the confirmed demo clients as occupied times. */
+export const DEMO_SCHEDULE: Schedule = {
+  ...defaultSchedule,
+  bookings: DEMO_INBOX.filter((row) => row.status === 'confirmed').map((row) => ({
+    start: row.start,
+    minutes: row.minutes,
+  })),
+}

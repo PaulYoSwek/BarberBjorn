@@ -1,5 +1,5 @@
-import type { Copy, ServiceId } from './content'
-import { agendaDays, type Schedule } from './schedule'
+import type { Copy, ServiceId } from './content.ts'
+import { agendaDays, type Schedule } from './schedule.ts'
 
 export type BookingKind = 'slot' | 'custom'
 

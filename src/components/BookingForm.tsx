@@ -2,10 +2,10 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { todayIso, validateBooking, type BookingInput } from '../booking'
 import { copy, type ServiceId } from '../content'
 import { useLang } from '../language'
+import { setOpeningHours } from '../seo'
 import {
   loadPublicSchedule,
   loadServices,
-  mergeLiveSchedule,
   subscribeLiveSchedule,
   submitBook,
   submitCustom,
@@ -94,7 +94,9 @@ export function BookingForm() {
   const [week, setWeek] = useState(0)
   const [latched, setLatched] = useState(false)
   const busy = useRef(false)
+  const [sending, setSending] = useState(false)
   const sessionHolds = useRef<BookingHold[]>([])
+  const refreshRef = useRef<() => void>(() => {})
 
   const edit = (next: BookingInput) => {
     setLatched(false)
@@ -103,19 +105,26 @@ export function BookingForm() {
 
   useEffect(() => {
     let cancelled = false
-    function apply(next: Schedule) {
-      if (!cancelled) setSchedule(() => withSessionHolds(mergeLiveSchedule(next), sessionHolds.current))
-    }
-    loadPublicSchedule()
-      .then(apply)
-      .catch(() => {})
-    const stop = subscribeLiveSchedule(() => {
+    let generation = 0
+    function refresh() {
+      const mine = ++generation
       loadPublicSchedule()
-        .then(apply)
-        .catch(() => {
-          if (!cancelled) setSchedule((current) => withSessionHolds(mergeLiveSchedule(current), sessionHolds.current))
+        .then((next) => {
+          if (cancelled || mine !== generation) return
+          setSchedule(withSessionHolds(next, sessionHolds.current))
+          setOpeningHours(next.week)
         })
-    })
+        .catch(() => {})
+    }
+    refreshRef.current = refresh
+    refresh()
+    // Another tab on this device (the dashboard) changed something.
+    const stop = subscribeLiveSchedule(refresh)
+    // Coming back to the tab: someone else may have booked in the meantime.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refresh()
+    }
+    document.addEventListener('visibilitychange', onVisible)
     loadServices()
       .then((rows) => {
         if (cancelled || rows.length === 0) return
@@ -127,6 +136,7 @@ export function BookingForm() {
     return () => {
       cancelled = true
       stop()
+      document.removeEventListener('visibilitychange', onVisible)
     }
   }, [])
 
@@ -193,6 +203,7 @@ export function BookingForm() {
       return
     }
     busy.current = true
+    setSending(true)
     setErrors({})
     const payload = { ...input, lang }
     try {
@@ -200,6 +211,8 @@ export function BookingForm() {
       if (!sent.ok) {
         setStatus('')
         setSubmitError(sent.error)
+        // The grid is stale when the time was just taken: show the real state.
+        if (TAKEN_SIGNALS.has(sent.error)) refreshRef.current()
         return
       }
       setSubmitError('')
@@ -217,10 +230,11 @@ export function BookingForm() {
       }
     } finally {
       busy.current = false
+      setSending(false)
     }
   }
 
-  const duration = minutes?.[input.service] ?? SERVICE_MINUTES[input.service]
+  const duration = input.service ? (minutes?.[input.service] ?? SERVICE_MINUTES[input.service]) : 0
   const serviceName = t.services.find((item) => item.id === input.service)?.name ?? ''
   const when = whenStamp(input.slot, days, t.days, t.monthShort)
 
@@ -331,7 +345,9 @@ export function BookingForm() {
             <span>{serviceName}{duration > 0 ? ` · ${duration} min` : ''}</span>
             <strong>{when || t.noTimeYet}</strong>
           </p>
-          <button type="submit">{t.sendLabel}</button>
+          <button type="submit" disabled={sending} aria-busy={sending}>
+            {sending ? t.sendingLabel : t.sendLabel}
+          </button>
         </div>
         {status === 'book' && <p>{t.bookSuccess}</p>}
         {status === 'request' && <p>{t.requestSuccess}</p>}

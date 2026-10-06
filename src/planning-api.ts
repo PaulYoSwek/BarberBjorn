@@ -1,6 +1,14 @@
+import { storeAdminSession } from './admin-session'
 import type { BookingInput, BookingKind } from './booking'
 import type { Lang, ServiceId } from './content'
-import { defaultSchedule, type DayHours, type Schedule, type ScheduleBlock, type Weekday } from './schedule'
+import {
+  defaultSchedule,
+  SERVICE_MINUTES,
+  type DayHours,
+  type Schedule,
+  type ScheduleBlock,
+  type Weekday,
+} from './schedule'
 import { supabase } from './supabase'
 
 const WEEKDAYS: Weekday[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
@@ -15,6 +23,13 @@ type WeekRow = {
 type BlockRow = {
   date: string
   time: string | null
+}
+
+type ExceptionRow = {
+  date: string
+  closed: boolean
+  open: string | null
+  close: string | null
 }
 
 type OccupancyRow = {
@@ -36,9 +51,9 @@ function isServiceId(value: string): value is ServiceId {
   return value === 'cut' || value === 'beard' || value === 'both'
 }
 
-function dayHours(row: WeekRow): DayHours {
+function dayHours(row: { closed: boolean; open: string | null; close: string | null }): DayHours {
   if (row.closed || !row.open || !row.close) return { closed: true }
-  return { open: row.open, close: row.close }
+  return { open: row.open.slice(0, 5), close: row.close.slice(0, 5) }
 }
 
 function localStart(value: string): string {
@@ -65,70 +80,63 @@ async function read<T>(table: string, columns: string): Promise<T[]> {
 export const LIVE_SCHEDULE_KEY = 'barber-live-schedule'
 const LIVE_EVENT = 'barber-live-schedule'
 
-export type LiveSchedule = {
-  week?: Schedule['week']
-  blocks?: ScheduleBlock[]
-  exceptions?: Schedule['exceptions']
-  bookings?: Schedule['bookings']
-}
-
-export function readLiveSchedule(): LiveSchedule {
+/**
+ * Supabase is the source of truth. The dashboard only pings other tabs on
+ * this device so the public agenda reloads right away after a change.
+ */
+export function publishLiveSchedule() {
   try {
-    const raw = localStorage.getItem(LIVE_SCHEDULE_KEY)
-    return raw ? (JSON.parse(raw) as LiveSchedule) : {}
+    localStorage.setItem(LIVE_SCHEDULE_KEY, String(Date.now()))
   } catch {
-    return {}
+    /* storage blocked */
   }
-}
-
-export function publishLiveSchedule(next: LiveSchedule) {
-  localStorage.setItem(LIVE_SCHEDULE_KEY, JSON.stringify(next))
   window.dispatchEvent(new Event(LIVE_EVENT))
 }
 
-export function subscribeLiveSchedule(onChange: (live: LiveSchedule) => void): () => void {
-  const notify = () => onChange(readLiveSchedule())
+export function subscribeLiveSchedule(onChange: () => void): () => void {
   const onStorage = (event: StorageEvent) => {
-    if (event.key === LIVE_SCHEDULE_KEY) notify()
+    if (event.key === LIVE_SCHEDULE_KEY) onChange()
   }
-  window.addEventListener(LIVE_EVENT, notify)
+  window.addEventListener(LIVE_EVENT, onChange)
   window.addEventListener('storage', onStorage)
   return () => {
-    window.removeEventListener(LIVE_EVENT, notify)
+    window.removeEventListener(LIVE_EVENT, onChange)
     window.removeEventListener('storage', onStorage)
   }
 }
 
-export function mergeLiveSchedule(base: Schedule, live = readLiveSchedule()): Schedule {
-  if (!live.week && !live.blocks && !live.exceptions && !live.bookings) return base
-  return {
-    ...base,
-    week: live.week ?? base.week,
-    blocks: live.blocks ?? base.blocks,
-    exceptions: live.exceptions ?? base.exceptions,
-    bookings: live.bookings ?? base.bookings,
+async function readExceptions(): Promise<Record<string, DayHours>> {
+  const exceptions: Record<string, DayHours> = {}
+  try {
+    const rows = await read<ExceptionRow>('schedule_exceptions', 'date, closed, open, close')
+    for (const row of rows) exceptions[String(row.date).slice(0, 10)] = dayHours(row)
+  } catch {
+    /* table not migrated yet: no one-off hours */
   }
+  return exceptions
 }
 
 export async function loadPublicSchedule(): Promise<Schedule> {
-  if (!supabase) return mergeLiveSchedule(defaultSchedule)
-  const [weekRows, blockRows, occupancy] = await Promise.all([
+  if (!supabase) return defaultSchedule
+  const [weekRows, blockRows, occupancy, exceptions] = await Promise.all([
     read<WeekRow>('schedule_week', 'weekday, closed, open, close'),
     read<BlockRow>('schedule_blocks', 'date, time'),
     read<OccupancyRow>('booking_occupancy', 'start, minutes'),
+    readExceptions(),
   ])
   const week = { ...defaultSchedule.week }
   for (const row of weekRows) {
     if (isWeekday(row.weekday)) week[row.weekday] = dayHours(row)
   }
-  return mergeLiveSchedule({
+  return {
     week,
+    exceptions,
     blocks: blockRows.map(toBlock),
     bookings: occupancy.map((row) => ({
       start: localStart(String(row.start)),
       minutes: row.minutes,
     })),
-  })
+  }
 }
 
 export async function loadServices(): Promise<ServiceSave[]> {
@@ -199,7 +207,39 @@ export function submitCustom(input: BookingInput & { lang: Lang }) {
 
 export type AdminWriteBody =
   | { type: 'blocks'; date: string; time: string; on: boolean }
-  | { type: 'week'; week: Record<Weekday, DayHours> }
+  | { type: 'week'; week: Record<Weekday, DayHours>; clearDates?: string[] }
+  | { type: 'exception'; date: string; hours: DayHours | null }
+
+export type LoginResult = 'ok' | 'wrong' | 'unavailable'
+
+function loginStatus(error: unknown): number | null {
+  if (!error || typeof error !== 'object' || !('context' in error)) return null
+  const context = (error as { context?: { status?: unknown } }).context
+  return typeof context?.status === 'number' ? context.status : null
+}
+
+/** Ask the edge function to check the password. Stores the session on success. */
+export async function adminLogin(password: string): Promise<LoginResult> {
+  if (!supabase) return 'unavailable'
+  try {
+    const { data, error } = await supabase.functions.invoke('admin-login', { body: { password } })
+    if (!error) {
+      const token =
+        data && typeof data === 'object' && typeof (data as { token?: unknown }).token === 'string'
+          ? (data as { token: string }).token
+          : null
+      storeAdminSession(token)
+      return 'ok'
+    }
+    return loginStatus(error) === 401 ? 'wrong' : 'unavailable'
+  } catch {
+    return 'unavailable'
+  }
+}
+
+export function isUnauthorized(error: unknown): boolean {
+  return error instanceof Error && error.message === 'unauthorized'
+}
 
 export async function adminWrite(
   body: AdminWriteBody,
@@ -214,8 +254,10 @@ export type InboxRow = {
   email: string
   phone: string
   start: string
+  minutes: number
   kind: BookingKind
   status: 'confirmed' | 'pending' | 'declined'
+  lang: Lang
   mail_sent: boolean
 }
 
@@ -237,8 +279,10 @@ type BookingRow = {
   email: string
   phone: string | null
   start: string
+  minutes?: number | null
   kind: string
   status: string
+  lang?: string | null
   mail_sent: boolean | null
 }
 
@@ -262,6 +306,7 @@ function toInbox(rows: BookingRow[]): InboxRow[] {
   const inbox: InboxRow[] = []
   for (const row of rows) {
     if (!isServiceId(row.service) || !isKind(row.kind) || !isStatus(row.status)) continue
+    const minutes = typeof row.minutes === 'number' && row.minutes > 0 ? row.minutes : SERVICE_MINUTES[row.service]
     inbox.push({
       id: String(row.id),
       service: row.service,
@@ -269,8 +314,10 @@ function toInbox(rows: BookingRow[]): InboxRow[] {
       email: row.email,
       phone: row.phone ?? '',
       start: localStart(String(row.start)),
+      minutes,
       kind: row.kind,
       status: row.status,
+      lang: row.lang === 'en' ? 'en' : 'nl',
       mail_sent: Boolean(row.mail_sent),
     })
   }

@@ -17,13 +17,16 @@ const STATUS_LABEL: Record<InboxRow['status'], string> = {
 
 type Props = {
   rows: InboxRow[]
+  loading?: boolean
   error?: string | null
   onChanged: (id: string, status: 'confirmed' | 'declined') => void
   onResend: (id: string) => void
 }
 
 function ordered(rows: InboxRow[]): InboxRow[] {
-  return rows.slice().sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || a.start.localeCompare(b.start))
+  return rows
+    .slice()
+    .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || a.start.localeCompare(b.start))
 }
 
 function when(start: string): string {
@@ -35,8 +38,9 @@ function when(start: string): string {
   return `${label} ${day} ${month} · ${start.slice(11, 16)}`
 }
 
-export function AdminInbox({ rows, error, onChanged, onResend }: Props) {
+export function AdminInbox({ rows, loading = false, error, onChanged, onResend }: Props) {
   const [notice, setNotice] = useState<string | null>(null)
+  const [done, setDone] = useState<string | null>(null)
   const [decidingId, setDecidingId] = useState<string | null>(null)
   const decidingRef = useRef<string | null>(null)
 
@@ -47,10 +51,11 @@ export function AdminInbox({ rows, error, onChanged, onResend }: Props) {
     try {
       const result = await decideInbox(id, action)
       if (!result.ok) {
-        setNotice('Beslissen mislukt.')
+        setNotice(result.error === 'overlap' ? 'Die tijd is al bezet. Kies een andere tijd of weiger.' : 'Beslissen mislukt.')
         return
       }
       setNotice(null)
+      setDone(action === 'accept' ? 'Geaccepteerd. De klant krijgt een mail.' : 'Geweigerd. De klant krijgt een mail.')
       onChanged(id, action === 'accept' ? 'confirmed' : 'declined')
     } catch {
       setNotice('Beslissen mislukt.')
@@ -69,12 +74,15 @@ export function AdminInbox({ rows, error, onChanged, onResend }: Props) {
           <p className="admin-kicker">Afspraken</p>
           <h1>Inbox</h1>
         </div>
-        <p className="admin-inbox-count">
-          {pendingCount === 0 ? 'Alles bij' : `${pendingCount} nieuw`}
-        </p>
+        <p className="admin-inbox-count">{pendingCount === 0 ? 'Alles bij' : `${pendingCount} nieuw`}</p>
       </header>
       {error ? <p role="alert">{error}</p> : null}
       {notice ? <p role="alert">{notice}</p> : null}
+      {done ? <p className="admin-done" role="status">{done}</p> : null}
+      {loading && rows.length === 0 && !error ? <p className="admin-hint">Inbox laden…</p> : null}
+      {!loading && rows.length === 0 && !error ? (
+        <p className="admin-hint">Nog geen afspraken. Nieuwe boekingen verschijnen hier vanzelf.</p>
+      ) : null}
       <ul className="admin-list">
         {ordered(rows).map((row) => (
           <li key={row.id} className={`admin-row admin-inbox-card is-${row.status}`}>
@@ -86,15 +94,19 @@ export function AdminInbox({ rows, error, onChanged, onResend }: Props) {
             <dl className="admin-inbox-meta">
               <div>
                 <dt>Dienst</dt>
-                <dd>{serviceName(row.service)}</dd>
+                <dd>
+                  {serviceName(row.service)} · {row.minutes} min
+                </dd>
               </div>
               <div>
                 <dt>Mail</dt>
-                <dd>{row.email}</dd>
+                <dd>
+                  <a href={`mailto:${row.email}`}>{row.email}</a>
+                </dd>
               </div>
               <div>
                 <dt>Telefoon</dt>
-                <dd>{row.phone || '—'}</dd>
+                <dd>{row.phone ? <a href={`tel:${row.phone.replace(/\s+/g, '')}`}>{row.phone}</a> : '—'}</dd>
               </div>
               <div>
                 <dt>Type</dt>

@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 import { defaultSchedule } from './schedule'
-import { copyWeekClosures, fillTemplate, isFree, weekHoursFromDays } from './planning'
+import { fillTemplate, isFree, weekHoursFromDays } from './planning'
 
 test('apply week keeps Saturday closed from the viewed days', () => {
   const week = weekHoursFromDays([
@@ -14,34 +14,6 @@ test('apply week keeps Saturday closed from the viewed days', () => {
   ])
   expect(week.mon).toEqual({ open: '10:00', close: '16:00' })
   expect(week.sat).toEqual({ closed: true })
-})
-
-test('copy week closures stamps closed days and times onto later same weekdays', () => {
-  const source = [
-    { date: '2026-10-05', weekday: 'mon' as const },
-    { date: '2026-10-06', weekday: 'tue' as const },
-    { date: '2026-10-07', weekday: 'wed' as const },
-  ]
-  const later = [
-    { date: '2026-10-12', weekday: 'mon' as const },
-    { date: '2026-10-13', weekday: 'tue' as const },
-    { date: '2026-10-14', weekday: 'wed' as const },
-  ]
-  const copied = copyWeekClosures(source, later, [
-    { date: '2026-10-05' },
-    { date: '2026-10-06', time: '15:00' },
-    { date: '2026-10-20', time: '11:00' },
-  ])
-  expect(copied).toEqual(
-    expect.arrayContaining([
-      { date: '2026-10-05' },
-      { date: '2026-10-12' },
-      { date: '2026-10-06', time: '15:00' },
-      { date: '2026-10-13', time: '15:00' },
-      { date: '2026-10-20', time: '11:00' },
-    ]),
-  )
-  expect(copied.some((block) => block.date === '2026-10-14')).toBe(false)
 })
 
 test('isFree is false on a confirmed hold and true on a pending-only world', () => {

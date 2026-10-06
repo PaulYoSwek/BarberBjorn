@@ -29,8 +29,10 @@ const client = {
   email: 'sam@mail.nl',
   phone: '',
   start: '2026-10-06T09:00:00',
+  minutes: 45,
   kind: 'slot' as const,
   status: 'confirmed' as const,
+  lang: 'nl' as const,
   mail_sent: true,
 }
 
@@ -63,6 +65,18 @@ test('Verstuur sends the selected client and template', async () => {
     subject: 'Hoi',
     body: 'Hoi Sam, Knippen op 2026-10-06 om 09:00.',
   })
+})
+
+test('an English client gets the English template', async () => {
+  loadInbox.mockResolvedValue([{ ...client, id: 'mail-en', name: 'Tom', lang: 'en' as const }])
+  render(<AdminShell />)
+  await userEvent.click(screen.getByRole('button', { name: 'Mail' }))
+  await userEvent.selectOptions(await screen.findByLabelText('Klant'), 'mail-en')
+  await userEvent.selectOptions(screen.getByLabelText('Sjabloon'), 'thanks')
+  await waitFor(() => expect(screen.getByLabelText('Onderwerp')).toHaveValue('Hi'))
+  expect(screen.getByLabelText('Bericht')).toHaveValue('Hi Tom')
+  await userEvent.click(screen.getByRole('button', { name: 'Verstuur' }))
+  expect(await screen.findByRole('status')).toHaveTextContent('Mail verstuurd naar sam@mail.nl.')
 })
 
 test('a successful send clears Mail niet gegaan for that client', async () => {

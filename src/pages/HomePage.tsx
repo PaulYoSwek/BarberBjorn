@@ -8,12 +8,16 @@ import { LanguageSwitch } from '../components/LanguageSwitch'
 import { Services } from '../components/Services'
 import { RopeDivider, type RopeEdge } from '../components/RopeDivider'
 import { Splash } from '../components/Splash'
+import { useLang } from '../language'
+import { useHeadTags } from '../seo'
 
 const BOOKING_CUT: RopeEdge = { of: 'prev', left: 1, right: 0.88 }
 const FOOTER_CUT: RopeEdge = { of: 'next', left: 0.18, right: 0 }
 
 export function HomePage() {
+  const { t, lang } = useLang()
   const [ready, setReady] = useState(false)
+  useHeadTags({ title: t.seoTitle, description: t.seoDescription, lang })
   return (
     <>
       {!ready && <Splash onDone={() => setReady(true)} />}

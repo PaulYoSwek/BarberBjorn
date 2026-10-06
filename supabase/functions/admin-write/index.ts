@@ -42,6 +42,33 @@ servePost(async (req) => {
     }
     const saved = await db.from('schedule_week').upsert(rows)
     if (saved.error) throw new Error(saved.error.message)
+    // The viewed week became the template, so its one-off hours are no longer needed.
+    const clear = Array.isArray(record.clearDates)
+      ? record.clearDates.filter((item): item is string => typeof item === 'string' && DATE.test(item))
+      : []
+    if (clear.length > 0) {
+      const cleared = await db.from('schedule_exceptions').delete().in('date', clear)
+      if (cleared.error) throw new Error(cleared.error.message)
+    }
+    return json(req, 200, { ok: true })
+  }
+
+  if (record.type === 'exception') {
+    const date = typeof record.date === 'string' ? record.date.slice(0, 10) : ''
+    if (!DATE.test(date)) return json(req, 400, { ok: false, error: 'invalid' })
+    if (record.hours === null) {
+      const deleted = await db.from('schedule_exceptions').delete().eq('date', date)
+      if (deleted.error) throw new Error(deleted.error.message)
+      return json(req, 200, { ok: true })
+    }
+    const hours = parseHours(record.hours)
+    if (!hours) return json(req, 400, { ok: false, error: 'invalid' })
+    const saved = await db.from('schedule_exceptions').upsert(
+      'closed' in hours
+        ? { date, closed: true, open: null, close: null }
+        : { date, closed: false, open: hours.open, close: hours.close },
+    )
+    if (saved.error) throw new Error(saved.error.message)
     return json(req, 200, { ok: true })
   }
 

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { loadInbox, type InboxRow } from '../../planning-api'
-import { DEMO_INBOX } from './admin-defaults'
+import { isUnauthorized, loadInbox, type InboxRow } from '../../planning-api'
 import { AdminAgenda } from './AdminAgenda'
 import { AdminInbox } from './AdminInbox'
 import { AdminMail } from './AdminMail'
@@ -28,10 +27,15 @@ function applyInbox(incoming: InboxRow[], decided: ReadonlyMap<string, 'confirme
 export function AdminShell({ pending, onLogout }: Props) {
   const [tab, setTab] = useState<Tab>('agenda')
   const [rows, setRows] = useState<InboxRow[]>([])
+  const [inboxLoaded, setInboxLoaded] = useState(false)
   const [inboxError, setInboxError] = useState<string | null>(null)
   const [mailClientId, setMailClientId] = useState<string | null>(null)
   const inboxGeneration = useRef(0)
   const decidedStatus = useRef(new Map<string, 'confirmed' | 'declined'>())
+  const logout = useRef(onLogout)
+  useEffect(() => {
+    logout.current = onLogout
+  }, [onLogout])
 
   function pullInbox(reportError: boolean) {
     const generation = ++inboxGeneration.current
@@ -40,9 +44,19 @@ export function AdminShell({ pending, onLogout }: Props) {
         if (generation !== inboxGeneration.current) return
         setRows(applyInbox(next, decidedStatus.current))
         setInboxError(null)
+        setInboxLoaded(true)
       })
-      .catch(() => {
-        if (reportError && generation === inboxGeneration.current) setInboxError('Inbox laden mislukt.')
+      .catch((error: unknown) => {
+        if (generation !== inboxGeneration.current) return
+        // The session cookie or token ran out: back to the password screen.
+        if (isUnauthorized(error)) {
+          logout.current?.()
+          return
+        }
+        if (reportError) {
+          setInboxError('Inbox laden mislukt.')
+          setInboxLoaded(true)
+        }
       })
   }
 
@@ -58,48 +72,55 @@ export function AdminShell({ pending, onLogout }: Props) {
 
   useEffect(() => {
     pullInbox(true)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') pullInbox(false)
+    }
+    document.addEventListener('visibilitychange', onVisible)
     return () => {
+      document.removeEventListener('visibilitychange', onVisible)
       inboxGeneration.current += 1
     }
   }, [])
 
-  const displayRows = rows.length > 0 ? rows : DEMO_INBOX
-  const pendingCount = pending ?? displayRows.filter((row) => row.status === 'pending').length
+  const pendingCount = pending ?? rows.filter((row) => row.status === 'pending').length
 
   return (
     <div className="admin">
       <header className="admin-bar">
         <div className="admin-brand">
-          <img className="admin-brand-mark" src="/logo-mark.png?v=2" alt="BarberBjorn" />
+          <img className="admin-brand-mark" src="/logo-mark.png?v=2" alt="BarberBjorn" width="28" height="28" />
           <span className="admin-brand-name">BarberBjorn</span>
         </div>
-        <nav className="admin-tabs">
-        {TABS.map((item) => {
-          const on = tab === item.id
-          const label = item.id === 'inbox' && pendingCount > 0 ? `Inbox ${pendingCount}` : item.label
-          return (
-            <button
-              key={item.id}
-              type="button"
-              className={on ? 'is-on' : undefined}
-              aria-current={on ? 'page' : undefined}
-              onClick={() => setTab(item.id)}
-            >
-              {label}
-            </button>
-          )
-        })}
+        <nav className="admin-tabs" aria-label="Dashboard">
+          {TABS.map((item) => {
+            const on = tab === item.id
+            const badge = item.id === 'inbox' && pendingCount > 0 ? pendingCount : 0
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className={on ? 'is-on' : undefined}
+                aria-current={on ? 'page' : undefined}
+                aria-label={badge ? `Inbox ${badge}` : undefined}
+                onClick={() => setTab(item.id)}
+              >
+                {item.label}
+                {badge ? <span className="admin-badge" aria-hidden="true">{badge}</span> : null}
+              </button>
+            )
+          })}
         </nav>
         <button type="button" className="admin-logout" onClick={onLogout}>
           Uitloggen
         </button>
       </header>
       <div className="admin-card">
-        {tab === 'agenda' ? <AdminAgenda clients={displayRows} /> : null}
+        {tab === 'agenda' ? <AdminAgenda clients={rows} /> : null}
         {tab === 'inbox' ? (
           <AdminInbox
-            rows={displayRows}
-            error={rows.length > 0 ? inboxError : null}
+            rows={rows}
+            loading={!inboxLoaded}
+            error={inboxError}
             onChanged={onDecided}
             onResend={(id) => {
               setMailClientId(id)
@@ -107,7 +128,7 @@ export function AdminShell({ pending, onLogout }: Props) {
             }}
           />
         ) : null}
-        {tab === 'mail' ? <AdminMail rows={displayRows} clientId={mailClientId} onSent={markMailSent} /> : null}
+        {tab === 'mail' ? <AdminMail rows={rows} clientId={mailClientId} onSent={markMailSent} /> : null}
         {tab === 'settings' ? <AdminSettings /> : null}
       </div>
     </div>

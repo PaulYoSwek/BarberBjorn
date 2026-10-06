@@ -1,23 +1,23 @@
 import { expect, test, vi } from 'vitest'
 import { defaultSchedule } from './schedule'
-import { loadPublicSchedule, loadServices, publishLiveSchedule } from './planning-api'
+import { loadPublicSchedule, loadServices, publishLiveSchedule, subscribeLiveSchedule } from './planning-api'
 
 test('supabase client stays null without env', async () => {
   const { supabase } = await import('./supabase')
   expect(supabase).toBeNull()
 })
 
-test('loadPublicSchedule overlays live week hours and blocks onto the public schedule', async () => {
+test('a dashboard ping reaches subscribers on this device and never changes the schedule', async () => {
   localStorage.clear()
-  publishLiveSchedule({
-    week: { ...defaultSchedule.week, mon: { open: '10:00', close: '16:00' } },
-    blocks: [{ date: '2026-10-05', time: '12:00' }],
-    bookings: [{ start: '2026-10-06T09:00:00', minutes: 45 }],
-  })
+  const seen = vi.fn()
+  const stop = subscribeLiveSchedule(seen)
+  publishLiveSchedule()
+  expect(seen).toHaveBeenCalledTimes(1)
+  stop()
+  publishLiveSchedule()
+  expect(seen).toHaveBeenCalledTimes(1)
   const schedule = await loadPublicSchedule()
-  expect(schedule.week.mon).toEqual({ open: '10:00', close: '16:00' })
-  expect(schedule.blocks).toEqual([{ date: '2026-10-05', time: '12:00' }])
-  expect(schedule.bookings).toEqual([{ start: '2026-10-06T09:00:00', minutes: 45 }])
+  expect(schedule).toEqual(defaultSchedule)
   localStorage.clear()
 })
 
@@ -55,6 +55,10 @@ test('maps live week blocks and occupancy into a schedule', async () => {
       { id: 'beard', price: '€18', minutes: 25 },
       { id: 'both', price: '€45', minutes: 70 },
     ],
+    schedule_exceptions: [
+      { date: '2026-10-14', closed: false, open: '11:00:00', close: '15:00:00' },
+      { date: '2026-10-15', closed: true, open: null, close: null },
+    ],
   }
   const from = vi.fn((table: string) => ({
     select: vi.fn(async () => ({ data: tables[table] ?? [], error: null })),
@@ -71,6 +75,8 @@ test('maps live week blocks and occupancy into a schedule', async () => {
   expect(from).toHaveBeenCalledWith('schedule_blocks')
   expect(from).toHaveBeenCalledWith('booking_occupancy')
   expect(from).toHaveBeenCalledWith('services')
+  expect(from).toHaveBeenCalledWith('schedule_exceptions')
+  expect(schedule.exceptions).toEqual({ '2026-10-14': { open: '11:00', close: '15:00' }, '2026-10-15': { closed: true } })
   expect(schedule.week.mon).toEqual({ open: '10:00', close: '16:00' })
   expect(schedule.week.sat).toEqual({ closed: true })
   expect(schedule.blocks).toEqual([
@@ -241,8 +247,10 @@ test('loadInbox invokes inbox-list and does not select bookings', async () => {
       email: 'sam@mail.nl',
       phone: '',
       start: '2026-10-06T12:00:00Z',
+      minutes: 45,
       kind: 'custom',
       status: 'pending',
+      lang: 'en',
       mail_sent: false,
     },
     {
@@ -284,6 +292,8 @@ test('loadInbox invokes inbox-list and does not select bookings', async () => {
   expect(inbox[0]?.service).toBe('cut')
   expect(inbox[0]?.status).toBe('pending')
   expect(inbox[0]?.mail_sent).toBe(false)
+  expect(inbox[0]?.minutes).toBe(45)
+  expect(inbox[0]?.lang).toBe('en')
   expect(inbox[0]?.start).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/)
   expect(new Date(inbox[0]!.start).getTime()).toBe(new Date('2026-10-06T12:00:00Z').getTime())
 })
@@ -364,4 +374,57 @@ test('loadPublicSchedule throws when a read fails', async () => {
   }))
   const { loadPublicSchedule: load } = await import('./planning-api')
   await expect(load()).rejects.toThrow('permission denied')
+})
+
+test('loadPublicSchedule survives a missing exceptions table', async () => {
+  vi.resetModules()
+  vi.doMock('./supabase', () => ({
+    supabase: {
+      from: (table: string) => ({
+        select: async () =>
+          table === 'schedule_exceptions'
+            ? { data: null, error: { message: 'relation does not exist' } }
+            : { data: [], error: null },
+      }),
+    },
+  }))
+  const { loadPublicSchedule: load } = await import('./planning-api')
+  const schedule = await load()
+  expect(schedule.exceptions).toEqual({})
+  expect(schedule.week.mon).toEqual({ open: '09:00', close: '18:00' })
+})
+
+test('adminLogin stores the token from the login body and sends it as a header', async () => {
+  localStorage.clear()
+  sessionStorage.clear()
+  const invoke = vi.fn(async () => ({ data: { ok: true, token: '9999999999.sig' }, error: null }))
+  vi.resetModules()
+  vi.doMock('./supabase', () => ({ supabase: { functions: { invoke } } }))
+  const api = await import('./planning-api')
+  const session = await import('./admin-session')
+  expect(await api.adminLogin('geheim')).toBe('ok')
+  expect(invoke).toHaveBeenCalledWith('admin-login', { body: { password: 'geheim' } })
+  expect(session.readAdminToken()).toBe('9999999999.sig')
+  expect(session.hasAdminSession()).toBe(true)
+  session.clearAdminSession()
+  expect(session.hasAdminSession()).toBe(false)
+})
+
+test('adminLogin reports a wrong password and an unreachable function apart', async () => {
+  vi.resetModules()
+  vi.doMock('./supabase', () => ({
+    supabase: {
+      functions: {
+        invoke: vi.fn(async () => ({ data: null, error: { message: 'no', context: { status: 401 } } })),
+      },
+    },
+  }))
+  let api = await import('./planning-api')
+  expect(await api.adminLogin('nee')).toBe('wrong')
+  vi.resetModules()
+  vi.doMock('./supabase', () => ({
+    supabase: { functions: { invoke: vi.fn(async () => ({ data: null, error: { message: 'down' } })) } },
+  }))
+  api = await import('./planning-api')
+  expect(await api.adminLogin('nee')).toBe('unavailable')
 })

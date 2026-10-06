@@ -1,5 +1,5 @@
-import type { ServiceId } from './content'
-import { agendaDays, type DayHours, type Schedule, type ScheduleBlock, type Weekday } from './schedule'
+import type { ServiceId } from './content.ts'
+import { agendaDays, type DayHours, type Schedule, type Weekday } from './schedule.ts'
 
 function clockMinutes(stamp: string): number {
   const [hours, minutes] = stamp.split(':')
@@ -36,31 +36,6 @@ export function weekHoursFromDays(
     week[weekday] = hours
   }
   return week
-}
-
-export function copyWeekClosures(
-  sourceDays: { date: string; weekday: Weekday }[],
-  targetDays: { date: string; weekday: Weekday }[],
-  blocks: ScheduleBlock[],
-): ScheduleBlock[] {
-  const pattern = new Map<Weekday, { dayClosed: boolean; times: string[] }>()
-  for (const day of sourceDays) {
-    const dayBlocks = blocks.filter((block) => block.date === day.date)
-    pattern.set(day.weekday, {
-      dayClosed: dayBlocks.some((block) => !block.time),
-      times: dayBlocks.flatMap((block) => (block.time ? [block.time] : [])),
-    })
-  }
-  const targetDates = new Set(targetDays.map((day) => day.date))
-  const kept = blocks.filter((block) => !targetDates.has(block.date))
-  const copied: ScheduleBlock[] = []
-  for (const day of targetDays) {
-    const hit = pattern.get(day.weekday)
-    if (!hit) continue
-    if (hit.dayClosed) copied.push({ date: day.date })
-    for (const time of hit.times) copied.push({ date: day.date, time })
-  }
-  return [...kept, ...copied]
 }
 
 export function isFree(

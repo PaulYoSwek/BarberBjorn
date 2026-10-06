@@ -2,6 +2,9 @@ export type Lang = 'nl' | 'en'
 export type ServiceId = 'cut' | 'beard' | 'both'
 
 export type Copy = {
+  seoTitle: string
+  seoDescription: string
+  heroHidden: string
   tagline: string
   bookCta: string
   bookKicker: string
@@ -21,6 +24,7 @@ export type Copy = {
   dayLabel: string
   slotLabel: string
   sendLabel: string
+  sendingLabel: string
   fieldError: string
   weekendError: string
   pastError: string
@@ -39,6 +43,7 @@ export type Copy = {
   weekNext: string
   closedLabel: string
   aboutKicker: string
+  portraitAlt: string
   aboutTitle: string
   aboutLines: string[]
   faqKicker: string
@@ -46,6 +51,19 @@ export type Copy = {
   faq: { q: string; a: string }[]
   mapLabel: string
   directionsCta: string
+  creditLabel: string
+  notFoundTitle: string
+  notFoundBody: string
+  backHome: string
+}
+
+/** Public origin of the site, used for canonical and social tags. */
+export const SITE_URL = 'https://www.barberbjorn.nl'
+
+/** The studio that built the site. Linked from the footer. */
+export const CREDIT = {
+  name: 'TurboTurtle',
+  url: 'https://turboturtle.nl',
 }
 
 export const CONTACT = {
@@ -70,11 +88,15 @@ const services = {
 
 export const copy: Record<Lang, Copy> = {
   nl: {
+    seoTitle: 'BarberBjorn · Kapper en barbier in Axel',
+    seoDescription:
+      'BarberBjorn is de kapper en barbier aan de Ferdinandstraat 8 in Axel. Knippen €30, baard €15, allebei €40. Eén stoel, geen haast. Plan je afspraak online.',
+    heroHidden: 'BarberBjorn, kapper en barbier in Axel',
     tagline: 'Een goede knip. Zonder haast.',
     bookCta: 'Afspraak maken',
     bookKicker: 'DE STOEL',
     bookTitle: 'Afspraak maken',
-    bookIntro: 'Kies een vrije tijd. Tot het systeem er is, gaat dit als mail weg.',
+    bookIntro: 'Kies een vrije tijd. Je krijgt meteen een bevestiging per mail.',
     serviceLabel: 'Dienst',
     nameLabel: 'Naam',
     phoneLabel: 'Telefoon',
@@ -89,6 +111,7 @@ export const copy: Record<Lang, Copy> = {
     dayLabel: 'Dag',
     slotLabel: 'Tijd',
     sendLabel: 'Verstuur',
+    sendingLabel: 'Even geduld…',
     fieldError: 'Vul dit nog even in.',
     weekendError: 'Zaterdag en zondag is de stoel dicht. Kies een weekdag.',
     pastError: 'Die dag is al geweest. Kies vandaag of later.',
@@ -115,6 +138,7 @@ export const copy: Record<Lang, Copy> = {
     weekNext: 'Volgende week',
     closedLabel: 'dicht',
     aboutKicker: 'OVER BJORN',
+    portraitAlt: 'Bjorn, kapper en barbier bij BarberBjorn in Axel',
     aboutTitle: 'Alleen hij. Alle tijd.',
     faqKicker: 'VRAGEN',
     faqTitle: 'Voor je komt.',
@@ -133,13 +157,21 @@ export const copy: Record<Lang, Copy> = {
     ],
     mapLabel: 'Ferdinandstraat 8, Axel',
     directionsCta: 'Route',
+    creditLabel: 'Website door',
+    notFoundTitle: 'Die pagina is er niet.',
+    notFoundBody: 'Het adres klopt niet, of de pagina is weg.',
+    backHome: 'Naar de voorpagina',
   },
   en: {
+    seoTitle: 'BarberBjorn · Barber in Axel',
+    seoDescription:
+      'BarberBjorn is the barber at Ferdinandstraat 8 in Axel, the Netherlands. Cut €30, beard €15, both €40. One chair, no rush. Book your visit online.',
+    heroHidden: 'BarberBjorn, barber in Axel',
     tagline: 'A proper cut. No rush.',
     bookCta: 'Book a visit',
     bookKicker: 'THE CHAIR',
     bookTitle: 'Book a visit',
-    bookIntro: 'Pick a free time. Until the booking system is in place, this leaves as an email.',
+    bookIntro: 'Pick a free time. You get a confirmation by mail right away.',
     serviceLabel: 'Service',
     nameLabel: 'Name',
     phoneLabel: 'Phone',
@@ -154,6 +186,7 @@ export const copy: Record<Lang, Copy> = {
     dayLabel: 'Day',
     slotLabel: 'Time',
     sendLabel: 'Send',
+    sendingLabel: 'One moment…',
     fieldError: 'Add this first.',
     weekendError: 'Saturday and Sunday the chair is closed. Pick a weekday.',
     pastError: 'That day has passed. Pick today or a later day.',
@@ -180,6 +213,7 @@ export const copy: Record<Lang, Copy> = {
     weekNext: 'Next week',
     closedLabel: 'closed',
     aboutKicker: 'ABOUT BJORN',
+    portraitAlt: 'Bjorn, the barber at BarberBjorn in Axel',
     aboutTitle: 'Just him. All the time.',
     faqKicker: 'QUESTIONS',
     faqTitle: 'Before you sit.',
@@ -198,5 +232,9 @@ export const copy: Record<Lang, Copy> = {
     ],
     mapLabel: 'Ferdinandstraat 8, Axel',
     directionsCta: 'Directions',
+    creditLabel: 'Website by',
+    notFoundTitle: 'That page is not here.',
+    notFoundBody: 'The address is wrong, or the page is gone.',
+    backHome: 'Back to the front page',
   },
 }

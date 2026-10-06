@@ -27,8 +27,10 @@ const pending = {
   email: 'sam@mail.nl',
   phone: '0612345678',
   start: '2026-10-08T14:00:00',
+  minutes: 45,
   kind: 'custom' as const,
   status: 'pending' as const,
+  lang: 'nl' as const,
   mail_sent: false,
 }
 
@@ -39,8 +41,10 @@ const confirmed = {
   email: 'kim@mail.nl',
   phone: '',
   start: '2026-10-06T10:00:00',
+  minutes: 20,
   kind: 'slot' as const,
   status: 'confirmed' as const,
+  lang: 'nl' as const,
   mail_sent: true,
 }
 
@@ -158,12 +162,36 @@ test('decline calls decideInbox while the row is still pending', async () => {
   expect(decideInbox).toHaveBeenCalledWith('pend-1', 'decline')
 })
 
-test('a failed inbox load falls back to demo bookings', async () => {
+test('a failed inbox load shows an error and no fake clients', async () => {
   loadInbox.mockRejectedValue(new Error('permission denied'))
   render(<AdminShell />)
   await userEvent.click(screen.getByRole('button', { name: /Inbox/ }))
-  expect(await screen.findByText('Jan de Vries')).toBeInTheDocument()
-  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  expect(await screen.findByRole('alert')).toHaveTextContent('Inbox laden mislukt.')
+  expect(screen.queryByText('Jan de Vries')).not.toBeInTheDocument()
+})
+
+test('an empty inbox says so', async () => {
+  loadInbox.mockResolvedValue([])
+  render(<AdminShell />)
+  await userEvent.click(screen.getByRole('button', { name: /Inbox/ }))
+  expect(await screen.findByText(/Nog geen afspraken/)).toBeInTheDocument()
+})
+
+test('an expired session sends the dashboard back to the gate', async () => {
+  loadInbox.mockRejectedValue(new Error('unauthorized'))
+  const onLogout = vi.fn()
+  render(<AdminShell onLogout={onLogout} />)
+  await waitFor(() => expect(onLogout).toHaveBeenCalledTimes(1))
+})
+
+test('accept reports an overlap in plain words', async () => {
+  loadInbox.mockResolvedValue([pending])
+  decideInbox.mockResolvedValue({ ok: false, error: 'overlap' })
+  render(<AdminShell />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Inbox 1' }))
+  await userEvent.click(within(row('Sam Pending')).getByRole('button', { name: 'Accepteer' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Die tijd is al bezet')
+  expect(within(row('Sam Pending')).getByRole('button', { name: 'Accepteer' })).toBeInTheDocument()
 })
 
 test('unsent mail offers a resend that opens Mail for that client', async () => {

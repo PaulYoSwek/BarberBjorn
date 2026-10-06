@@ -39,6 +39,8 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: 'jsdom',
       setupFiles: ['./src/animation-event-polyfill.ts', './src/test-setup.ts'],
+      // Tests must not pick up a developer's .env: they mock the backend themselves.
+      env: { VITE_SUPABASE_URL: '', VITE_SUPABASE_ANON_KEY: '', VITE_MAPBOX_TOKEN: '' },
     },
   }
 })

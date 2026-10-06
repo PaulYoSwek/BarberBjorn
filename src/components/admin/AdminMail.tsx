@@ -25,6 +25,8 @@ export function AdminMail({ rows, clientId, onSent }: Props) {
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
+  const [done, setDone] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
   const applied = useRef('')
 
   useEffect(() => {
@@ -53,19 +55,25 @@ export function AdminMail({ rows, clientId, onSent }: Props) {
 
   useEffect(() => {
     if (!key) return
-    const template = templates.find((item) => item.key === key && item.lang === 'nl')
+    const client = rows.find((item) => item.id === selected)
+    // Mail in the language the client used on the site; Dutch when unknown.
+    const wanted = client?.lang ?? 'nl'
+    const template =
+      templates.find((item) => item.key === key && item.lang === wanted) ??
+      templates.find((item) => item.key === key && item.lang === 'nl')
     if (!template) return
     const stamp = `${selected}|${key}|${template.subject}|${template.body}`
     if (applied.current === stamp) return
     applied.current = stamp
-    const client = rows.find((item) => item.id === selected)
     const vars = client ? mailVars(client) : null
     setSubject(vars ? fillTemplate(template.subject, vars) : template.subject)
     setBody(vars ? fillTemplate(template.body, vars) : template.body)
   }, [key, selected, templates, rows])
 
   async function send() {
-    if (!selected || !key) return
+    if (!selected || !key || busy) return
+    setBusy(true)
+    setDone(null)
     try {
       const result = await sendClientMail(selected, key, { subject, body })
       if (!result.ok) {
@@ -73,9 +81,13 @@ export function AdminMail({ rows, clientId, onSent }: Props) {
         return
       }
       setNotice(null)
+      const client = rows.find((item) => item.id === selected)
+      setDone(`Mail verstuurd naar ${client?.email ?? 'de klant'}.`)
       onSent(selected)
     } catch {
       setNotice('Mail versturen mislukt.')
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -83,14 +95,22 @@ export function AdminMail({ rows, clientId, onSent }: Props) {
 
   return (
     <div className="admin-form">
+      <header className="admin-agenda-head">
+        <div>
+          <p className="admin-kicker">Klanten</p>
+          <h1>Mail</h1>
+        </div>
+      </header>
       {notice ? <p role="alert">{notice}</p> : null}
+      {done ? <p className="admin-done" role="status">{done}</p> : null}
+      {clients.length === 0 ? <p className="admin-hint">Nog geen klanten met een mailadres.</p> : null}
       <label>
         Klant
         <select aria-label="Klant" value={selected} onChange={(event) => setSelected(event.target.value)}>
           <option value="">Kies een klant</option>
           {clients.map((row) => (
             <option key={row.id} value={row.id}>
-              {row.name}
+              {row.name} · {row.start.slice(0, 10)} {row.start.slice(11, 16)}
             </option>
           ))}
         </select>
@@ -114,10 +134,10 @@ export function AdminMail({ rows, clientId, onSent }: Props) {
       </label>
       <label>
         Bericht
-        <textarea aria-label="Bericht" value={body} onChange={(event) => setBody(event.target.value)} />
+        <textarea aria-label="Bericht" rows={6} value={body} onChange={(event) => setBody(event.target.value)} />
       </label>
-      <button type="button" className="admin-primary" disabled={!selected || !key} onClick={() => { void send() }}>
-        Verstuur
+      <button type="button" className="admin-primary" disabled={!selected || !key || busy} onClick={() => { void send() }}>
+        {busy ? 'Versturen…' : 'Verstuur'}
       </button>
     </div>
   )

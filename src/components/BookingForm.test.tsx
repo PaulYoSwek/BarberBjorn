@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { LanguageProvider } from '../language'
 import { publishLiveSchedule } from '../planning-api'
-import { defaultSchedule } from '../schedule'
+import { DEMO_SCHEDULE as defaultSchedule } from './admin/demo'
 import { BookingForm } from './BookingForm'
 import { LanguageSwitch } from './LanguageSwitch'
 
@@ -270,11 +270,12 @@ test('a live dashboard close updates the public agenda immediately', async () =>
       </LanguageProvider>,
     )
     expect(screen.getAllByText('dicht')).toHaveLength(2)
-    publishLiveSchedule({
+    loadPublicSchedule.mockResolvedValue({
       week: defaultSchedule.week,
       blocks: [{ date: '2026-10-06' }, { date: '2026-10-07', time: '15:00' }],
       bookings: [{ start: '2026-10-08T10:00:00', minutes: 45 }],
     })
+    publishLiveSchedule()
     await waitFor(() => {
       expect(screen.getAllByText('dicht')).toHaveLength(3)
     })
@@ -386,9 +387,11 @@ test('a second click while book is in flight does not submit twice', async () =>
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
-    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }))
+    const send = screen.getByRole('button', { name: 'Verstuur' })
+    fireEvent.click(send)
+    fireEvent.click(send)
     expect(submitBook).toHaveBeenCalledTimes(1)
+    expect(send).toBeDisabled()
     release({ ok: true })
     expect(await screen.findByText('Je tijd is van jou. Er gaat een mail naartoe.')).toBeInTheDocument()
   } finally {
@@ -457,6 +460,34 @@ test('a late schedule load keeps a start booked in this session', async () => {
     })
     expect(screen.getByRole('button', { name: 'di 6 okt 09:00' })).toBeDisabled()
     expect(screen.getByText('Je tijd is van jou. Er gaat een mail naartoe.')).toBeInTheDocument()
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
+test('a taken time reloads the agenda so the grid is honest again', async () => {
+  window.history.replaceState(null, '', '/?lang=nl')
+  localStorage.clear()
+  submitBook.mockResolvedValue({ ok: false, error: 'taken' })
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-05T12:00:00'))
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  try {
+    render(
+      <LanguageProvider>
+        <BookingForm />
+      </LanguageProvider>,
+    )
+    await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
+    await user.type(screen.getByLabelText('Naam'), 'Sam')
+    await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
+    loadPublicSchedule.mockResolvedValue({
+      ...defaultSchedule,
+      bookings: [...(defaultSchedule.bookings ?? []), { start: '2026-10-06T09:00:00', minutes: 60 }],
+    })
+    await user.click(screen.getByRole('button', { name: 'Verstuur' }))
+    expect(await screen.findByText('Die tijd is al weg. Kies een vrije.')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'di 6 okt 09:00' })).toBeDisabled())
   } finally {
     vi.useRealTimers()
   }

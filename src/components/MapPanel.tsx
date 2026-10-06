@@ -1,4 +1,4 @@
-import mapboxgl from 'mapbox-gl'
+import type { Map as MapboxMap } from 'mapbox-gl'
 import { useEffect, useRef, useState } from 'react'
 import { CONTACT } from '../content'
 import { useLang } from '../language'
@@ -28,7 +28,7 @@ function isSpriteOnlyError(url: string, message: string) {
   return !isStyleDocumentUrl(url) && !isStyleDocumentUrl(message)
 }
 
-function isMapOrStyleFailure(event: MapErrorEvent, map: mapboxgl.Map) {
+function isMapOrStyleFailure(event: MapErrorEvent, map: MapboxMap) {
   if (event.tile != null || event.sourceId != null) return false
   const message = event.error?.message ?? ''
   const url = event.error?.url ?? ''
@@ -46,48 +46,81 @@ function isMapOrStyleFailure(event: MapErrorEvent, map: mapboxgl.Map) {
   }
 }
 
+const PIN_SVG =
+  '<svg viewBox="0 0 28 38" aria-hidden="true"><path fill="#f5c400" stroke="#101010" stroke-width="1.6" d="M14 36.5 3.2 16.2A11.2 11.2 0 1 1 24.8 16.2Z"/><circle cx="14" cy="14" r="4.2" fill="#101010"/></svg>'
+
+/**
+ * The map library is large, so it loads in its own chunk after the page is
+ * interactive. Without a token, or when the map fails, the address stays as text.
+ */
 export function MapPanel() {
   const { lang } = useLang()
   const node = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<MapboxMap | null>(null)
   const [failed, setFailed] = useState(!token)
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     if (!token || !node.current) return
-    mapboxgl.accessToken = token
-    let map: mapboxgl.Map
-    try {
-      map = new mapboxgl.Map({
-        container: node.current,
-        style: 'mapbox://styles/mapbox/dark-v11',
-        center: [FALLBACK_PIN.lng, FALLBACK_PIN.lat],
-        zoom: 15,
-        cooperativeGestures: true,
-        attributionControl: false,
-      })
-    } catch {
-      setFailed(true)
-      return
-    }
+    let cancelled = false
     let removed = false
     const removeMap = () => {
       if (removed) return
       removed = true
-      map.remove()
+      mapRef.current?.remove()
+      mapRef.current = null
     }
-    const marker = document.createElement('div')
-    marker.className = 'map-pin'
-    marker.innerHTML = '<svg viewBox="0 0 28 38" aria-hidden="true"><path fill="#f5c400" stroke="#101010" stroke-width="1.6" d="M14 36.5 3.2 16.2A11.2 11.2 0 1 1 24.8 16.2Z"/><circle cx="14" cy="14" r="4.2" fill="#101010"/></svg>'
-    new mapboxgl.Marker({ element: marker, anchor: 'bottom' }).setLngLat([FALLBACK_PIN.lng, FALLBACK_PIN.lat]).addTo(map)
-    map.on('load', () => {
-      map.setLanguage(lang)
-    })
-    map.on('error', (event) => {
-      if (removed || !isMapOrStyleFailure(event as MapErrorEvent, map)) return
+    Promise.all([import('mapbox-gl'), import('mapbox-gl/dist/mapbox-gl.css')])
+      .then(([module]) => {
+        if (cancelled || !node.current) return
+        const lib = module.default
+        lib.accessToken = token
+        let map: MapboxMap
+        try {
+          map = new lib.Map({
+            container: node.current,
+            style: 'mapbox://styles/mapbox/dark-v11',
+            center: [FALLBACK_PIN.lng, FALLBACK_PIN.lat],
+            zoom: 15,
+            cooperativeGestures: true,
+            attributionControl: false,
+          })
+        } catch {
+          setFailed(true)
+          return
+        }
+        mapRef.current = map
+        const marker = document.createElement('div')
+        marker.className = 'map-pin'
+        marker.innerHTML = PIN_SVG
+        new lib.Marker({ element: marker, anchor: 'bottom' }).setLngLat([FALLBACK_PIN.lng, FALLBACK_PIN.lat]).addTo(map)
+        map.on('load', () => {
+          if (removed) return
+          setLoaded(true)
+        })
+        map.on('error', (event) => {
+          if (removed || !isMapOrStyleFailure(event as MapErrorEvent, map)) return
+          removeMap()
+          setFailed(true)
+        })
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true)
+      })
+    return () => {
+      cancelled = true
       removeMap()
-      setFailed(true)
-    })
-    return () => removeMap()
-  }, [lang])
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!loaded) return
+    try {
+      mapRef.current?.setLanguage(lang)
+    } catch {
+      /* label language is a nicety */
+    }
+  }, [lang, loaded])
 
   if (failed) return <p className="map-fallback">{CONTACT.addressFull}</p>
   return <div ref={node} className="map-canvas" />

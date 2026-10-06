@@ -43,7 +43,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-test('admin without a session shows the password gate', () => {
+test('admin without a session shows the password gate', async () => {
   window.history.replaceState(null, '', '/admin')
   sessionStorage.clear()
   render(
@@ -53,43 +53,47 @@ test('admin without a session shows the password gate', () => {
       </LanguageProvider>
     </BrowserRouter>,
   )
-  expect(screen.getByRole('img', { name: 'BarberBjorn' })).toBeInTheDocument()
+  expect(await screen.findByRole('img', { name: 'BarberBjorn' })).toBeInTheDocument()
   expect(screen.getByText('Dashboard')).toBeInTheDocument()
   expect(screen.getByLabelText('Wachtwoord')).toBeInTheDocument()
   expect(screen.queryByText('Agenda')).not.toBeInTheDocument()
+  expect(document.title).toBe('Dashboard · BarberBjorn')
+  expect(document.head.querySelector('meta[name="robots"]')?.getAttribute('content')).toMatch(/noindex/)
 })
 
-test('a stored session skips the password gate', () => {
+test('a stored session skips the password gate', async () => {
   sessionStorage.setItem('barber-admin', '1')
   renderAt('/admin')
-  expect(screen.getByText('Agenda')).toBeInTheDocument()
+  expect(await screen.findByText('Agenda')).toBeInTheDocument()
   expect(screen.queryByLabelText('Wachtwoord')).not.toBeInTheDocument()
 })
 
 test('uitloggen returns to the password gate', async () => {
   sessionStorage.setItem('barber-admin', '1')
   renderAt('/admin')
-  expect(screen.getByText('Agenda')).toBeInTheDocument()
+  expect(await screen.findByText('Agenda')).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'Uitloggen' }))
   expect(screen.getByLabelText('Wachtwoord')).toBeInTheDocument()
   expect(screen.queryByText('Agenda')).not.toBeInTheDocument()
   expect(sessionStorage.getItem('barber-admin')).not.toBe('1')
+  expect(localStorage.getItem('barber-admin')).not.toBe('1')
 })
 
 test('a correct password opens the agenda and stores the session', async () => {
-  invoke.mockResolvedValue({ data: { ok: true }, error: null })
+  invoke.mockResolvedValue({ data: { ok: true, token: '9999999999.sig' }, error: null })
   renderAt('/admin')
-  await userEvent.type(screen.getByLabelText('Wachtwoord'), 'geheim')
+  await userEvent.type(await screen.findByLabelText('Wachtwoord'), 'geheim')
   await userEvent.click(screen.getByRole('button', { name: 'Inloggen' }))
   expect(await screen.findByText('Agenda')).toBeInTheDocument()
   expect(sessionStorage.getItem('barber-admin')).toBe('1')
+  expect(localStorage.getItem('barber-admin-token')).toBe('9999999999.sig')
   expect(invoke).toHaveBeenCalledWith('admin-login', { body: { password: 'geheim' } })
 })
 
 test('a wrong password stays on the gate', async () => {
   invoke.mockResolvedValue({ data: null, error: new Error('unauthorized') })
   renderAt('/admin')
-  await userEvent.type(screen.getByLabelText('Wachtwoord'), 'nee')
+  await userEvent.type(await screen.findByLabelText('Wachtwoord'), 'nee')
   await userEvent.click(screen.getByRole('button', { name: 'Inloggen' }))
   expect(await screen.findByText('Onjuist wachtwoord.')).toBeInTheDocument()
   expect(screen.getByLabelText('Wachtwoord')).toBeInTheDocument()
@@ -101,7 +105,7 @@ test('login without a supabase client stays on the gate', async () => {
   clientBox.current = null
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }))
   renderAt('/admin')
-  await userEvent.type(screen.getByLabelText('Wachtwoord'), 'geheim')
+  await userEvent.type(await screen.findByLabelText('Wachtwoord'), 'geheim')
   await userEvent.click(screen.getByRole('button', { name: 'Inloggen' }))
   expect(await screen.findByText('Onjuist wachtwoord.')).toBeInTheDocument()
   expect(screen.getByLabelText('Wachtwoord')).toBeInTheDocument()
@@ -117,7 +121,7 @@ test('a missing login function falls back to the local login route', async () =>
   const fetchMock = vi.fn().mockResolvedValue({ ok: true })
   vi.stubGlobal('fetch', fetchMock)
   renderAt('/admin')
-  await userEvent.type(screen.getByLabelText('Wachtwoord'), 'geheim')
+  await userEvent.type(await screen.findByLabelText('Wachtwoord'), 'geheim')
   await userEvent.click(screen.getByRole('button', { name: 'Inloggen' }))
   expect(await screen.findByText('Agenda')).toBeInTheDocument()
   expect(sessionStorage.getItem('barber-admin')).toBe('1')
