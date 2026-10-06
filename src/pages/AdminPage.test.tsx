@@ -32,6 +32,12 @@ function renderAt(path: string) {
   )
 }
 
+// index.html carries this link; the test document does not.
+const manifestLink = document.createElement('link')
+manifestLink.rel = 'manifest'
+manifestLink.href = '/site.webmanifest'
+document.head.appendChild(manifestLink)
+
 beforeEach(() => {
   sessionStorage.clear()
   localStorage.clear()
@@ -59,6 +65,7 @@ test('admin without a session shows the password gate', async () => {
   expect(screen.getByRole('link', { name: 'Naar de website' })).toHaveAttribute('href', '/')
   expect(screen.queryByText('Agenda')).not.toBeInTheDocument()
   expect(document.title).toBe('Dashboard · BarberBjorn')
+  expect(document.head.querySelector('link[rel="manifest"]')?.getAttribute('href')).toBe('/admin.webmanifest')
   expect(document.head.querySelector('meta[name="robots"]')?.getAttribute('content')).toMatch(/noindex/)
 })
 

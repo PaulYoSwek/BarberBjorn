@@ -41,6 +41,23 @@
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
+    <script>
+      // "Add to Home Screen" on /admin must open the dashboard, not the front page.
+      if (location.pathname.indexOf('/admin') === 0) {
+        document.querySelector('link[rel="manifest"]').href = '/admin.webmanifest'
+        ;[
+          ['apple-mobile-web-app-capable', 'yes'],
+          ['mobile-web-app-capable', 'yes'],
+          ['apple-mobile-web-app-title', 'BB Dashboard'],
+          ['apple-mobile-web-app-status-bar-style', 'black'],
+        ].forEach(function (pair) {
+          var meta = document.createElement('meta')
+          meta.name = pair[0]
+          meta.content = pair[1]
+          document.head.appendChild(meta)
+        })
+      }
+    </script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

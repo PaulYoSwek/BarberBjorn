@@ -925,3 +925,8 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
   border: 1px solid #2a2a2a; background: #fff; color: #101010;
 }
 .inbox-move-actions .inbox-accept { background: #f5c400; border-color: #f5c400; flex: 1 1 auto; }
+
+@media (display-mode: standalone) {
+  .admin-bar { padding-top: max(10px, env(safe-area-inset-top)); }
+  .admin-gate { padding-top: max(20px, env(safe-area-inset-top)); }
+}

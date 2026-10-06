@@ -38,3 +38,16 @@ test('the template migration carries every starting mail text', async () => {
     }
   }
 })
+
+test('the dashboard has its own home-screen app that opens /admin', () => {
+  const admin = JSON.parse(readFileSync('public/admin.webmanifest', 'utf8')) as Record<string, string>
+  const site = JSON.parse(readFileSync('public/site.webmanifest', 'utf8')) as Record<string, string>
+  expect(admin.start_url).toBe('/admin')
+  expect(admin.scope).toBe('/admin')
+  expect(admin.display).toBe('standalone')
+  expect(admin.id).not.toBe(site.id)
+  expect(site.start_url).toBe('/')
+  const html = readFileSync('index.html', 'utf8')
+  expect(html).toContain("location.pathname.indexOf('/admin') === 0")
+  expect(html).toContain("'/admin.webmanifest'")
+})
