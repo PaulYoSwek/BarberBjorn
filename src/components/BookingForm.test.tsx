@@ -68,7 +68,7 @@ test('shows the chosen service and time above send', async () => {
     const summary = screen.getByTestId('booking-summary')
     expect(summary).toHaveTextContent('Knippen + baard')
     expect(summary).toHaveTextContent('di 6 okt 09:00')
-    expect(summary.compareDocumentPosition(screen.getByRole('button', { name: 'Verstuur' }))).toBe(
+    expect(summary.compareDocumentPosition(screen.getByRole('button', { name: 'Boeken' }))).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     )
   } finally {
@@ -106,7 +106,7 @@ test('an empty submit shows the Dutch hint and does not navigate', async () => {
       <BookingForm />
     </LanguageProvider>,
   )
-  await userEvent.click(screen.getByRole('button', { name: 'Verstuur' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Boeken' }))
   expect(screen.getAllByText('Vul dit nog even in.').length).toBeGreaterThan(0)
   expect(assign).not.toHaveBeenCalled()
   expect(submitBook).not.toHaveBeenCalled()
@@ -130,7 +130,7 @@ test('a free slot books through submitBook', async () => {
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
-    await user.click(screen.getByRole('button', { name: 'Verstuur' }))
+    await user.click(screen.getByRole('button', { name: 'Boeken' }))
     expect(submitBook).toHaveBeenCalledWith({
       service: 'cut',
       name: 'Sam',
@@ -165,7 +165,7 @@ test('a custom time asks through submitCustom', async () => {
     fireEvent.change(screen.getByLabelText('Tijd'), { target: { value: '19:30' } })
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
-    await user.click(screen.getByRole('button', { name: 'Verstuur' }))
+    await user.click(screen.getByRole('button', { name: 'Boeken' }))
     expect(submitCustom).toHaveBeenCalledWith({
       service: 'both',
       name: 'Sam',
@@ -191,7 +191,7 @@ test('an empty Dutch submit follows the active language', async () => {
       <BookingForm />
     </LanguageProvider>,
   )
-  await userEvent.click(screen.getByRole('button', { name: 'Verstuur' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Boeken' }))
   expect(screen.getAllByText('Vul dit nog even in.').length).toBeGreaterThan(0)
   await userEvent.click(screen.getByRole('button', { name: 'EN' }))
   expect(screen.getAllByText('Add this first.').length).toBeGreaterThan(0)
@@ -334,7 +334,7 @@ test('a taken book error shows the Dutch taken line', async () => {
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
-    await user.click(screen.getByRole('button', { name: 'Verstuur' }))
+    await user.click(screen.getByRole('button', { name: 'Boeken' }))
     expect(await screen.findByText('Die tijd is al weg. Kies een vrije.')).toBeInTheDocument()
     expect(screen.queryByText('taken')).not.toBeInTheDocument()
     expect(screen.queryByText('Je tijd is van jou. Er gaat een mail naartoe.')).not.toBeInTheDocument()
@@ -358,14 +358,14 @@ test('a successful slot book takes that start and ignores another submit', async
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
-    await user.click(screen.getByRole('button', { name: 'Verstuur' }))
+    await user.click(screen.getByRole('button', { name: 'Boeken' }))
     expect(await screen.findByText('Je tijd is van jou. Er gaat een mail naartoe.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'di 6 okt 09:00' })).toBeDisabled()
-    await user.click(screen.getByRole('button', { name: 'Verstuur' }))
+    await user.click(screen.getByRole('button', { name: 'Boeken' }))
     expect(submitBook).toHaveBeenCalledTimes(1)
     expect(screen.getByText('Je tijd is van jou. Er gaat een mail naartoe.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'di 6 okt 10:00' }))
-    await user.click(screen.getByRole('button', { name: 'Verstuur' }))
+    await user.click(screen.getByRole('button', { name: 'Boeken' }))
     expect(submitBook).toHaveBeenCalledTimes(2)
   } finally {
     vi.useRealTimers()
@@ -394,7 +394,7 @@ test('a second click while book is in flight does not submit twice', async () =>
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
-    const send = screen.getByRole('button', { name: 'Verstuur' })
+    const send = screen.getByRole('button', { name: 'Boeken' })
     fireEvent.click(send)
     fireEvent.click(send)
     expect(submitBook).toHaveBeenCalledTimes(1)
@@ -423,9 +423,9 @@ test('a successful custom request does not send twice', async () => {
     fireEvent.change(screen.getByLabelText('Tijd'), { target: { value: '19:30' } })
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
-    await user.click(screen.getByRole('button', { name: 'Verstuur' }))
+    await user.click(screen.getByRole('button', { name: 'Boeken' }))
     expect(await screen.findByText('Nog geen bevestiging. Je krijgt mail als Bjorn ja of nee zegt.')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Verstuur' }))
+    await user.click(screen.getByRole('button', { name: 'Boeken' }))
     expect(submitCustom).toHaveBeenCalledTimes(1)
     expect(screen.getByText('Nog geen bevestiging. Je krijgt mail als Bjorn ja of nee zegt.')).toBeInTheDocument()
   } finally {
@@ -455,7 +455,7 @@ test('a late schedule load keeps a start booked in this session', async () => {
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
-    await user.click(screen.getByRole('button', { name: 'Verstuur' }))
+    await user.click(screen.getByRole('button', { name: 'Boeken' }))
     expect(await screen.findByText('Je tijd is van jou. Er gaat een mail naartoe.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'di 6 okt 09:00' })).toBeDisabled()
     releaseSchedule({
@@ -492,7 +492,7 @@ test('a taken time reloads the agenda so the grid is honest again', async () => 
       ...defaultSchedule,
       bookings: [...(defaultSchedule.bookings ?? []), { start: '2026-10-06T09:00:00', minutes: 60 }],
     })
-    await user.click(screen.getByRole('button', { name: 'Verstuur' }))
+    await user.click(screen.getByRole('button', { name: 'Boeken' }))
     expect(await screen.findByText('Die tijd is al weg. Kies een vrije.')).toBeInTheDocument()
     await waitFor(() => expect(screen.getByRole('button', { name: 'di 6 okt 09:00' })).toBeDisabled())
   } finally {

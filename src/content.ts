@@ -69,8 +69,8 @@ export const CREDIT = {
 export const CONTACT = {
   email: 'hallo@barberbjorn.nl',
   phone: '06 12 34 56 78',
-  addressLine: 'Ferdinandstraat 8, Axel',
-  addressFull: 'Ferdinandstraat 8, 4571 AP Axel',
+  addressLine: 'Ferdinandstraat 21, Axel',
+  addressFull: 'Ferdinandstraat 21, 4571 AN Axel',
 }
 
 const services = {
@@ -90,7 +90,7 @@ export const copy: Record<Lang, Copy> = {
   nl: {
     seoTitle: 'BarberBjorn · Kapper en barbier in Axel',
     seoDescription:
-      'BarberBjorn is de kapper en barbier aan de Ferdinandstraat 8 in Axel. Knippen €30, baard €15, allebei €40. Eén stoel, geen haast. Plan je afspraak online.',
+      'BarberBjorn is de kapper en barbier aan de Ferdinandstraat 21 in Axel. Knippen €30, baard €15, knippen + baard €40. Eén stoel, geen haast. Plan je afspraak online.',
     heroHidden: 'BarberBjorn, kapper en barbier in Axel',
     tagline: 'Een goede knip. Zonder haast.',
     bookCta: 'Afspraak maken',
@@ -110,7 +110,7 @@ export const copy: Record<Lang, Copy> = {
     requestSuccess: 'Nog geen bevestiging. Je krijgt mail als Bjorn ja of nee zegt.',
     dayLabel: 'Dag',
     slotLabel: 'Tijd',
-    sendLabel: 'Verstuur',
+    sendLabel: 'Boeken',
     sendingLabel: 'Even geduld…',
     fieldError: 'Vul dit nog even in.',
     weekendError: 'Zaterdag en zondag is de stoel dicht. Kies een weekdag.',
@@ -153,9 +153,9 @@ export const copy: Record<Lang, Copy> = {
       { q: 'Hoe lang duurt het?', a: 'Knippen zo’n 45 minuten, een baard 20 minuten, knippen + baard rond een uur. Hij werkt niet op de klok.' },
       { q: 'Mag ik de muziek kiezen?', a: 'Ja. Zeg een artiest of een sfeer. Liever stil, dan blijft het stil.' },
       { q: 'Geeft hij advies?', a: 'Ja. Hij zegt het als een andere lengte of een andere lijn je beter staat.' },
-      { q: 'Waar zit BarberBjorn?', a: 'Ferdinandstraat 8 in Axel. De kaart bovenaan wijst de deur.' },
+      { q: 'Waar zit BarberBjorn?', a: 'Ferdinandstraat 21 in Axel. De kaart bovenaan wijst de deur.' },
     ],
-    mapLabel: 'Ferdinandstraat 8, Axel',
+    mapLabel: 'Ferdinandstraat 21, Axel',
     directionsCta: 'Route',
     creditLabel: 'Website door',
     notFoundTitle: 'Die pagina is er niet.',
@@ -165,7 +165,7 @@ export const copy: Record<Lang, Copy> = {
   en: {
     seoTitle: 'BarberBjorn · Barber in Axel',
     seoDescription:
-      'BarberBjorn is the barber at Ferdinandstraat 8 in Axel, the Netherlands. Cut €30, beard €15, both €40. One chair, no rush. Book your visit online.',
+      'BarberBjorn is the barber at Ferdinandstraat 21 in Axel, the Netherlands. Cut €30, beard €15, cut + beard €40. One chair, no rush. Book your visit online.',
     heroHidden: 'BarberBjorn, barber in Axel',
     tagline: 'A proper cut. No rush.',
     bookCta: 'Book a visit',
@@ -185,7 +185,7 @@ export const copy: Record<Lang, Copy> = {
     requestSuccess: 'Not confirmed yet. You will get a mail when Bjorn says yes or no.',
     dayLabel: 'Day',
     slotLabel: 'Time',
-    sendLabel: 'Send',
+    sendLabel: 'Book',
     sendingLabel: 'One moment…',
     fieldError: 'Add this first.',
     weekendError: 'Saturday and Sunday the chair is closed. Pick a weekday.',
@@ -228,9 +228,9 @@ export const copy: Record<Lang, Copy> = {
       { q: 'How long does it take?', a: "A cut takes about 45 minutes, a beard 20 minutes, cut + beard around an hour. He doesn't work to the clock." },
       { q: 'Can I choose the music?', a: "Yes. Name an artist or a mood. If you'd rather have quiet, it stays quiet." },
       { q: 'Does he give advice?', a: "Yes. He'll say so if a different length or line would suit you better." },
-      { q: 'Where is BarberBjorn?', a: 'Ferdinandstraat 8 in Axel. The map at the top points to the door.' },
+      { q: 'Where is BarberBjorn?', a: 'Ferdinandstraat 21 in Axel. The map at the top points to the door.' },
     ],
-    mapLabel: 'Ferdinandstraat 8, Axel',
+    mapLabel: 'Ferdinandstraat 21, Axel',
     directionsCta: 'Directions',
     creditLabel: 'Website by',
     notFoundTitle: 'That page is not here.',

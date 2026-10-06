@@ -20,3 +20,10 @@ test('the shell defines the locked colors and no radius tokens', () => {
   expect(css).toContain('--ink: #101010')
   expect(css).not.toMatch(/border-radius:\s*[1-9]/)
 })
+
+test('the map box outranks the late-loading Mapbox stylesheet', () => {
+  const css = readFileSync('src/styles.css', 'utf8')
+  // `.mapboxgl-map { position: relative }` arrives after our CSS; a single-class rule would lose and collapse the map.
+  expect(css).toMatch(/\.hero-map \.map-canvas \{[^}]*position: absolute/)
+  expect(css).not.toMatch(/^\.map-canvas \{/m)
+})

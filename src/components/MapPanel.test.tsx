@@ -9,6 +9,6 @@ test('without a token the address is text', () => {
       <MapPanel />
     </LanguageProvider>,
   )
-  expect(screen.getByText('Ferdinandstraat 8, 4571 AP Axel')).toBeInTheDocument()
+  expect(screen.getByText('Ferdinandstraat 21, 4571 AN Axel')).toBeInTheDocument()
   expect(document.querySelector('.mapboxgl-map')).toBeNull()
 })

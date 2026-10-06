@@ -168,7 +168,8 @@ img, video { max-width: 100%; display: block; }
   background: var(--yellow); color: var(--ink);
   text-decoration: none; font-weight: 500;
 }
-.map-canvas { position: absolute; inset: 0; }
+/* Two classes so this beats `.mapboxgl-map { position: relative }`, whose stylesheet loads later with the map. */
+.hero-map .map-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .mapboxgl-ctrl-logo,
 .mapboxgl-ctrl-attrib,
 .mapboxgl-ctrl-bottom-left,
@@ -250,7 +251,8 @@ img, video { max-width: 100%; display: block; }
   border: 1px solid #2a2a2a; padding: 0 10px;
 }
 .booking-confirm button[type="submit"] {
-  background: var(--yellow); color: var(--ink); border-color: var(--yellow); cursor: pointer; font-weight: 500;
+  justify-self: start; min-width: 180px; min-height: 48px; padding: 0 32px;
+  background: var(--yellow); color: var(--ink); border-color: var(--yellow); cursor: pointer; font-weight: 600;
 }
 .agenda-wrap { min-height: 0; flex: 1 1 auto; display: flex; flex-direction: column; gap: 10px; }
 .agenda-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
@@ -306,7 +308,7 @@ img, video { max-width: 100%; display: block; }
   .agenda-when strong { font-size: 0.72rem; }
   .agenda-slots button { min-height: 36px; font-size: 0.74rem; padding: 0 2px; }
   .agenda-week button { min-width: 44px; min-height: 44px; }
-  .booking-confirm button[type="submit"] { width: 100%; min-height: 48px; }
+  .booking-confirm button[type="submit"] { align-self: flex-start; width: auto; min-width: 160px; min-height: 48px; }
   .booking-services { grid-template-columns: 1fr; max-width: none; }
   .booking-services button { min-height: 56px; font-size: 1rem; }
 }

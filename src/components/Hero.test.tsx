@@ -32,7 +32,7 @@ test('directions open Google Maps at the shop', () => {
   const link = screen.getByRole('link', { name: 'Route' })
   expect(link).toHaveAttribute(
     'href',
-    'https://www.google.com/maps/dir/?api=1&destination=51.262824,3.919134',
+    'https://www.google.com/maps/dir/?api=1&destination=51.262565,3.91918',
   )
   expect(link).toHaveAttribute('target', '_blank')
   expect(link).toHaveAttribute('rel', 'noopener noreferrer')
@@ -46,7 +46,7 @@ test('the directions label follows the language', () => {
 test('the map shows a small shop address', () => {
   renderHero()
   const address = document.querySelector('.map-address')
-  expect(address).toHaveTextContent('Ferdinandstraat 8')
-  expect(address).toHaveTextContent('4571 AP Axel')
+  expect(address).toHaveTextContent('Ferdinandstraat 21')
+  expect(address).toHaveTextContent('4571 AN Axel')
   expect(address?.closest('.hero-map')).toBeTruthy()
 })
