@@ -473,3 +473,13 @@ export async function moveBooking(id: string, start: string): Promise<MoveResult
     return { ok: false, error: err instanceof Error ? err.message : 'offline' }
   }
 }
+
+/** Remove a client and all their bookings (for example after a privacy request). */
+export function deleteClient(client: { id?: string | null; email: string; phone: string }) {
+  return invokeOk('admin-write', {
+    type: 'clientDelete',
+    ...(client.id ? { id: client.id } : {}),
+    email: client.email,
+    phone: client.phone,
+  })
+}

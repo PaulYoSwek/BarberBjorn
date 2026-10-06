@@ -16,7 +16,8 @@ function renderFooter(search = '') {
 test('shows the placeholder contact', () => {
   renderFooter()
   expect(screen.getByRole('link', { name: 'hallo@barberbjorn.nl' })).toHaveAttribute('href', 'mailto:hallo@barberbjorn.nl')
-  expect(screen.getByRole('link', { name: '06 12 34 56 78' })).toHaveAttribute('href', 'tel:+31612345678')
+  expect(screen.getByRole('link', { name: '+31 6 48163783' })).toHaveAttribute('href', 'tel:+31648163783')
+  expect(screen.getByRole('link', { name: 'Privacy en cookies' })).toHaveAttribute('href', '/privacy')
   expect(screen.getByText('Ferdinandstraat 21, Axel')).toBeInTheDocument()
 })
 

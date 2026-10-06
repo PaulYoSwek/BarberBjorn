@@ -9,7 +9,7 @@ const base = {
   service: 'cut' as const,
   name: 'Sam',
   email: 'sam@mail.nl',
-  phone: '',
+  phone: '06 12345678',
   slot: '2026-10-06T09:00:00',
   kind: 'slot' as const,
 }
@@ -85,13 +85,25 @@ test('free slot passes when today is frozen and now is omitted', () => {
   expect(sameDayAfternoon.ok).toBe(true)
 })
 
-test('requires email and allows an empty phone on a free slot', () => {
+test('requires email and a phone number', () => {
   const missing = validateBooking({ ...base, email: '' }, copy.nl, today)
   expect(missing.ok).toBe(false)
   if (!missing.ok) expect(missing.errors.email).toBe('Vul dit nog even in.')
 
-  const ok = validateBooking(base, copy.nl, today)
-  expect(ok.ok).toBe(true)
+  const noPhone = validateBooking({ ...base, phone: '  ' }, copy.nl, today)
+  expect(noPhone.ok).toBe(false)
+  if (!noPhone.ok) expect(noPhone.errors.phone).toBe('Vul dit nog even in.')
+
+  const shortPhone = validateBooking({ ...base, phone: '0612' }, copy.en, today)
+  expect(shortPhone.ok).toBe(false)
+  if (!shortPhone.ok) expect(shortPhone.errors.phone).toBe('That number looks wrong. Use at least 8 digits.')
+
+  const letters = validateBooking({ ...base, phone: 'bel me 0612345678' }, copy.nl, today)
+  expect(letters.ok).toBe(false)
+
+  for (const phone of ['06 12345678', '+31 6 12345678', '+32 470 12 34 56', '(06) 123-456-78']) {
+    expect(validateBooking({ ...base, phone }, copy.nl, today).ok).toBe(true)
+  }
 })
 
 test('a custom time need not sit on the published grid', () => {

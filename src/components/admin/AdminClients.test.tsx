@@ -4,7 +4,8 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { defaultSchedule } from '../../schedule'
 import { AdminShell } from './AdminShell'
 
-const { loadInbox, loadClients, saveClient, loadServices, loadPublicSchedule } = vi.hoisted(() => ({
+const { loadInbox, loadClients, saveClient, loadServices, loadPublicSchedule, deleteClient } = vi.hoisted(() => ({
+  deleteClient: vi.fn(),
   loadInbox: vi.fn(),
   loadClients: vi.fn(),
   saveClient: vi.fn(),
@@ -14,7 +15,7 @@ const { loadInbox, loadClients, saveClient, loadServices, loadPublicSchedule } =
 
 vi.mock('../../planning-api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../planning-api')>()
-  return { ...actual, loadInbox, loadClients, saveClient, loadServices, loadPublicSchedule }
+  return { ...actual, loadInbox, loadClients, saveClient, loadServices, loadPublicSchedule, deleteClient }
 })
 
 function row(id: string, name: string, email: string, start: string, extra: Record<string, unknown> = {}) {
@@ -53,6 +54,8 @@ beforeEach(() => {
     ],
   })
   saveClient.mockReset()
+  deleteClient.mockReset()
+  deleteClient.mockResolvedValue({ ok: true })
   saveClient.mockResolvedValue({ ok: true })
   loadServices.mockReset()
   loadServices.mockResolvedValue([
@@ -154,4 +157,16 @@ test('without the clients table the page still shows people from bookings', asyn
   expect(screen.getByText(/klantenlijst in de database is nog niet actief/)).toBeInTheDocument()
   expect(screen.getByRole('heading', { name: 'Bo Kers' })).toBeInTheDocument()
   expect(screen.queryByRole('heading', { name: 'Cas Nieuw' })).not.toBeInTheDocument()
+})
+
+test('a client and their bookings can be deleted after a clear confirmation', async () => {
+  await openClients()
+  await userEvent.click(screen.getByRole('button', { name: 'Ada Vos bewerken' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Klant en afspraken verwijderen' }))
+  expect(screen.getByText(/Dit verwijdert Ada Vos en alle 2 afspraken voorgoed/)).toBeInTheDocument()
+  expect(deleteClient).not.toHaveBeenCalled()
+  await userEvent.click(screen.getByRole('button', { name: 'Ja, verwijderen' }))
+  expect(deleteClient).toHaveBeenCalledWith({ id: 'c1', email: 'ada@x.nl', phone: '0611111111' })
+  expect(await screen.findByRole('status')).toHaveTextContent('Ada Vos en alle afspraken zijn verwijderd.')
+  await waitFor(() => expect(loadInbox).toHaveBeenCalledTimes(2))
 })

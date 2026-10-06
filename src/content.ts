@@ -14,7 +14,10 @@ export type Copy = {
   nameLabel: string
   phoneLabel: string
   emailLabel: string
-  phoneOptional: string
+  phoneError: string
+  privacyNote: string
+  privacyLink: string
+  footerPrivacy: string
   customTimeCta: string
   customTimeTitle: string
   backToAgenda: string
@@ -69,7 +72,8 @@ export const CREDIT = {
 
 export const CONTACT = {
   email: 'hallo@barberbjorn.nl',
-  phone: '06 12 34 56 78',
+  phone: '+31 6 48163783',
+  phoneHref: 'tel:+31648163783',
   addressLine: 'Ferdinandstraat 21, Axel',
   addressFull: 'Ferdinandstraat 21, 4571 AN Axel',
 }
@@ -102,7 +106,10 @@ export const copy: Record<Lang, Copy> = {
     nameLabel: 'Naam',
     phoneLabel: 'Telefoon',
     emailLabel: 'E-mail',
-    phoneOptional: 'Telefoon (niet verplicht)',
+    phoneError: 'Dit nummer klopt niet. Gebruik minstens 8 cijfers.',
+    privacyNote: 'We gebruiken je gegevens alleen voor je afspraak.',
+    privacyLink: 'Privacyverklaring',
+    footerPrivacy: 'Privacy en cookies',
     customTimeCta: 'Ander tijdstip vragen',
     customTimeTitle: 'Ander tijdstip',
     backToAgenda: 'Terug naar het overzicht',
@@ -178,7 +185,10 @@ export const copy: Record<Lang, Copy> = {
     nameLabel: 'Name',
     phoneLabel: 'Phone',
     emailLabel: 'Email',
-    phoneOptional: 'Phone (optional)',
+    phoneError: 'That number looks wrong. Use at least 8 digits.',
+    privacyNote: 'We only use your details for your appointment.',
+    privacyLink: 'Privacy statement',
+    footerPrivacy: 'Privacy and cookies',
     customTimeCta: 'Request another time',
     customTimeTitle: 'Another time',
     backToAgenda: 'Back to the overview',

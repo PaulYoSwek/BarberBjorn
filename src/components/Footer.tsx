@@ -4,7 +4,7 @@ import { useLang } from '../language'
 const YEAR = new Date().getFullYear()
 
 export function Footer() {
-  const { t } = useLang()
+  const { t, lang } = useLang()
   const year = YEAR
   return (
     <footer className="footer">
@@ -13,11 +13,16 @@ export function Footer() {
         <address className="footer-contact">
           <p>{CONTACT.addressLine}</p>
           <a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>
-          <a href="tel:+31612345678">{CONTACT.phone}</a>
+          <a href={CONTACT.phoneHref}>{CONTACT.phone}</a>
         </address>
       </div>
       <div className="footer-meta">
-        <p>© {year} Bjorn’s Barber</p>
+        <p>
+          © {year} Bjorn’s Barber ·{' '}
+          <a className="footer-privacy" href={lang === 'en' ? '/privacy?lang=en' : '/privacy'}>
+            {t.footerPrivacy}
+          </a>
+        </p>
         <p className="footer-credit">
           {t.creditLabel}{' '}
           <a href={CREDIT.url} target="_blank" rel="noopener" title={`${CREDIT.name} · Digitale oplossingen op maat`}>

@@ -16,4 +16,9 @@
     <xhtml:link rel="alternate" hreflang="en" href="https://www.barberbjorn.nl/?lang=en" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.barberbjorn.nl/" />
   </url>
+  <url>
+    <loc>https://www.barberbjorn.nl/privacy</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
 </urlset>

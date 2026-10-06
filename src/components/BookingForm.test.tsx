@@ -130,12 +130,13 @@ test('a free slot books through submitBook', async () => {
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
+    await user.type(screen.getByLabelText('Telefoon'), '06 12345678')
     await user.click(screen.getByRole('button', { name: 'Boeken' }))
     expect(submitBook).toHaveBeenCalledWith({
       service: 'cut',
       name: 'Sam',
       email: 'sam@mail.nl',
-      phone: '',
+      phone: '06 12345678',
       slot: '2026-10-06T09:00:00',
       kind: 'slot',
       lang: 'nl',
@@ -165,12 +166,13 @@ test('a custom time asks through submitCustom', async () => {
     fireEvent.change(screen.getByLabelText('Tijd'), { target: { value: '19:30' } })
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
+    await user.type(screen.getByLabelText('Telefoon'), '06 12345678')
     await user.click(screen.getByRole('button', { name: 'Boeken' }))
     expect(submitCustom).toHaveBeenCalledWith({
       service: 'both',
       name: 'Sam',
       email: 'sam@mail.nl',
-      phone: '',
+      phone: '06 12345678',
       slot: '2026-10-15T19:30:00',
       kind: 'custom',
       lang: 'nl',
@@ -334,6 +336,7 @@ test('a taken book error shows the Dutch taken line', async () => {
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
+    await user.type(screen.getByLabelText('Telefoon'), '06 12345678')
     await user.click(screen.getByRole('button', { name: 'Boeken' }))
     expect(await screen.findByText('Die tijd is al weg. Kies een vrije.')).toBeInTheDocument()
     expect(screen.queryByText('taken')).not.toBeInTheDocument()
@@ -358,6 +361,7 @@ test('a successful slot book takes that start and ignores another submit', async
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
+    await user.type(screen.getByLabelText('Telefoon'), '06 12345678')
     await user.click(screen.getByRole('button', { name: 'Boeken' }))
     expect(await screen.findByText('Je tijd is van jou. Er gaat een mail naartoe.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'di 6 okt 09:00' })).toBeDisabled()
@@ -394,6 +398,7 @@ test('a second click while book is in flight does not submit twice', async () =>
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
+    await user.type(screen.getByLabelText('Telefoon'), '06 12345678')
     const send = screen.getByRole('button', { name: 'Boeken' })
     fireEvent.click(send)
     fireEvent.click(send)
@@ -423,6 +428,7 @@ test('a successful custom request does not send twice', async () => {
     fireEvent.change(screen.getByLabelText('Tijd'), { target: { value: '19:30' } })
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
+    await user.type(screen.getByLabelText('Telefoon'), '06 12345678')
     await user.click(screen.getByRole('button', { name: 'Boeken' }))
     expect(await screen.findByText('Nog geen bevestiging. Je krijgt mail als Bjorn ja of nee zegt.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Boeken' }))
@@ -455,6 +461,7 @@ test('a late schedule load keeps a start booked in this session', async () => {
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
+    await user.type(screen.getByLabelText('Telefoon'), '06 12345678')
     await user.click(screen.getByRole('button', { name: 'Boeken' }))
     expect(await screen.findByText('Je tijd is van jou. Er gaat een mail naartoe.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'di 6 okt 09:00' })).toBeDisabled()
@@ -488,6 +495,7 @@ test('a taken time reloads the agenda so the grid is honest again', async () => 
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
+    await user.type(screen.getByLabelText('Telefoon'), '06 12345678')
     loadPublicSchedule.mockResolvedValue({
       ...defaultSchedule,
       bookings: [...(defaultSchedule.bookings ?? []), { start: '2026-10-06T09:00:00', minutes: 60 }],
@@ -545,6 +553,35 @@ test('the site blackens exactly the half-hours the dashboard closed', async () =
     await user.click(screen.getByRole('button', { name: 'Baard' }))
     expect(screen.getByRole('button', { name: 'di 6 okt 10:00' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'di 6 okt 10:30' })).toHaveClass('is-taken')
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
+test('booking without a phone number is stopped with a hint at the field', async () => {
+  window.history.replaceState(null, '', '/?lang=nl')
+  localStorage.clear()
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-05T12:00:00'))
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  try {
+    render(
+      <LanguageProvider>
+        <BookingForm />
+      </LanguageProvider>,
+    )
+    await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
+    await user.type(screen.getByLabelText('Naam'), 'Sam')
+    await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
+    const phone = screen.getByLabelText('Telefoon')
+    await user.click(screen.getByRole('button', { name: 'Boeken' }))
+    expect(submitBook).not.toHaveBeenCalled()
+    expect(phone.closest('label')).toHaveTextContent('Vul dit nog even in.')
+    await user.type(phone, '12')
+    await user.click(screen.getByRole('button', { name: 'Boeken' }))
+    expect(phone.closest('label')).toHaveTextContent('Dit nummer klopt niet. Gebruik minstens 8 cijfers.')
+    expect(submitBook).not.toHaveBeenCalled()
+    expect(screen.getByRole('link', { name: 'Privacyverklaring' })).toHaveAttribute('href', '/privacy')
   } finally {
     vi.useRealTimers()
   }

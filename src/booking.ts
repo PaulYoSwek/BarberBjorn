@@ -41,6 +41,11 @@ export function validateBooking(
   if (!isService(input.service)) errors.service = t.fieldError
   if (input.name.trim().length < 2) errors.name = t.fieldError
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email.trim())) errors.email = t.fieldError
+  const digits = input.phone.replace(/\D/g, '')
+  if (!input.phone.trim()) errors.phone = t.fieldError
+  else if (digits.length < 8 || digits.length > 15 || /[^\d\s()+\-./]/.test(input.phone.trim())) {
+    errors.phone = t.phoneError
+  }
 
   if (!SLOT.test(input.slot)) {
     errors.slot = t.fieldError
@@ -67,7 +72,7 @@ export function validateBooking(
     `${t.nameLabel}: ${input.name.trim()}`,
     `${t.emailLabel}: ${input.email.trim()}`,
   ]
-  if (input.phone.trim()) lines.push(`${t.phoneLabel}: ${input.phone.trim()}`)
+  lines.push(`${t.phoneLabel}: ${input.phone.trim()}`)
   lines.push(`${t.slotLabel}: ${input.slot.slice(0, 10)} ${input.slot.slice(11, 16)}`, '', t.requestNote)
   const body = lines.join('\n')
   return { ok: true, subject: t.mailSubject, body }

@@ -368,7 +368,7 @@ export function BookingForm() {
             {errors.email && <span role="alert">{errors.email}</span>}
           </label>
           <label>
-            {t.phoneOptional}
+            {t.phoneLabel}
             <input value={input.phone} type="tel" inputMode="tel" autoComplete="tel" onChange={(event) => edit({ ...input, phone: event.target.value })} />
             {errors.phone && <span role="alert">{errors.phone}</span>}
           </label>
@@ -382,6 +382,10 @@ export function BookingForm() {
             {sending ? t.sendingLabel : t.sendLabel}
           </button>
         </div>
+        <p className="booking-privacy">
+          {t.privacyNote}{' '}
+          <a href={lang === 'en' ? '/privacy?lang=en' : '/privacy'}>{t.privacyLink}</a>
+        </p>
         {status === 'book' && <p>{t.bookSuccess}</p>}
         {status === 'request' && <p>{t.requestSuccess}</p>}
         {submitError && <p role="alert">{shownSubmitError(submitError, t.takenError)}</p>}

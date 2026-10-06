@@ -1,6 +1,7 @@
 import { MAIL_KEYS } from '../../../src/mail-templates.ts'
 import { addDaysIso, weeklyBlockRows } from '../../../src/planning.ts'
 import type { DayHours, Weekday } from '../../../src/schedule.ts'
+import { isSchemaMissing } from '../_shared/clients.ts'
 import { serviceClient } from '../_shared/db.ts'
 import { json, readJson, rejectUnlessSession, servePost } from '../_shared/http.ts'
 
@@ -79,6 +80,27 @@ servePost(async (req) => {
       throw new Error(saved.error.message)
     }
     return json(req, 200, { ok: true, id: (saved.data as { id: string }).id })
+  }
+
+  if (record.type === 'clientDelete') {
+    const id = typeof record.id === 'string' ? record.id : ''
+    const email = typeof record.email === 'string' ? record.email.trim().toLowerCase() : ''
+    const phone = typeof record.phone === 'string' ? record.phone.trim() : ''
+    if (!id && !email && !phone) return json(req, 400, { ok: false, error: 'invalid' })
+    // Mail addresses may contain _ or %, which ilike would read as wildcards.
+    const pattern = email.replace(/[\\%_]/g, (char) => `\\${char}`)
+    const bookings = email
+      ? await db.from('bookings').delete().ilike('email', pattern).select('id')
+      : await db.from('bookings').delete().eq('phone', phone).eq('email', '').select('id')
+    if (bookings.error) throw new Error(bookings.error.message)
+    if (id) {
+      const removed = await db.from('clients').delete().eq('id', id)
+      if (removed.error) throw new Error(removed.error.message)
+    } else if (email) {
+      const removed = await db.from('clients').delete().eq('email', email)
+      if (removed.error && !isSchemaMissing(removed.error)) throw new Error(removed.error.message)
+    }
+    return json(req, 200, { ok: true, bookings: bookings.data?.length ?? 0 })
   }
 
   if (record.type === 'copyBlocks') {

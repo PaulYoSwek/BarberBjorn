@@ -16,12 +16,12 @@ import {
   type Recency,
 } from '../../clients'
 import { copy, type ServiceId } from '../../content'
-import { loadClients, loadServices, saveClient, type InboxRow } from '../../planning-api'
+import { deleteClient, loadClients, loadServices, saveClient, type InboxRow } from '../../planning-api'
 import type { Weekday } from '../../schedule'
 
-type Props = { rows: InboxRow[] }
+type Props = { rows: InboxRow[]; onDeleted?: () => void }
 
-type Draft = { id?: string; name: string; email: string; phone: string; note: string }
+type Draft = { id?: string; key?: string; name: string; email: string; phone: string; note: string }
 
 const EMPTY_DRAFT: Draft = { name: '', email: '', phone: '', note: '' }
 
@@ -63,7 +63,7 @@ function usually(summary: ClientSummary): string {
   return parts.filter(Boolean).join(' · ')
 }
 
-export function AdminClients({ rows }: Props) {
+export function AdminClients({ rows, onDeleted }: Props) {
   const [stored, setStored] = useState<ClientRecord[]>([])
   const [ready, setReady] = useState(true)
   const [loaded, setLoaded] = useState(false)
@@ -73,6 +73,7 @@ export function AdminClients({ rows }: Props) {
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [done, setDone] = useState<string | null>(null)
+  const [confirming, setConfirming] = useState(false)
 
   function refresh() {
     return loadClients()
@@ -124,13 +125,35 @@ export function AdminClients({ rows }: Props) {
   function edit(summary: ClientSummary) {
     setNotice(null)
     setDone(null)
+    setConfirming(false)
     setDraft({
       id: summary.id ?? undefined,
+      key: summary.key,
       name: summary.name,
       email: summary.email,
       phone: summary.phone,
       note: summary.note,
     })
+  }
+
+  async function remove() {
+    if (!draft || busy) return
+    setBusy(true)
+    try {
+      const result = await deleteClient({ id: draft.id, email: draft.email, phone: draft.phone })
+      if (!result.ok) {
+        setNotice('Verwijderen mislukt. Probeer het nog eens.')
+        return
+      }
+      setNotice(null)
+      setDone(`${draft.name.trim() || 'De klant'} en alle afspraken zijn verwijderd.`)
+      setDraft(null)
+      setConfirming(false)
+      await refresh()
+      onDeleted?.()
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -142,7 +165,8 @@ export function AdminClients({ rows }: Props) {
     }
     setBusy(true)
     try {
-      const result = await saveClient(draft)
+      const { key: _key, ...client } = draft
+      const result = await saveClient(client)
       if (!result.ok) {
         setNotice(SAVE_ERRORS[result.error] ?? 'Opslaan mislukt. Probeer het nog eens.')
         return
@@ -253,6 +277,34 @@ export function AdminClients({ rows }: Props) {
               Annuleren
             </button>
           </div>
+          {draft.key ? (
+            <div className="admin-danger is-wide">
+              {confirming ? (
+                <>
+                  <p>
+                    Weet je het zeker? Dit verwijdert {draft.name.trim() || 'deze klant'} en{' '}
+                    {(() => {
+                      const count = all.find((item) => item.key === draft.key)?.bookings.length ?? 0
+                      return count === 1 ? '1 afspraak' : `alle ${count} afspraken`
+                    })()}{' '}
+                    voorgoed. Dit kan niet ongedaan worden gemaakt.
+                  </p>
+                  <div className="admin-actions">
+                    <button type="button" className="admin-danger-confirm" disabled={busy} onClick={() => void remove()}>
+                      {busy ? 'Verwijderen…' : 'Ja, verwijderen'}
+                    </button>
+                    <button type="button" onClick={() => setConfirming(false)}>
+                      Niet verwijderen
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <button type="button" className="admin-danger-open" onClick={() => setConfirming(true)}>
+                  Klant en afspraken verwijderen
+                </button>
+              )}
+            </div>
+          ) : null}
         </form>
       ) : null}
 

@@ -13,5 +13,6 @@ test('dutch and english carry the same keys and the locked facts', () => {
   expect(copy.nl.faq).toHaveLength(5)
   expect(copy.en.faq).toHaveLength(5)
   expect(CONTACT.email).toBe('hallo@barberbjorn.nl')
-  expect(CONTACT.phone).toBe('06 12 34 56 78')
+  expect(CONTACT.phone).toBe('+31 6 48163783')
+  expect(CONTACT.phoneHref).toBe('tel:+31648163783')
 })

@@ -146,7 +146,7 @@ export function AdminShell({ pending, onLogout }: Props) {
             }}
           />
         ) : null}
-        {tab === 'klanten' ? <AdminClients rows={rows} /> : null}
+        {tab === 'klanten' ? <AdminClients rows={rows} onDeleted={() => pullInbox(false)} /> : null}
         {tab === 'mail' ? <AdminMail rows={rows} clientId={mailClientId} templateKey={mailKey} onSent={markMailSent} /> : null}
         {tab === 'settings' ? <AdminSettings /> : null}
       </div>

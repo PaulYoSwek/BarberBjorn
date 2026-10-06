@@ -8,7 +8,7 @@
   --yellow: #f5c400;
   --text: #161616;
   --text-on-dark: #f4f1ea;
-  --font-display: "Bricolage Grotesque", sans-serif;
+  --font-display: "Bricolage Grotesque Variable", "Bricolage Grotesque", sans-serif;
   --font-body: Outfit, sans-serif;
 }
 
@@ -930,3 +930,40 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
   .admin-bar { padding-top: max(10px, env(safe-area-inset-top)); }
   .admin-gate { padding-top: max(20px, env(safe-area-inset-top)); }
 }
+
+/* Privacy */
+.booking-privacy { margin: 0; font-size: 0.8rem; color: #5c574e; }
+.booking-privacy a { color: inherit; }
+.footer-privacy { color: inherit; display: inline; min-height: 0; line-height: inherit; }
+.privacy { background: var(--paper); color: var(--text); padding: 88px 6vw 72px; }
+.privacy-body { max-width: 720px; margin: 0 auto; line-height: 1.6; }
+.privacy-back { display: inline-flex; align-items: center; min-height: 44px; color: inherit; margin-bottom: 18px; }
+.privacy .kicker { color: #9a7b00; }
+.privacy h1 {
+  margin: 0; font-family: var(--font-display); font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 720;
+  letter-spacing: -0.045em; line-height: 0.98;
+}
+.privacy-updated { margin: 10px 0 0; font-size: 0.85rem; color: #6b665c; }
+.privacy-intro { font-size: 1.08rem; margin: 22px 0; }
+.privacy-toc { padding: 14px 18px; background: #f7f4ec; border-left: 3px solid var(--yellow); margin-bottom: 18px; }
+.privacy-toc ol { margin: 0; padding-left: 20px; columns: 2; column-gap: 28px; }
+.privacy-toc a { color: inherit; line-height: 1.9; }
+.privacy section { padding-top: 22px; border-top: 1px solid rgba(16, 16, 16, 0.12); margin-top: 22px; scroll-margin-top: 24px; }
+.privacy h2 {
+  margin: 0 0 8px; font-family: var(--font-display); font-size: 1.35rem; font-weight: 720; letter-spacing: -0.03em;
+}
+.privacy p { margin: 0 0 10px; }
+.privacy ul { margin: 0 0 10px; padding-left: 20px; }
+.privacy li { margin: 0 0 6px; }
+@media (max-width: 800px) {
+  .privacy { padding: 72px 20px 56px; }
+  .privacy-toc ol { columns: 1; }
+}
+
+.admin-danger { display: grid; gap: 8px; padding-top: 10px; border-top: 1px dashed #d9b3a8; }
+.admin-danger p { margin: 0; font-size: 0.88rem; color: #8a1600; }
+.admin-danger-open {
+  justify-self: start; min-height: 40px; padding: 0 12px; cursor: pointer;
+  border: 1px solid #8a1600; background: #fff; color: #8a1600; font-weight: 600;
+}
+.admin-danger-confirm { background: #8a1600 !important; border-color: #8a1600 !important; color: #fff !important; font-weight: 700; }

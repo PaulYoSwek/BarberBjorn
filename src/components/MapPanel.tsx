@@ -75,6 +75,8 @@ export function MapPanel() {
         if (cancelled || !node.current) return
         const lib = module.default
         lib.accessToken = token
+        // No usage statistics to Mapbox (see the privacy statement).
+        lib.config.EVENTS_URL = null
         let map: MapboxMap
         try {
           map = new lib.Map({
@@ -84,6 +86,7 @@ export function MapPanel() {
             zoom: 15,
             cooperativeGestures: true,
             attributionControl: false,
+            performanceMetricsCollection: false,
           })
         } catch {
           setFailed(true)
