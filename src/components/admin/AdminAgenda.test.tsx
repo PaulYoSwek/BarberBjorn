@@ -249,11 +249,58 @@ test('Kopieer naar aankomende weken writes the edited weekday hours and clears t
   await userEvent.click(screen.getByRole('button', { name: 'Volgende week' }))
   expect(screen.getByLabelText('Open')).toHaveValue('10:00')
   await userEvent.click(screen.getByRole('button', { name: 'Kopieer naar aankomende weken' }))
-  expect(adminWrite).toHaveBeenLastCalledWith({
-    type: 'week',
-    week: editedWeek(),
-    clearDates: ['2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15', '2026-10-16', '2026-10-17', '2026-10-18'],
+  await waitFor(() =>
+    expect(adminWrite).toHaveBeenCalledWith({
+      type: 'week',
+      week: editedWeek(),
+      clearDates: ['2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15', '2026-10-16', '2026-10-17', '2026-10-18'],
+    }),
+  )
+})
+
+test('Kopieer naar aankomende weken copies closed half-hours and says it worked', async () => {
+  loadPublicSchedule.mockResolvedValue({
+    ...DEMO_SCHEDULE,
+    // A one-off close next Tuesday that the copy replaces, and a holiday it keeps.
+    blocks: [{ date: '2026-10-13', time: '15:00' }, { date: '2026-10-14' }],
   })
+  await openReady()
+  await userEvent.click(screen.getByRole('button', { name: 'ma 5 okt 12:00 vrij' }))
+  await userEvent.click(screen.getByRole('button', { name: 'ma 5 okt 12:30 vrij' }))
+  await userEvent.click(screen.getByRole('button', { name: 'wo 7 okt 16:00 vrij' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Kopieer naar aankomende weken' }))
+  await waitFor(() =>
+    expect(adminWrite).toHaveBeenCalledWith({
+      type: 'copyBlocks',
+      from: '2026-10-12',
+      weeks: 52,
+      pattern: { mon: ['12:00', '12:30'], tue: [], wed: ['16:00'], thu: [], fri: [], sat: [], sun: [] },
+    }),
+  )
+  const status = await screen.findByRole('status')
+  expect(status).toHaveTextContent('Gekopieerd naar de komende 52 weken')
+  expect(status).toHaveTextContent('3 dichte tijden per week')
+  await userEvent.click(screen.getByRole('button', { name: 'Volgende week' }))
+  expect(screen.getByRole('button', { name: 'ma 12 okt 12:00 dicht' })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByRole('button', { name: 'ma 12 okt 12:30 dicht' })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByRole('button', { name: 'ma 12 okt 13:00 vrij' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'di 13 okt 15:00 vrij' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /wo 14 okt dicht/ })).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'Volgende week' }))
+  expect(screen.getByRole('button', { name: 'wo 21 okt 16:00 dicht' })).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('a failed block copy rolls the later weeks back and shows no success', async () => {
+  await openReady()
+  await userEvent.click(screen.getByRole('button', { name: 'ma 5 okt 12:00 vrij' }))
+  adminWrite.mockImplementation(async (body: { type: string }) =>
+    body.type === 'copyBlocks' ? { ok: false, error: 'offline' } : { ok: true },
+  )
+  await userEvent.click(screen.getByRole('button', { name: 'Kopieer naar aankomende weken' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Opslaan mislukt')
+  expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'Volgende week' }))
+  expect(screen.getByRole('button', { name: 'ma 12 okt 12:00 vrij' })).toBeInTheDocument()
 })
 
 test('each day column can close the whole day', async () => {

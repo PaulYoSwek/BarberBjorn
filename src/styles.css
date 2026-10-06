@@ -724,11 +724,11 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
   .admin-site, .admin-logout { padding: 0 12px; font-size: 0.86rem; }
   .admin-tabs {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 9;
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 0;
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 0;
     padding: 0 0 env(safe-area-inset-bottom, 0px);
     background: #101010; border-top: 3px solid #f5c400;
   }
-  .admin-tabs button { min-height: 56px; border: 0; border-right: 1px solid #2a2a2a; font-size: 0.9rem; padding: 0 6px; }
+  .admin-tabs button { min-height: 56px; border: 0; border-right: 1px solid #2a2a2a; font-size: 0.82rem; padding: 0 2px; }
   .admin-tabs button:last-child { border-right: 0; }
   .admin-card { margin: 0; width: 100%; border: 0; padding: 12px; }
   .admin-agenda-head { align-items: start; }
@@ -798,3 +798,58 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
 }
 .admin-field { border: 1px solid #2a2a2a; margin: 0 0 12px; padding: 12px; }
 .admin-field legend { padding: 0 4px; }
+
+/* Klanten */
+.admin-clients { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.admin-clients label > input, .admin-clients label > select, .admin-clients label > textarea { width: 100%; min-width: 0; }
+.admin-clients button { cursor: pointer; }
+.admin-add {
+  min-height: 44px; padding: 0 16px;
+  border: 1px solid #101010; background: #f5c400; color: #101010; font-weight: 700;
+}
+.admin-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.admin-stats div { padding: 10px 12px; border: 1px solid #e4dfd4; background: #f7f4ec; }
+.admin-stats dt { font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: #6b665c; }
+.admin-stats dd {
+  margin: 2px 0 0; font-family: var(--font-display); font-size: 1.5rem; font-weight: 720; letter-spacing: -0.03em;
+}
+.admin-client-form {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;
+  padding: 14px; border: 1px solid #2a2a2a; background: #f7f4ec;
+}
+.admin-client-form .admin-hours-title, .admin-client-form .is-wide { grid-column: 1 / -1; }
+.admin-client-form label, .admin-filters label { display: grid; gap: 4px; font-size: 0.8rem; }
+.admin-client-form input, .admin-client-form textarea,
+.admin-filters input, .admin-filters select {
+  min-height: 44px; padding: 8px; border: 1px solid #2a2a2a; background: #fff; font-size: 16px;
+}
+.admin-client-form .admin-actions { margin-top: 0; }
+.admin-client-form .admin-primary { flex: 0 0 auto; min-width: 140px; font-weight: 700; }
+.admin-filters {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; align-items: end;
+  padding: 12px; border: 1px solid #e4dfd4; background: #f7f4ec;
+}
+.admin-filters .is-search { grid-column: 1 / -1; }
+.admin-clear {
+  min-height: 44px; padding: 0 12px; border: 1px solid #2a2a2a; background: #fff; font-weight: 600;
+}
+.admin-client-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+.admin-client {
+  display: grid; gap: 10px; padding: 16px; border: 1px solid #2a2a2a; background: #fff;
+  box-shadow: inset 4px 0 0 #f5c400;
+}
+.admin-client-head { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+.admin-client-head h2 { margin: 0; font-family: var(--font-display); font-size: 1.25rem; letter-spacing: -0.03em; overflow-wrap: anywhere; }
+.admin-client-score { margin: 0; display: grid; justify-items: end; line-height: 1.1; flex: 0 0 auto; }
+.admin-client-score strong { font-family: var(--font-display); font-size: 1.4rem; letter-spacing: -0.03em; }
+.admin-client-score span { font-size: 0.85rem; color: #5c574e; }
+.admin-client-contact { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.9rem; overflow-wrap: anywhere; }
+.admin-client-contact a { color: inherit; }
+.admin-client-note { margin: 0; padding: 8px 10px; background: #f7f4ec; font-size: 0.9rem; white-space: pre-wrap; }
+.admin-client .admin-actions { margin-top: 0; }
+@media (max-width: 720px) {
+  .admin-client-form { grid-template-columns: 1fr; }
+  .admin-filters { grid-template-columns: 1fr 1fr; }
+  .admin-client-list { grid-template-columns: 1fr; }
+  .admin-stats dd { font-size: 1.2rem; }
+}

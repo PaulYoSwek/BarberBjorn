@@ -8,3 +8,4 @@ dist-ssr
 .superpowers
 supabase/.temp
 .claude
+**/supabase/.temp

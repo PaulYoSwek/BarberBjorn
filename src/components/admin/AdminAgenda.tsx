@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { copy } from '../../content'
-import { weekHoursFromDays } from '../../planning'
+import { addDaysIso, COPY_WEEKS, weekHoursFromDays } from '../../planning'
 import { adminWrite, loadPublicSchedule, publishLiveSchedule, type InboxRow } from '../../planning-api'
 import { agendaDays, defaultSchedule, type AgendaDay, type DayHours, type Schedule, type Weekday } from '../../schedule'
 import { serviceName } from './admin-defaults'
@@ -144,6 +144,8 @@ export function AdminAgenda({ clients = [] }: Props) {
   const [picked, setPicked] = useState<string[]>([])
   const [ready, setReady] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  const [done, setDone] = useState<string | null>(null)
+  const [copying, setCopying] = useState(false)
   const [detail, setDetail] = useState<InboxRow | null>(null)
   const local = useRef<LocalEdits>({ blocks: new Map(), exceptions: new Map(), week: null })
 
@@ -190,16 +192,24 @@ export function AdminAgenda({ clients = [] }: Props) {
   const selectedDays = visible.filter((day) => selectedDates.includes(day.date))
   const hoursDay = selectedDays.find((day) => !('closed' in hoursFor(day))) ?? selectedDays[0]
 
-  function saved(ok: boolean, revert: () => void) {
+  function saved(ok: boolean, revert: () => void, success?: string) {
     if (ok) {
       setNotice(null)
+      setDone(success ?? null)
       publishLiveSchedule()
       return
     }
     revert()
     touch()
+    setDone(null)
     setNotice(SAVE_FAILED)
   }
+
+  useEffect(() => {
+    if (!done) return
+    const timer = window.setTimeout(() => setDone(null), 8000)
+    return () => window.clearTimeout(timer)
+  }, [done])
 
   async function write(body: Parameters<typeof adminWrite>[0], revert: () => void) {
     try {
@@ -283,23 +293,62 @@ export function AdminAgenda({ clients = [] }: Props) {
     })()
   }
 
-  /** The viewed week becomes the repeating Monday–Sunday template. */
+  /**
+   * The viewed week becomes the repeating Monday–Sunday template: its hours go
+   * into the weekday template and its closed half-hours are stamped onto the
+   * same weekdays for COPY_WEEKS weeks ahead.
+   */
   function apply() {
-    if (!ready || visible.length === 0) return
+    if (!ready || visible.length === 0 || copying) return
     const pageDates = visible.map((day) => day.date)
     const next = weekHoursFromDays(visible.map((day) => ({ weekday: day.weekday, hours: hoursFor(day) })))
+    const pattern: Partial<Record<Weekday, string[]>> = {}
+    for (const day of visible) {
+      const dayHours = hoursFor(day)
+      pattern[day.weekday] = 'closed' in dayHours ? [] : daySlotTimes(dayHours).filter((time) => blocked(day.date, time, view))
+    }
+    const from = addDaysIso(pageDates[pageDates.length - 1], 1)
+
     const beforeWeek = local.current.week
     const beforeExceptions = new Map(pageDates.map((date) => [date, local.current.exceptions.get(date)] as const))
+    const beforeBlocks = new Map(local.current.blocks)
     local.current.week = next
     for (const date of pageDates) local.current.exceptions.set(date, null)
+    // Show the copy right away on the later weeks that are loaded.
+    for (const day of days) {
+      if (day.date < from) continue
+      for (const block of view.blocks ?? []) {
+        if (block.date === day.date && block.time) local.current.blocks.set(blockKey(day.date, block.time), false)
+      }
+      for (const time of pattern[day.weekday] ?? []) local.current.blocks.set(blockKey(day.date, time), true)
+    }
     touch()
-    void write({ type: 'week', week: next, clearDates: pageDates }, () => {
+    const revert = () => {
       local.current.week = beforeWeek
+      local.current.blocks = beforeBlocks
       for (const [date, hours] of beforeExceptions) {
         if (hours === undefined) local.current.exceptions.delete(date)
         else local.current.exceptions.set(date, hours)
       }
-    })
+    }
+    const closedCount = Object.values(pattern).reduce((sum, times) => sum + (times?.length ?? 0), 0)
+    const success =
+      `Gekopieerd naar de komende ${COPY_WEEKS} weken: openingstijden` +
+      (closedCount > 0 ? ` en ${closedCount} dichte ${closedCount === 1 ? 'tijd' : 'tijden'} per week.` : '.')
+    setDone(null)
+    setCopying(true)
+    void (async () => {
+      try {
+        const first = await adminWrite({ type: 'week', week: next, clearDates: pageDates })
+        if (!first.ok) return saved(false, revert)
+        const second = await adminWrite({ type: 'copyBlocks', from, weeks: COPY_WEEKS, pattern })
+        saved(second.ok, revert, success)
+      } catch {
+        saved(false, revert)
+      } finally {
+        setCopying(false)
+      }
+    })()
   }
 
   const hours = hoursDay ? hoursFor(hoursDay) : null
@@ -375,13 +424,24 @@ export function AdminAgenda({ clients = [] }: Props) {
             </div>
           </section>
         ) : null}
-        <button type="button" className="admin-copy-week" disabled={!ready} onClick={apply}>
-          Kopieer naar aankomende weken
+        <button
+          type="button"
+          className="admin-copy-week"
+          aria-label="Kopieer naar aankomende weken"
+          disabled={!ready || copying}
+          onClick={apply}
+        >
+          {copying ? 'Kopiëren…' : 'Kopieer naar aankomende weken'}
         </button>
+        {done ? (
+          <p className="admin-done" role="status">
+            {done}
+          </p>
+        ) : null}
       </div>
       <p className="admin-hint">
         Tik dagen aan om ze samen in te stellen. Uren gelden alleen voor die dag. Kopieer naar aankomende weken zet
-        deze week als vaste standaard. Geboekt opent de klant.
+        de uren en dichte tijden van deze week vast voor het komende jaar. Geboekt opent de klant.
       </p>
       {!ready && !notice ? <p className="admin-hint">Agenda laden…</p> : null}
       {notice ? <p role="alert">{notice}</p> : null}

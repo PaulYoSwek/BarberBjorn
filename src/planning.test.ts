@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 import { defaultSchedule } from './schedule'
-import { fillTemplate, isFree, weekHoursFromDays } from './planning'
+import { addDaysIso, fillTemplate, isFree, weekHoursFromDays, weeklyBlockRows } from './planning'
 
 test('apply week keeps Saturday closed from the viewed days', () => {
   const week = weekHoursFromDays([
@@ -38,4 +38,22 @@ test('fillTemplate substitutes the four tokens', () => {
       time: '09:00',
     }),
   ).toBe('Hoi Sam, Knippen op 6 okt om 09:00.')
+})
+
+test('weekly block rows stamp each weekday pattern onto every later week', () => {
+  const rows = weeklyBlockRows('2026-10-12', 2, { mon: ['12:00', '12:30'], wed: ['15:00'] })
+  expect(rows).toEqual([
+    { date: '2026-10-12', time: '12:00' },
+    { date: '2026-10-12', time: '12:30' },
+    { date: '2026-10-14', time: '15:00' },
+    { date: '2026-10-19', time: '12:00' },
+    { date: '2026-10-19', time: '12:30' },
+    { date: '2026-10-21', time: '15:00' },
+  ])
+})
+
+test('addDaysIso walks across a daylight saving change without skipping a date', () => {
+  expect(addDaysIso('2026-10-24', 1)).toBe('2026-10-25')
+  expect(addDaysIso('2026-10-25', 1)).toBe('2026-10-26')
+  expect(addDaysIso('2026-10-12', 52 * 7 - 1)).toBe('2027-10-10')
 })

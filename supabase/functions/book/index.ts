@@ -1,6 +1,7 @@
 import { todayIso, validateBooking } from '../../../src/booking.ts'
 import { copy, type ServiceId } from '../../../src/content.ts'
 import { isFree } from '../../../src/planning.ts'
+import { insertBooking, rememberClient, servicePrice } from '../_shared/clients.ts'
 import { serviceClient } from '../_shared/db.ts'
 import { confirmedOverlaps, lostOverlapRace } from '../_shared/holds.ts'
 import { json, readJson, servePost } from '../_shared/http.ts'
@@ -35,22 +36,19 @@ servePost(async (req) => {
   if (!isFree(input.slot, minutes, schedule, now)) {
     return json(req, 409, { ok: false, error: takenMessage(input.lang) })
   }
-  const inserted = await db
-    .from('bookings')
-    .insert({
-      service: input.service,
-      name: input.name.trim(),
-      email: input.email.trim(),
-      phone: input.phone.trim(),
-      start: salonWallToUtc(input.slot),
-      minutes,
-      kind: 'slot',
-      status: 'confirmed',
-      lang: input.lang,
-      mail_sent: false,
-    })
-    .select('id, created_at')
-    .single()
+  const inserted = await insertBooking(db, {
+    service: input.service,
+    price: await servicePrice(db, input.service),
+    name: input.name.trim(),
+    email: input.email.trim(),
+    phone: input.phone.trim(),
+    start: salonWallToUtc(input.slot),
+    minutes,
+    kind: 'slot',
+    status: 'confirmed',
+    lang: input.lang,
+    mail_sent: false,
+  })
   if (inserted.error || !inserted.data) {
     if (isOverlapError(inserted.error)) return json(req, 409, { ok: false, error: takenMessage(input.lang) })
     throw new Error(inserted.error?.message ?? 'insert')
@@ -62,6 +60,7 @@ servePost(async (req) => {
     if (removed.error) throw new Error(removed.error.message)
     return json(req, 409, { ok: false, error: takenMessage(input.lang) })
   }
+  await rememberClient(db, input)
   let sent = false
   try {
     sent = (

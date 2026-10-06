@@ -1,5 +1,6 @@
 import { todayIso, validateBooking } from '../../../src/booking.ts'
 import { copy, type ServiceId } from '../../../src/content.ts'
+import { insertBooking, rememberClient, servicePrice } from '../_shared/clients.ts'
 import { serviceClient } from '../_shared/db.ts'
 import { json, readJson, servePost } from '../_shared/http.ts'
 import { parseBooking, validationMessage } from '../_shared/input.ts'
@@ -19,8 +20,9 @@ servePost(async (req) => {
   const checked = validateBooking(input, copy[input.lang], todayIso(now), now, schedule)
   if (!checked.ok) return json(req, 400, { ok: false, error: validationMessage(checked.errors, input.lang) })
   if (!isService(input.service)) return json(req, 400, { ok: false, error: copy[input.lang].fieldError })
-  const inserted = await db.from('bookings').insert({
+  const inserted = await insertBooking(db, {
     service: input.service,
+    price: await servicePrice(db, input.service),
     name: input.name.trim(),
     email: input.email.trim(),
     phone: input.phone.trim(),
@@ -32,5 +34,6 @@ servePost(async (req) => {
     mail_sent: false,
   })
   if (inserted.error) throw new Error(inserted.error.message)
+  await rememberClient(db, input)
   return json(req, 200, { ok: true })
 })

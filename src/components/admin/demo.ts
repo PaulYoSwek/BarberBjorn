@@ -15,6 +15,7 @@ export const DEMO_INBOX: InboxRow[] = [
     status: 'confirmed',
     lang: 'nl',
     mail_sent: true,
+    price: null,
   },
   {
     id: 'demo-sara',
@@ -28,6 +29,7 @@ export const DEMO_INBOX: InboxRow[] = [
     status: 'confirmed',
     lang: 'nl',
     mail_sent: true,
+    price: null,
   },
   {
     id: 'demo-omar',
@@ -41,6 +43,7 @@ export const DEMO_INBOX: InboxRow[] = [
     status: 'confirmed',
     lang: 'en',
     mail_sent: true,
+    price: null,
   },
   {
     id: 'demo-lisa',
@@ -54,6 +57,7 @@ export const DEMO_INBOX: InboxRow[] = [
     status: 'confirmed',
     lang: 'nl',
     mail_sent: true,
+    price: null,
   },
   {
     id: 'demo-thomas',
@@ -67,6 +71,7 @@ export const DEMO_INBOX: InboxRow[] = [
     status: 'confirmed',
     lang: 'nl',
     mail_sent: true,
+    price: null,
   },
   {
     id: 'demo-tom',
@@ -80,6 +85,7 @@ export const DEMO_INBOX: InboxRow[] = [
     status: 'pending',
     lang: 'nl',
     mail_sent: false,
+    price: null,
   },
 ]
 

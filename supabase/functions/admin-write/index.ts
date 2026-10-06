@@ -1,3 +1,4 @@
+import { addDaysIso, weeklyBlockRows } from '../../../src/planning.ts'
 import type { DayHours, Weekday } from '../../../src/schedule.ts'
 import { serviceClient } from '../_shared/db.ts'
 import { json, readJson, rejectUnlessSession, servePost } from '../_shared/http.ts'
@@ -51,6 +52,64 @@ servePost(async (req) => {
       if (cleared.error) throw new Error(cleared.error.message)
     }
     return json(req, 200, { ok: true })
+  }
+
+  if (record.type === 'client') {
+    const id = typeof record.id === 'string' ? record.id : ''
+    const name = typeof record.name === 'string' ? record.name.trim() : ''
+    const email = typeof record.email === 'string' ? record.email.trim().toLowerCase() : ''
+    const phone = typeof record.phone === 'string' ? record.phone.trim() : ''
+    const note = typeof record.note === 'string' ? record.note.trim() : ''
+    if (name.length < 2 || name.length > 120) return json(req, 400, { ok: false, error: 'name' })
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json(req, 400, { ok: false, error: 'email' })
+    if (phone.length > 40 || note.length > 2000) return json(req, 400, { ok: false, error: 'invalid' })
+    const fields = { name, email, phone, note }
+    let targetId = id
+    if (!targetId && email) {
+      const existing = await db.from('clients').select('id').eq('email', email).maybeSingle()
+      if (existing.error) throw new Error(existing.error.message)
+      targetId = (existing.data as { id: string } | null)?.id ?? ''
+    }
+    const saved = targetId
+      ? await db.from('clients').update(fields).eq('id', targetId).select('id').single()
+      : await db.from('clients').insert(fields).select('id').single()
+    if (saved.error) {
+      if (saved.error.code === '23505') return json(req, 409, { ok: false, error: 'exists' })
+      throw new Error(saved.error.message)
+    }
+    return json(req, 200, { ok: true, id: (saved.data as { id: string }).id })
+  }
+
+  if (record.type === 'copyBlocks') {
+    const from = typeof record.from === 'string' ? record.from.slice(0, 10) : ''
+    const weeks = typeof record.weeks === 'number' && Number.isInteger(record.weeks) ? record.weeks : 0
+    if (!DATE.test(from) || weeks < 1 || weeks > 104) return json(req, 400, { ok: false, error: 'invalid' })
+    if (!record.pattern || typeof record.pattern !== 'object') return json(req, 400, { ok: false, error: 'invalid' })
+    const given = record.pattern as Record<string, unknown>
+    const pattern: Partial<Record<Weekday, string[]>> = {}
+    for (const weekday of WEEKDAYS) {
+      const times = given[weekday]
+      if (times === undefined) continue
+      if (!Array.isArray(times) || times.some((time) => typeof time !== 'string' || !CLOCK.test(time))) {
+        return json(req, 400, { ok: false, error: 'invalid' })
+      }
+      pattern[weekday] = [...new Set(times as string[])]
+    }
+    const to = addDaysIso(from, weeks * 7 - 1)
+    // Replace closed half-hours on the later dates; whole closed days (holidays) stay.
+    const cleared = await db
+      .from('schedule_blocks')
+      .delete()
+      .gte('date', from)
+      .lte('date', to)
+      .not('time', 'is', null)
+    if (cleared.error) throw new Error(cleared.error.message)
+    const rows = weeklyBlockRows(from, weeks, pattern)
+    for (let start = 0; start < rows.length; start += 500) {
+      const inserted = await db.from('schedule_blocks').insert(rows.slice(start, start + 500))
+      if (inserted.error) throw new Error(inserted.error.message)
+    }
+    return json(req, 200, { ok: true, copied: rows.length })
   }
 
   if (record.type === 'exception') {

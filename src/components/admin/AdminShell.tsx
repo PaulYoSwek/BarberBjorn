@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { isUnauthorized, loadInbox, type InboxRow } from '../../planning-api'
 import { AdminAgenda } from './AdminAgenda'
+import { AdminClients } from './AdminClients'
 import { AdminInbox } from './AdminInbox'
 import { AdminMail } from './AdminMail'
 import { AdminSettings } from './AdminSettings'
 
-type Tab = 'agenda' | 'inbox' | 'mail' | 'settings'
+type Tab = 'agenda' | 'inbox' | 'klanten' | 'mail' | 'settings'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'agenda', label: 'Agenda' },
   { id: 'inbox', label: 'Inbox' },
+  { id: 'klanten', label: 'Klanten' },
   { id: 'mail', label: 'Mail' },
   { id: 'settings', label: 'Settings' },
 ]
@@ -131,6 +133,7 @@ export function AdminShell({ pending, onLogout }: Props) {
             }}
           />
         ) : null}
+        {tab === 'klanten' ? <AdminClients rows={rows} /> : null}
         {tab === 'mail' ? <AdminMail rows={rows} clientId={mailClientId} onSent={markMailSent} /> : null}
         {tab === 'settings' ? <AdminSettings /> : null}
       </div>

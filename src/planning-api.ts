@@ -1,8 +1,12 @@
 import { storeAdminSession } from './admin-session'
 import type { BookingInput, BookingKind } from './booking'
+import type { ClientRecord } from './clients'
 import type { Lang, ServiceId } from './content'
 import {
+  AGENDA_DAYS,
+  dateIso,
   defaultSchedule,
+  mondayOf,
   SERVICE_MINUTES,
   type DayHours,
   type Schedule,
@@ -77,6 +81,22 @@ async function read<T>(table: string, columns: string): Promise<T[]> {
   return (data ?? []) as T[]
 }
 
+/** Rows whose `date` falls in [from, to]. Keeps a year of copied blocks out of every page load. */
+async function readDates<T>(table: string, columns: string, from: string, to: string): Promise<T[]> {
+  if (!supabase) return []
+  const { data, error } = await supabase.from(table).select(columns).gte('date', from).lte('date', to)
+  if (error) throw new Error(error.message)
+  return (data ?? []) as T[]
+}
+
+/** The agenda shows four weeks from this Monday; a week of slack covers the page staying open. */
+function agendaRange(now = new Date()): { from: string; to: string } {
+  const monday = mondayOf(now)
+  const last = new Date(monday)
+  last.setDate(last.getDate() + AGENDA_DAYS + 7)
+  return { from: dateIso(monday), to: dateIso(last) }
+}
+
 export const LIVE_SCHEDULE_KEY = 'barber-live-schedule'
 const LIVE_EVENT = 'barber-live-schedule'
 
@@ -118,9 +138,10 @@ async function readExceptions(): Promise<Record<string, DayHours>> {
 
 export async function loadPublicSchedule(): Promise<Schedule> {
   if (!supabase) return defaultSchedule
+  const range = agendaRange()
   const [weekRows, blockRows, occupancy, exceptions] = await Promise.all([
     read<WeekRow>('schedule_week', 'weekday, closed, open, close'),
-    read<BlockRow>('schedule_blocks', 'date, time'),
+    readDates<BlockRow>('schedule_blocks', 'date, time', range.from, range.to),
     read<OccupancyRow>('booking_occupancy', 'start, minutes'),
     readExceptions(),
   ])
@@ -209,6 +230,7 @@ export type AdminWriteBody =
   | { type: 'blocks'; date: string; time: string; on: boolean }
   | { type: 'week'; week: Record<Weekday, DayHours>; clearDates?: string[] }
   | { type: 'exception'; date: string; hours: DayHours | null }
+  | { type: 'copyBlocks'; from: string; weeks: number; pattern: Partial<Record<Weekday, string[]>> }
 
 export type LoginResult = 'ok' | 'wrong' | 'unavailable'
 
@@ -259,6 +281,8 @@ export type InboxRow = {
   status: 'confirmed' | 'pending' | 'declined'
   lang: Lang
   mail_sent: boolean
+  /** Price stored when the booking was made; null for older bookings. */
+  price: string | null
 }
 
 export type ServiceSave = { id: ServiceId; price: string; minutes: number }
@@ -284,6 +308,7 @@ type BookingRow = {
   status: string
   lang?: string | null
   mail_sent: boolean | null
+  price?: string | null
 }
 
 function isKind(value: string): value is BookingKind {
@@ -319,6 +344,7 @@ function toInbox(rows: BookingRow[]): InboxRow[] {
       status: row.status,
       lang: row.lang === 'en' ? 'en' : 'nl',
       mail_sent: Boolean(row.mail_sent),
+      price: typeof row.price === 'string' && row.price ? row.price : null,
     })
   }
   return inbox
@@ -388,4 +414,44 @@ export function saveServices(services: ServiceSave[]) {
 
 export function saveTemplates(templates: TemplateSave[]) {
   return invokeOk('admin-write', { type: 'templates', templates })
+}
+
+export type ClientList = { ready: boolean; clients: ClientRecord[] }
+
+function toClients(rows: unknown[]): ClientRecord[] {
+  const clients: ClientRecord[] = []
+  for (const item of rows) {
+    if (!item || typeof item !== 'object') continue
+    const row = item as Record<string, unknown>
+    if (typeof row.id !== 'string' || typeof row.name !== 'string') continue
+    clients.push({
+      id: row.id,
+      name: row.name,
+      email: typeof row.email === 'string' ? row.email : '',
+      phone: typeof row.phone === 'string' ? row.phone : '',
+      note: typeof row.note === 'string' ? row.note : '',
+      created_at: typeof row.created_at === 'string' ? row.created_at : '',
+    })
+  }
+  return clients
+}
+
+/** Stored clients. `ready` is false until the clients table exists. */
+export async function loadClients(): Promise<ClientList> {
+  if (!supabase) throw new Error('offline')
+  const { data, error } = await supabase.functions.invoke('clients-list', { body: {} })
+  if (error) throw new Error(await invokeDetail(error))
+  const failed = failurePayload(data)
+  if (failed) throw new Error(failed)
+  const record = (data ?? {}) as { ready?: unknown; clients?: unknown }
+  return {
+    ready: record.ready !== false,
+    clients: Array.isArray(record.clients) ? toClients(record.clients) : [],
+  }
+}
+
+export type ClientSave = { id?: string; name: string; email: string; phone: string; note: string }
+
+export function saveClient(client: ClientSave) {
+  return invokeOk('admin-write', { type: 'client', ...client })
 }

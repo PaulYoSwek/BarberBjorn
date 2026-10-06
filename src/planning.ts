@@ -99,3 +99,33 @@ export function fillTemplate(
     .replaceAll('{{date}}', vars.date)
     .replaceAll('{{time}}', vars.time)
 }
+
+const WEEKDAY_ORDER: Weekday[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+
+/** How far "Kopieer naar aankomende weken" stamps closed half-hours ahead. */
+export const COPY_WEEKS = 52
+
+/** The date `count` days after an ISO date (calendar math in UTC, so DST never shifts the day). */
+export function addDaysIso(date: string, count: number): string {
+  const day = new Date(`${date}T12:00:00Z`)
+  day.setUTCDate(day.getUTCDate() + count)
+  return day.toISOString().slice(0, 10)
+}
+
+/**
+ * Closed half-hours for every date from `from` for `weeks` weeks, following a
+ * per-weekday pattern (e.g. mon: ['12:00', '12:30'] for a lunch break).
+ */
+export function weeklyBlockRows(
+  from: string,
+  weeks: number,
+  pattern: Partial<Record<Weekday, string[]>>,
+): { date: string; time: string }[] {
+  const rows: { date: string; time: string }[] = []
+  for (let index = 0; index < weeks * 7; index++) {
+    const date = addDaysIso(from, index)
+    const weekday = WEEKDAY_ORDER[new Date(`${date}T12:00:00Z`).getUTCDay()]
+    for (const time of pattern[weekday] ?? []) rows.push({ date, time })
+  }
+  return rows
+}

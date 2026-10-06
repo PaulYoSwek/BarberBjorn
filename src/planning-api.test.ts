@@ -2,6 +2,19 @@ import { expect, test, vi } from 'vitest'
 import { defaultSchedule } from './schedule'
 import { loadPublicSchedule, loadServices, publishLiveSchedule, subscribeLiveSchedule } from './planning-api'
 
+type Result = { data: unknown; error: { message: string } | null }
+
+/** A PostgREST-like query: awaitable, with chainable filters that are recorded. */
+function query(result: Result, filters: string[] = []) {
+  const builder = {
+    gte: (column: string, value: string) => (filters.push(`${column}>=${value}`), builder),
+    lte: (column: string, value: string) => (filters.push(`${column}<=${value}`), builder),
+    then: (resolve: (value: Result) => unknown, reject?: (reason: unknown) => unknown) =>
+      Promise.resolve(result).then(resolve, reject),
+  }
+  return builder
+}
+
 test('supabase client stays null without env', async () => {
   const { supabase } = await import('./supabase')
   expect(supabase).toBeNull()
@@ -60,14 +73,22 @@ test('maps live week blocks and occupancy into a schedule', async () => {
       { date: '2026-10-15', closed: true, open: null, close: null },
     ],
   }
+  const blockFilters: string[] = []
   const from = vi.fn((table: string) => ({
-    select: vi.fn(async () => ({ data: tables[table] ?? [], error: null })),
+    select: vi.fn(() =>
+      query({ data: tables[table] ?? [], error: null }, table === 'schedule_blocks' ? blockFilters : []),
+    ),
   }))
 
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-07T10:00:00'))
   vi.resetModules()
   vi.doMock('./supabase', () => ({ supabase: { from } }))
   const api = await import('./planning-api')
   const schedule = await api.loadPublicSchedule()
+  vi.useRealTimers()
+  // Only the agenda window (this Monday + 4 weeks + a week of slack) is fetched.
+  expect(blockFilters).toEqual(['date>=2026-10-05', 'date<=2026-11-09'])
   const listed = await api.loadServices()
   const zoned = schedule.bookings?.[1]
 
@@ -368,7 +389,7 @@ test('loadPublicSchedule throws when a read fails', async () => {
   vi.doMock('./supabase', () => ({
     supabase: {
       from: () => ({
-        select: async () => ({ data: null, error: { message: 'permission denied' } }),
+        select: () => query({ data: null, error: { message: 'permission denied' } }),
       }),
     },
   }))
@@ -381,10 +402,12 @@ test('loadPublicSchedule survives a missing exceptions table', async () => {
   vi.doMock('./supabase', () => ({
     supabase: {
       from: (table: string) => ({
-        select: async () =>
-          table === 'schedule_exceptions'
-            ? { data: null, error: { message: 'relation does not exist' } }
-            : { data: [], error: null },
+        select: () =>
+          query(
+            table === 'schedule_exceptions'
+              ? { data: null, error: { message: 'relation does not exist' } }
+              : { data: [], error: null },
+          ),
       }),
     },
   }))
