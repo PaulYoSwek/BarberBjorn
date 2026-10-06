@@ -24,6 +24,8 @@ import {
 const empty: BookingInput = { service: 'both', name: '', email: '', phone: '', slot: '', kind: 'slot' }
 const WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const
 const WEEK = 7
+/** How often the agenda re-reads the live schedule while it is on screen. */
+const REFRESH_MS = 60_000
 
 function monthIndex(date: string) {
   return Number(date.slice(5, 7)) - 1
@@ -130,11 +132,14 @@ export function BookingForm() {
     refresh()
     // Another tab on this device (the dashboard) changed something.
     const stop = subscribeLiveSchedule(refresh)
-    // Coming back to the tab: someone else may have booked in the meantime.
+    // Coming back to the tab or window: someone else may have booked, or the dashboard closed a time.
     const onVisible = () => {
       if (document.visibilityState === 'visible') refresh()
     }
     document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    // And every minute while the page is open, for a dashboard on another device.
+    const timer = window.setInterval(onVisible, REFRESH_MS)
     loadServices()
       .then((rows) => {
         if (cancelled || rows.length === 0) return
@@ -147,6 +152,8 @@ export function BookingForm() {
       cancelled = true
       stop()
       document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+      window.clearInterval(timer)
     }
   }, [])
 

@@ -19,7 +19,7 @@ type Props = {
 }
 
 const MOVE_ERRORS: Record<string, string> = {
-  overlap: 'Die tijd is al bezet door een andere afspraak. Kies een ander moment.',
+  overlap: 'Die tijd is dicht of al bezet voor de hele afspraak. Kies een ander moment of zet de tijd eerst open.',
   past: 'Kies een moment in de toekomst.',
   invalid: 'Kies een dag en een tijd.',
 }

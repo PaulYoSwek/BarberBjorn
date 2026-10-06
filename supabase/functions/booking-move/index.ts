@@ -1,8 +1,10 @@
+import { isFree } from '../../../src/planning.ts'
 import { serviceClient } from '../_shared/db.ts'
 import { confirmedOverlaps } from '../_shared/holds.ts'
 import { json, readJson, rejectUnlessSession, servePost } from '../_shared/http.ts'
 import { sendBookingMail } from '../_shared/notify.ts'
 import { salonNow, salonWallToUtc, utcToSalonWall } from '../_shared/salon.ts'
+import { loadSchedule } from '../_shared/schedule.ts'
 
 const WALL = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00$/
 
@@ -44,6 +46,9 @@ servePost(async (req) => {
   if (!found.data) return json(req, 404, { ok: false, error: 'missing' })
   const row = found.data as BookingRecord
 
+  // The whole appointment must be free: no other booking and no closed quarter-hour in it.
+  const schedule = await loadSchedule(db, row.id)
+  if (!isFree(start, row.minutes, schedule, salonNow())) return json(req, 409, { ok: false, error: 'overlap' })
   const overlaps = await confirmedOverlaps(db, row.id, start, row.minutes)
   if (overlaps.length > 0) return json(req, 409, { ok: false, error: 'overlap' })
 

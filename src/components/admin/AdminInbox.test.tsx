@@ -267,6 +267,6 @@ test('moving onto a taken time explains it and keeps the form open', async () =>
   await userEvent.click(await screen.findByRole('button', { name: 'Inbox 1' }))
   await userEvent.click(within(row('Sam Pending')).getByRole('button', { name: 'Ander tijdstip' }))
   await userEvent.click(screen.getByRole('button', { name: 'Verplaats en mail' }))
-  expect(await screen.findByRole('alert')).toHaveTextContent('Die tijd is al bezet')
+  expect(await screen.findByRole('alert')).toHaveTextContent('Die tijd is dicht of al bezet')
   expect(screen.getByRole('form', { name: 'Sam Pending verplaatsen' })).toBeInTheDocument()
 })

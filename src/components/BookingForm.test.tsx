@@ -644,7 +644,34 @@ test('a chosen start is let go when a reload shows it taken', async () => {
     })
     publishLiveSchedule()
     await waitFor(() => expect(screen.getByRole('button', { name: 'di 6 okt 11:00' })).toBeDisabled())
-    expect(screen.getByTestId('booking-summary')).toHaveTextContent('Nog geen tijd gekozen')
+    await waitFor(() => expect(screen.getByTestId('booking-summary')).toHaveTextContent('Nog geen tijd gekozen'))
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
+test('the agenda re-reads the schedule when the window regains focus', async () => {
+  window.history.replaceState(null, '', '/?lang=nl')
+  localStorage.clear()
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-05T12:00:00'))
+  try {
+    render(
+      <LanguageProvider>
+        <BookingForm />
+      </LanguageProvider>,
+    )
+    await waitFor(() => expect(loadPublicSchedule).toHaveBeenCalledTimes(1))
+    fireEvent.click(screen.getByRole('button', { name: 'Knippen' }))
+    // The dashboard on another device closes 13:15; a 45-minute cut at 13:00 must stop being offered.
+    loadPublicSchedule.mockResolvedValue({ ...defaultSchedule, blocks: [{ date: '2026-10-06', time: '13:15' }] })
+    window.dispatchEvent(new Event('focus'))
+    await waitFor(() => expect(loadPublicSchedule).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'di 6 okt 13:15' })).toHaveClass('is-taken'))
+    expect(screen.getByRole('button', { name: 'di 6 okt 13:00' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'di 6 okt 12:45' })).toBeDisabled()
+    // 12:30 to 13:15 ends exactly where the closed quarter starts, so it still fits.
+    expect(screen.getByRole('button', { name: 'di 6 okt 12:30' })).toBeEnabled()
   } finally {
     vi.useRealTimers()
   }

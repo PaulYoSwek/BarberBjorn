@@ -182,23 +182,38 @@ export function AdminAgenda({ clients = [] }: Props) {
 
   useEffect(() => {
     let cancelled = false
-    loadPublicSchedule()
-      .then((next) => {
-        if (cancelled) return
-        setCloud(next)
-        setReady(true)
-        // The public read has no reasons; the dashboard read does. Fall back quietly.
-        loadAdminBlocks()
-          .then((blocks) => {
-            if (!cancelled) setCloud((current) => ({ ...current, blocks }))
-          })
-          .catch(() => {})
-      })
-      .catch(() => {
-        if (!cancelled) setNotice('Agenda laden mislukt.')
-      })
+    let generation = 0
+    function load(first: boolean) {
+      const mine = ++generation
+      loadPublicSchedule()
+        .then((next) => {
+          if (cancelled || mine !== generation) return
+          setCloud(next)
+          setReady(true)
+          // The public read has no reasons; the dashboard read does. Fall back quietly.
+          loadAdminBlocks()
+            .then((blocks) => {
+              if (!cancelled && mine === generation) setCloud((current) => ({ ...current, blocks }))
+            })
+            .catch(() => {})
+        })
+        .catch(() => {
+          if (!cancelled && first) setNotice('Agenda laden mislukt.')
+        })
+    }
+    load(true)
+    // Bookings made on the site show up without a reload.
+    const again = () => {
+      if (document.visibilityState === 'visible') load(false)
+    }
+    document.addEventListener('visibilitychange', again)
+    window.addEventListener('focus', again)
+    const timer = window.setInterval(again, 60_000)
     return () => {
       cancelled = true
+      document.removeEventListener('visibilitychange', again)
+      window.removeEventListener('focus', again)
+      window.clearInterval(timer)
     }
   }, [])
 
