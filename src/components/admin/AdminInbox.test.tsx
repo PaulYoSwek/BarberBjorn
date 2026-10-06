@@ -195,12 +195,21 @@ test('accept reports an overlap in plain words', async () => {
 })
 
 test('unsent mail offers a resend that opens Mail for that client', async () => {
-  loadInbox.mockResolvedValue([pending])
+  loadInbox.mockResolvedValue([{ ...confirmed, mail_sent: false }])
+  render(<AdminShell />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Inbox' }))
+  const card = row('Kim Confirmed')
+  expect(within(card).getByText('Mail niet gegaan')).toBeInTheDocument()
+  await userEvent.click(within(card).getByRole('button', { name: 'Opnieuw' }))
+  expect(screen.getByRole('button', { name: 'Mail' })).toHaveAttribute('aria-current', 'page')
+  expect(screen.getByLabelText('Klant')).toHaveValue('conf-1')
+})
+
+test('a pending request is not flagged as unsent mail and sits under Te beoordelen', async () => {
+  loadInbox.mockResolvedValue([pending, confirmed])
   render(<AdminShell />)
   await userEvent.click(await screen.findByRole('button', { name: 'Inbox 1' }))
-  const pendingRow = row('Sam Pending')
-  expect(within(pendingRow).getByText('Mail niet gegaan')).toBeInTheDocument()
-  await userEvent.click(within(pendingRow).getByRole('button', { name: 'Opnieuw' }))
-  expect(screen.getByRole('button', { name: 'Mail' })).toHaveAttribute('aria-current', 'page')
-  expect(screen.getByLabelText('Klant')).toHaveValue('pend-1')
+  expect(within(row('Sam Pending')).queryByText('Mail niet gegaan')).not.toBeInTheDocument()
+  expect(within(screen.getByRole('region', { name: 'Te beoordelen' })).getByText('Sam Pending')).toBeInTheDocument()
+  expect(screen.getByText('1 nieuw')).toBeInTheDocument()
 })

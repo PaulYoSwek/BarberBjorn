@@ -3,12 +3,6 @@ import { copy } from '../../content'
 import { decideInbox, type InboxRow } from '../../planning-api'
 import { serviceName } from './admin-defaults'
 
-const STATUS_ORDER: Record<InboxRow['status'], number> = {
-  pending: 0,
-  confirmed: 1,
-  declined: 2,
-}
-
 const STATUS_LABEL: Record<InboxRow['status'], string> = {
   pending: 'Nieuw',
   confirmed: 'Bevestigd',
@@ -23,19 +17,69 @@ type Props = {
   onResend: (id: string) => void
 }
 
-function ordered(rows: InboxRow[]): InboxRow[] {
-  return rows
-    .slice()
-    .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || a.start.localeCompare(b.start))
+type Group = { id: string; title: string; rows: InboxRow[] }
+
+const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const
+
+function wallNow(): string {
+  const now = new Date()
+  const pad = (part: number) => String(part).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:00`
 }
 
-function when(start: string): string {
-  const month = copy.nl.monthShort[Number(start.slice(5, 7)) - 1]
-  const day = Number(start.slice(8, 10))
-  const weekday = new Date(`${start.slice(0, 10)}T12:00:00`).getDay()
-  const keys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const
-  const label = copy.nl.days.find((item) => item.key === keys[weekday])?.label ?? ''
-  return `${label} ${day} ${month} · ${start.slice(11, 16)}`
+/** New requests first, then what is coming, then what happened, then declined. */
+function grouped(rows: InboxRow[]): Group[] {
+  const now = wallNow()
+  const byStart = (a: InboxRow, b: InboxRow) => a.start.localeCompare(b.start)
+  const confirmed = rows.filter((row) => row.status === 'confirmed')
+  const groups: Group[] = [
+    { id: 'pending', title: 'Te beoordelen', rows: rows.filter((row) => row.status === 'pending').sort(byStart) },
+    { id: 'upcoming', title: 'Komend', rows: confirmed.filter((row) => row.start >= now).sort(byStart) },
+    { id: 'past', title: 'Geweest', rows: confirmed.filter((row) => row.start < now).sort((a, b) => byStart(b, a)) },
+    {
+      id: 'declined',
+      title: 'Geweigerd',
+      rows: rows.filter((row) => row.status === 'declined').sort((a, b) => byStart(b, a)),
+    },
+  ]
+  return groups.filter((group) => group.rows.length > 0)
+}
+
+function DateTile({ start }: { start: string }) {
+  const date = start.slice(0, 10)
+  const weekday = WEEKDAY_KEYS[new Date(`${date}T12:00:00`).getDay()]
+  const day = copy.nl.days.find((item) => item.key === weekday)?.label ?? ''
+  const month = copy.nl.monthShort[Number(date.slice(5, 7)) - 1]
+  return (
+    <div className="inbox-date" aria-label={`${day} ${Number(date.slice(8, 10))} ${month} ${start.slice(11, 16)}`}>
+      <span>{day}</span>
+      <strong>{Number(date.slice(8, 10))}</strong>
+      <span>{month}</span>
+      <em>{start.slice(11, 16)}</em>
+    </div>
+  )
+}
+
+function MailIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M1.5 3.5h13v9h-13z M1.5 4l6.5 5 6.5-5" fill="none" stroke="currentColor" strokeWidth="1.4" />
+    </svg>
+  )
+}
+
+function PhoneIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <path
+        d="M4.2 1.8 6 4.6 4.8 6.2a8.4 8.4 0 0 0 5 5l1.6-1.2 2.8 1.8-.8 2.4c-6.3.4-12-5.3-11.6-11.6Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
 }
 
 export function AdminInbox({ rows, loading = false, error, onChanged, onResend }: Props) {
@@ -51,7 +95,9 @@ export function AdminInbox({ rows, loading = false, error, onChanged, onResend }
     try {
       const result = await decideInbox(id, action)
       if (!result.ok) {
-        setNotice(result.error === 'overlap' ? 'Die tijd is al bezet. Kies een andere tijd of weiger.' : 'Beslissen mislukt.')
+        setNotice(
+          result.error === 'overlap' ? 'Die tijd is al bezet. Kies een andere tijd of weiger.' : 'Beslissen mislukt.',
+        )
         return
       }
       setNotice(null)
@@ -66,6 +112,7 @@ export function AdminInbox({ rows, loading = false, error, onChanged, onResend }
   }
 
   const pendingCount = rows.filter((row) => row.status === 'pending').length
+  const groups = grouped(rows)
 
   return (
     <div className="admin-inbox">
@@ -74,81 +121,98 @@ export function AdminInbox({ rows, loading = false, error, onChanged, onResend }
           <p className="admin-kicker">Afspraken</p>
           <h1>Inbox</h1>
         </div>
-        <p className="admin-inbox-count">{pendingCount === 0 ? 'Alles bij' : `${pendingCount} nieuw`}</p>
+        <p className={`inbox-count${pendingCount > 0 ? ' is-new' : ''}`}>
+          {pendingCount === 0 ? 'Alles bij' : `${pendingCount} nieuw`}
+        </p>
       </header>
       {error ? <p role="alert">{error}</p> : null}
       {notice ? <p role="alert">{notice}</p> : null}
-      {done ? <p className="admin-done" role="status">{done}</p> : null}
+      {done ? (
+        <p className="admin-done" role="status">
+          {done}
+        </p>
+      ) : null}
       {loading && rows.length === 0 && !error ? <p className="admin-hint">Inbox laden…</p> : null}
       {!loading && rows.length === 0 && !error ? (
         <p className="admin-hint">Nog geen afspraken. Nieuwe boekingen verschijnen hier vanzelf.</p>
       ) : null}
-      <ul className="admin-list">
-        {ordered(rows).map((row) => (
-          <li key={row.id} className={`admin-row admin-inbox-card is-${row.status}`}>
-            <div className="admin-inbox-card-head">
-              <h2>{row.name}</h2>
-              <span className="admin-status">{STATUS_LABEL[row.status]}</span>
-            </div>
-            <p className="admin-inbox-when">{when(row.start)}</p>
-            <dl className="admin-inbox-meta">
-              <div>
-                <dt>Dienst</dt>
-                <dd>
-                  {serviceName(row.service)} · {row.minutes} min
-                </dd>
-              </div>
-              <div>
-                <dt>Mail</dt>
-                <dd>
-                  <a href={`mailto:${row.email}`}>{row.email}</a>
-                </dd>
-              </div>
-              <div>
-                <dt>Telefoon</dt>
-                <dd>{row.phone ? <a href={`tel:${row.phone.replace(/\s+/g, '')}`}>{row.phone}</a> : '—'}</dd>
-              </div>
-              <div>
-                <dt>Type</dt>
-                <dd>{row.kind === 'custom' ? 'Ander tijdstip' : 'Slot'}</dd>
-              </div>
-            </dl>
-            {row.mail_sent ? null : <p className="admin-inbox-mail">Mail niet gegaan</p>}
-            {row.status === 'pending' || !row.mail_sent ? (
-              <div className="admin-actions">
-                {row.status === 'pending' ? (
-                  <>
-                    <button
-                      type="button"
-                      className="admin-primary"
-                      disabled={decidingId === row.id}
-                      onClick={() => {
-                        void decide(row.id, 'accept')
-                      }}
-                    >
-                      Accepteer
-                    </button>
-                    <button
-                      type="button"
-                      disabled={decidingId === row.id}
-                      onClick={() => {
-                        void decide(row.id, 'decline')
-                      }}
-                    >
-                      Weiger
-                    </button>
-                  </>
-                ) : null}
-                {row.mail_sent ? null : (
-                  <button type="button" onClick={() => onResend(row.id)}>
-                    Opnieuw
-                  </button>
-                )}
-              </div>
-            ) : null}
-          </li>
-        ))}
-      </ul>
+      {groups.map((group) => (
+        <section key={group.id} className="inbox-group" aria-label={group.title}>
+          <h2 className="inbox-group-title">
+            {group.title} <span>{group.rows.length}</span>
+          </h2>
+          <ul className="inbox-list">
+            {group.rows.map((row) => {
+              // A pending request gets its mail when Bjorn decides, so it is not "unsent" yet.
+              const unsent = row.status !== 'pending' && !row.mail_sent
+              return (
+                <li key={row.id} className={`inbox-card is-${row.status}`}>
+                  <DateTile start={row.start} />
+                  <div className="inbox-body">
+                    <div className="inbox-top">
+                      <h3>{row.name}</h3>
+                      <span className="inbox-status">{STATUS_LABEL[row.status]}</span>
+                    </div>
+                    <p className="inbox-tags">
+                      <span className="inbox-tag is-service">
+                        {serviceName(row.service)} · {row.minutes} min
+                      </span>
+                      {row.price ? <span className="inbox-tag">{row.price}</span> : null}
+                      {row.kind === 'custom' ? <span className="inbox-tag is-custom">Ander tijdstip</span> : null}
+                    </p>
+                    <p className="inbox-contact">
+                      <a href={`mailto:${row.email}`}>
+                        <MailIcon />
+                        {row.email}
+                      </a>
+                      {row.phone ? (
+                        <a href={`tel:${row.phone.replace(/\s+/g, '')}`}>
+                          <PhoneIcon />
+                          {row.phone}
+                        </a>
+                      ) : null}
+                    </p>
+                    {row.status === 'pending' || unsent ? (
+                      <div className="inbox-actions">
+                        {unsent ? <span className="inbox-warn">Mail niet gegaan</span> : null}
+                        {row.status === 'pending' ? (
+                          <>
+                            <button
+                              type="button"
+                              className="inbox-accept"
+                              disabled={decidingId === row.id}
+                              onClick={() => {
+                                void decide(row.id, 'accept')
+                              }}
+                            >
+                              Accepteer
+                            </button>
+                            <button
+                              type="button"
+                              className="inbox-decline"
+                              disabled={decidingId === row.id}
+                              onClick={() => {
+                                void decide(row.id, 'decline')
+                              }}
+                            >
+                              Weiger
+                            </button>
+                          </>
+                        ) : null}
+                        {unsent ? (
+                          <button type="button" className="inbox-resend" onClick={() => onResend(row.id)}>
+                            Opnieuw
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      ))}
     </div>
   )
 }

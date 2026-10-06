@@ -748,27 +748,6 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
   margin: 0; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.04em;
   text-transform: uppercase; color: #5c574e;
 }
-.admin-inbox-card {
-  gap: 10px; padding: 16px; background: #fff;
-  box-shadow: inset 4px 0 0 #d9d3c7;
-}
-.admin-inbox-card.is-pending { box-shadow: inset 4px 0 0 #f5c400; }
-.admin-inbox-card.is-confirmed { box-shadow: inset 4px 0 0 #101010; }
-.admin-inbox-card-head {
-  display: flex; align-items: start; justify-content: space-between; gap: 12px;
-}
-.admin-inbox-card-head h2 {
-  margin: 0; font-family: var(--font-display); font-size: 1.25rem;
-  letter-spacing: -0.03em;
-}
-.admin-status {
-  flex: 0 0 auto; min-height: 28px; padding: 4px 8px;
-  border: 1px solid #2a2a2a; background: #f7f4ec;
-  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
-}
-.admin-inbox-card.is-pending .admin-status { background: #f5c400; border-color: #f5c400; }
-.admin-inbox-card.is-declined .admin-status { opacity: 0.55; }
-.admin-inbox-when { font-size: 1.05rem; font-weight: 600; }
 .admin-inbox-meta {
   display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin: 0;
 }
@@ -778,7 +757,6 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
   text-transform: uppercase; color: #6b665c;
 }
 .admin-inbox-meta dd { margin: 0; font-size: 0.92rem; word-break: break-word; }
-.admin-inbox-mail { font-size: 0.85rem; font-weight: 600; color: #7a3e00; }
 @media (max-width: 720px) {
   .admin-inbox-meta { grid-template-columns: 1fr; }
 }
@@ -852,4 +830,84 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
   .admin-filters { grid-template-columns: 1fr 1fr; }
   .admin-client-list { grid-template-columns: 1fr; }
   .admin-stats dd { font-size: 1.2rem; }
+}
+
+/* Inbox */
+.inbox-count {
+  margin: 0; padding: 4px 10px; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  background: #e3f0e6; color: #1d6b3a;
+}
+.inbox-count.is-new { background: #f5c400; color: #101010; }
+.inbox-group { display: grid; gap: 8px; }
+.inbox-group-title {
+  margin: 4px 0 0; display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-body); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: #6b665c;
+}
+.inbox-group-title span {
+  display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px;
+  background: #ebe6db; color: #3d3a33; letter-spacing: 0;
+}
+.inbox-list {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+}
+.inbox-card {
+  display: grid; grid-template-columns: 64px minmax(0, 1fr);
+  background: #fff; border: 1px solid #d9d3c7;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.inbox-card:hover { border-color: #2a2a2a; box-shadow: 0 6px 18px rgba(16, 16, 16, 0.08); }
+.inbox-card.is-pending { border-color: #f5c400; box-shadow: inset 0 3px 0 #f5c400; }
+.inbox-card.is-declined { opacity: 0.72; }
+.inbox-date {
+  display: grid; align-content: center; justify-items: center; padding: 10px 4px;
+  background: #101010; color: #f4f1ea; text-align: center; line-height: 1.1;
+}
+.inbox-date span { font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.75; }
+.inbox-date strong { font-family: var(--font-display); font-size: 1.6rem; font-weight: 720; letter-spacing: -0.04em; }
+.inbox-date em { margin-top: 6px; font-style: normal; font-weight: 700; font-size: 0.86rem; color: #f5c400; }
+.inbox-card.is-declined .inbox-date { background: #5c574e; }
+.inbox-card.is-declined .inbox-date em { color: #f4f1ea; text-decoration: line-through; }
+.inbox-body { display: grid; gap: 8px; padding: 12px 14px; min-width: 0; }
+.inbox-top { display: flex; align-items: start; justify-content: space-between; gap: 10px; }
+.inbox-top h3 {
+  margin: 0; font-family: var(--font-display); font-size: 1.08rem; font-weight: 720; letter-spacing: -0.03em;
+  overflow-wrap: anywhere;
+}
+.inbox-status {
+  flex: 0 0 auto; padding: 3px 8px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; background: #e3f0e6; color: #1d6b3a;
+}
+.inbox-card.is-pending .inbox-status { background: #f5c400; color: #101010; }
+.inbox-card.is-declined .inbox-status { background: #ebe6db; color: #5c574e; }
+.inbox-tags { margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.inbox-tag { padding: 3px 8px; font-size: 0.78rem; background: #f4f1ea; color: #3d3a33; border: 1px solid #e4dfd4; }
+.inbox-tag.is-service { font-weight: 600; color: #101010; }
+.inbox-tag.is-custom { background: #fff6cc; border-color: #f0d76a; color: #6b5300; }
+.inbox-contact { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.86rem; }
+.inbox-contact a {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 28px; min-width: 0;
+  color: #2a2a2a; text-decoration: none; overflow-wrap: anywhere;
+}
+.inbox-contact a:hover { text-decoration: underline; }
+.inbox-contact svg { width: 14px; height: 14px; flex: 0 0 auto; color: #9a7b00; }
+.inbox-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.inbox-actions button {
+  min-height: 40px; padding: 0 14px; font-weight: 700; font-size: 0.86rem; cursor: pointer;
+  border: 1px solid #2a2a2a; background: #fff; color: #101010;
+}
+.inbox-actions button:disabled { opacity: 0.5; cursor: wait; }
+.inbox-actions .inbox-accept { background: #f5c400; border-color: #f5c400; flex: 1 1 auto; }
+.inbox-actions .inbox-accept:hover { background: #ffd21a; }
+.inbox-actions .inbox-decline:hover { border-color: #8a1600; color: #8a1600; }
+.inbox-warn {
+  padding: 4px 8px; font-size: 0.76rem; font-weight: 700;
+  background: #fff1e0; color: #8a4b00; border: 1px solid #f2c894;
+}
+.inbox-actions .inbox-resend { min-height: 32px; padding: 0 10px; font-size: 0.8rem; }
+@media (max-width: 720px) {
+  .inbox-list { grid-template-columns: 1fr; }
+  .inbox-card { grid-template-columns: 56px minmax(0, 1fr); }
+  .inbox-actions .inbox-accept, .inbox-actions .inbox-decline { min-height: 44px; }
 }
