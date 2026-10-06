@@ -22,7 +22,7 @@ const ADDRESS = CONTACT.addressLine
 export const MAIL_TEMPLATES: Record<MailKey, Record<Lang, { subject: string; body: string }>> = {
   thanks: {
     nl: {
-      subject: 'Je afspraak bij BarberBjorn staat vast',
+      subject: 'Je afspraak bij Bjorn’s Barber staat vast',
       body: `Hoi {{name}},
 
 Bedankt voor je boeking. Je afspraak staat vast:
@@ -37,7 +37,7 @@ Tot dan,
 Bjorn`,
     },
     en: {
-      subject: 'Your appointment at BarberBjorn is booked',
+      subject: 'Your appointment at Bjorn’s Barber is booked',
       body: `Hi {{name}},
 
 Thanks for booking. Your appointment is set:
@@ -54,7 +54,7 @@ Bjorn`,
   },
   accepted: {
     nl: {
-      subject: 'Je afspraak bij BarberBjorn is bevestigd',
+      subject: 'Je afspraak bij Bjorn’s Barber is bevestigd',
       body: `Hoi {{name}},
 
 Goed nieuws: je gevraagde tijd past. Je afspraak staat vast:
@@ -67,7 +67,7 @@ Tot dan,
 Bjorn`,
     },
     en: {
-      subject: 'Your appointment at BarberBjorn is confirmed',
+      subject: 'Your appointment at Bjorn’s Barber is confirmed',
       body: `Hi {{name}},
 
 Good news: the time you asked for works. Your appointment is set:
@@ -102,7 +102,7 @@ Bjorn`,
   },
   moved: {
     nl: {
-      subject: 'Je afspraak bij BarberBjorn is verplaatst',
+      subject: 'Je afspraak bij Bjorn’s Barber is verplaatst',
       body: `Hoi {{name}},
 
 Je afspraak is verplaatst naar een nieuw moment:
@@ -117,7 +117,7 @@ Tot dan,
 Bjorn`,
     },
     en: {
-      subject: 'Your appointment at BarberBjorn has moved',
+      subject: 'Your appointment at Bjorn’s Barber has moved',
       body: `Hi {{name}},
 
 Your appointment has moved to a new time:

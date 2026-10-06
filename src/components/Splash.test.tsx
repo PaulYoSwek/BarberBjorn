@@ -27,7 +27,7 @@ test('the wipe ending reveals the page', () => {
   setMotion(false)
   const onDone = vi.fn()
   render(<Splash onDone={onDone} />)
-  expect(screen.getByRole('img', { name: 'BarberBjorn' })).toBeInTheDocument()
+  expect(screen.getByRole('img', { name: 'Bjorn’s Barber' })).toBeInTheDocument()
   const curtain = document.querySelector('.splash-curtain') as HTMLElement
   const event = new Event('animationend', { bubbles: true })
   Object.defineProperty(event, 'animationName', { value: 'splash-wipe' })

@@ -6,7 +6,7 @@ import { useHeadTags } from '../seo'
 
 export function AdminPage() {
   const [open, setOpen] = useState(() => hasAdminSession())
-  useHeadTags({ title: 'Dashboard · BarberBjorn', robots: 'noindex, nofollow' })
+  useHeadTags({ title: 'Dashboard · Bjorn’s Barber', robots: 'noindex, nofollow' })
 
   useEffect(() => {
     document.documentElement.lang = 'nl'

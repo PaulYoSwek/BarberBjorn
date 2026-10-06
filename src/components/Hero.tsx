@@ -56,10 +56,10 @@ export function Hero() {
         />
       )}
       <div className="hero-scrim" />
-      <img className="hero-stamp" src="/logo-mark.png?v=2" alt="" width="68" height="68" decoding="async" />
+      <img className="hero-stamp" src="/logo-mark.png?v=3" alt="" width="68" height="68" decoding="async" />
       <div className="hero-copy">
         <h1 className="hero-title">
-          <img className="hero-name" src="/logo-name.png?v=2" alt="BarberBjorn" width="460" height="150" fetchPriority="high" />
+          <img className="hero-name" src="/logo-name.png?v=3" alt="Bjorn’s Barber" width="460" height="200" fetchPriority="high" />
           <span className="sr-only">{t.heroHidden}</span>
         </h1>
         <p>{t.tagline}</p>

@@ -118,7 +118,7 @@ test('builds a Dutch mailto body with the chosen time', () => {
   )
   expect(result.ok).toBe(true)
   if (result.ok) {
-    expect(result.subject).toBe('Afspraak BarberBjorn')
+    expect(result.subject).toBe('Afspraak Bjorn’s Barber')
     expect(result.body).toContain('Dienst: Knippen + baard')
     expect(result.body).toContain('Naam: Sam')
     expect(result.body).toContain('Telefoon: 06 12 34 56 78')

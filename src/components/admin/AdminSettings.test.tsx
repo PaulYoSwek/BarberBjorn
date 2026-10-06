@@ -33,8 +33,8 @@ const services = [
 ]
 
 const templates = [
-  { key: 'thanks' as const, lang: 'nl' as const, subject: 'Afspraak BarberBjorn', body: 'Hoi {{name}}' },
-  { key: 'thanks' as const, lang: 'en' as const, subject: 'Appointment BarberBjorn', body: 'Hi {{name}}' },
+  { key: 'thanks' as const, lang: 'nl' as const, subject: 'Afspraak Bjorn’s Barber', body: 'Hoi {{name}}' },
+  { key: 'thanks' as const, lang: 'en' as const, subject: 'Appointment Bjorn’s Barber', body: 'Hi {{name}}' },
   { key: 'accepted' as const, lang: 'nl' as const, subject: 'Afspraak bevestigd', body: 'Bevestigd {{name}}' },
   { key: 'accepted' as const, lang: 'en' as const, subject: 'Appointment confirmed', body: 'Confirmed {{name}}' },
   { key: 'declined' as const, lang: 'nl' as const, subject: 'Afspraak niet mogelijk', body: 'Niet mogelijk' },
@@ -82,7 +82,7 @@ test('saving templates calls saveTemplates with the edited subject', async () =>
   await userEvent.click(screen.getByRole('button', { name: 'Opslaan' }))
   expect(saveTemplates).toHaveBeenCalledWith([
     { key: 'thanks', lang: 'nl', subject: 'Tot zo', body: 'Hoi {{name}}' },
-    { key: 'thanks', lang: 'en', subject: 'Appointment BarberBjorn', body: 'Hi {{name}}' },
+    { key: 'thanks', lang: 'en', subject: 'Appointment Bjorn’s Barber', body: 'Hi {{name}}' },
     { key: 'accepted', lang: 'nl', subject: 'Afspraak bevestigd', body: 'Bevestigd {{name}}' },
     { key: 'accepted', lang: 'en', subject: 'Appointment confirmed', body: 'Confirmed {{name}}' },
     { key: 'declined', lang: 'nl', subject: 'Afspraak niet mogelijk', body: 'Niet mogelijk' },

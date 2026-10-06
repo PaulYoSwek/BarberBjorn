@@ -20,7 +20,7 @@ export function Splash({ onDone }: Props) {
         }}
       />
       <div className="splash-lockup">
-        <img className="splash-mark" src="/logo-wordmark.png?v=2" alt="BarberBjorn" />
+        <img className="splash-mark" src="/logo-wordmark.png?v=3" alt="Bjorn’s Barber" />
         <div className="splash-meet" />
       </div>
     </div>

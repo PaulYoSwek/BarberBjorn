@@ -374,7 +374,7 @@ test('day columns page a week with Sunday last and a booked half-hour stays book
 test('shell marks the active tab at the top and shows the inbox badge', async () => {
   const { container } = render(<AdminShell pending={2} />)
   expect(container.querySelector('.admin-bar')).toBe(container.querySelector('.admin')?.firstElementChild)
-  expect(screen.getByRole('img', { name: 'BarberBjorn' })).toBeInTheDocument()
+  expect(screen.getByRole('img', { name: 'Bjorn’s Barber' })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Agenda' })).toHaveAttribute('aria-current', 'page')
   expect(screen.getByRole('button', { name: 'Inbox 2' })).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'Mail' }))

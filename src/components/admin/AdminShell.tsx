@@ -100,8 +100,8 @@ export function AdminShell({ pending, onLogout }: Props) {
     <div className="admin">
       <header className="admin-bar">
         <div className="admin-brand">
-          <img className="admin-brand-mark" src="/logo-mark.png?v=2" alt="BarberBjorn" width="28" height="28" />
-          <span className="admin-brand-name">BarberBjorn</span>
+          <img className="admin-brand-mark" src="/logo-mark.png?v=3" alt="Bjorn’s Barber" width="28" height="28" />
+          <span className="admin-brand-name">Bjorn’s Barber</span>
         </div>
         <nav className="admin-tabs" aria-label="Dashboard">
           {TABS.map((item) => {

@@ -59,12 +59,12 @@ test('admin without a session shows the password gate', async () => {
       </LanguageProvider>
     </BrowserRouter>,
   )
-  expect(await screen.findByRole('img', { name: 'BarberBjorn' })).toBeInTheDocument()
+  expect(await screen.findByRole('img', { name: 'Bjorn’s Barber' })).toBeInTheDocument()
   expect(screen.getByText('Dashboard')).toBeInTheDocument()
   expect(screen.getByLabelText('Wachtwoord')).toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'Naar de website' })).toHaveAttribute('href', '/')
   expect(screen.queryByText('Agenda')).not.toBeInTheDocument()
-  expect(document.title).toBe('Dashboard · BarberBjorn')
+  expect(document.title).toBe('Dashboard · Bjorn’s Barber')
   expect(document.head.querySelector('link[rel="manifest"]')?.getAttribute('href')).toBe('/admin.webmanifest')
   expect(document.head.querySelector('meta[name="robots"]')?.getAttribute('content')).toMatch(/noindex/)
 })

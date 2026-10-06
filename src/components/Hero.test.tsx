@@ -15,7 +15,7 @@ function renderHero(search = '') {
 
 test('shows the Dutch line and a link to the form', () => {
   renderHero()
-  expect(screen.getByRole('img', { name: 'BarberBjorn' })).toHaveAttribute('src', '/logo-name.png?v=2')
+  expect(screen.getByRole('img', { name: 'Bjorn’s Barber' })).toHaveAttribute('src', '/logo-name.png?v=3')
   expect(screen.getByText('Een goede knip. Zonder haast.')).toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'Afspraak maken' })).toHaveAttribute('href', '#afspraak')
 })

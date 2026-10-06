@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { expect, test } from 'vitest'
 
 test('vercel serves /admin through the app and leaves /api to serverless routes', () => {
@@ -30,7 +30,13 @@ test('the map box outranks the late-loading Mapbox stylesheet', () => {
 
 test('the template migration carries every starting mail text', async () => {
   const { MAIL_TEMPLATES } = await import('./mail-templates')
-  const sql = readFileSync('supabase/migrations/20261006180000_mail_templates.sql', 'utf8')
+  // The newest migration that writes mail templates must carry the current texts.
+  const latest = readdirSync('supabase/migrations')
+    .filter((file) => file.endsWith('.sql'))
+    .sort()
+    .reverse()
+    .find((file) => readFileSync(`supabase/migrations/${file}`, 'utf8').includes('mail_templates'))
+  const sql = readFileSync(`supabase/migrations/${latest}`, 'utf8')
   for (const langs of Object.values(MAIL_TEMPLATES)) {
     for (const { subject, body } of Object.values(langs)) {
       expect(sql).toContain(subject.replaceAll("'", "''"))

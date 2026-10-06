@@ -5,7 +5,7 @@ import { useHeadTags } from '../seo'
 
 export function NotFoundPage() {
   const { t, lang } = useLang()
-  useHeadTags({ title: `404 · BarberBjorn`, robots: 'noindex, follow', lang })
+  useHeadTags({ title: `404 · Bjorn’s Barber`, robots: 'noindex, follow', lang })
   return (
     <>
       <LanguageSwitch />

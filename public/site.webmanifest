@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "BarberBjorn",
-  "short_name": "BarberBjorn",
+  "name": "Bjorn’s Barber",
+  "short_name": "Bjorn’s Barber",
   "description": "Kapper en barbier in Axel. Een goede knip. Zonder haast.",
   "start_url": "/",
   "display": "browser",
@@ -9,12 +9,12 @@
   "theme_color": "#101010",
   "icons": [
     {
-      "src": "/favicon-48.png",
+      "src": "/favicon-48.png?v=3",
       "sizes": "48x48",
       "type": "image/png"
     },
     {
-      "src": "/apple-touch-icon.png",
+      "src": "/apple-touch-icon.png?v=3",
       "sizes": "180x180",
       "type": "image/png"
     }

@@ -9,7 +9,7 @@ export function Footer() {
   return (
     <footer className="footer">
       <div className="footer-main">
-        <img src="/logo-wordmark.png?v=2" alt="BarberBjorn" width="132" height="139" loading="lazy" decoding="async" />
+        <img src="/logo-wordmark.png?v=3" alt="Bjorn’s Barber" width="132" height="125" loading="lazy" decoding="async" />
         <address className="footer-contact">
           <p>{CONTACT.addressLine}</p>
           <a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>
@@ -17,7 +17,7 @@ export function Footer() {
         </address>
       </div>
       <div className="footer-meta">
-        <p>© {year} BarberBjorn</p>
+        <p>© {year} Bjorn’s Barber</p>
         <p className="footer-credit">
           {t.creditLabel}{' '}
           <a href={CREDIT.url} target="_blank" rel="noopener" title={`${CREDIT.name} · Digitale oplossingen op maat`}>

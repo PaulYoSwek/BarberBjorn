@@ -1,6 +1,6 @@
-# BarberBjorn
+# Bjorn’s Barber
 
-Landing page and booking system for BarberBjorn, kapper en barbier in Axel.
+Landing page and booking system for Bjorn’s Barber, kapper en barbier in Axel.
 Built by [TurboTurtle](https://turboturtle.nl).
 
 - `/` — the public site (NL/EN) with live booking.
@@ -46,7 +46,7 @@ Function secrets (Supabase dashboard, Edge Functions, Secrets; never in git):
 | `ADMIN_PASSWORD` | Password for `/admin`. Without it nobody can log in. |
 | `ADMIN_SESSION_SECRET` | Optional extra key for signing admin sessions. Changing it logs everyone out. |
 | `RESEND_API_KEY` | Sends booking mails. Without it bookings still save, marked "Mail niet gegaan". |
-| `RESEND_FROM` | Sender, e.g. `BarberBjorn <hallo@barberbjorn.nl>`. The domain must be verified in Resend. |
+| `RESEND_FROM` | Sender, e.g. `Bjorn’s Barber <hallo@barberbjorn.nl>`. The domain must be verified in Resend. |
 | `SITE_ORIGIN` | Comma-separated origins allowed to call the functions (CORS). |
 
 Shared code in `src/` that the functions import must use explicit `.ts` import extensions, or the

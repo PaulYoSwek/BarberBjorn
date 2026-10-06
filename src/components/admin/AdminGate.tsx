@@ -67,7 +67,7 @@ export function AdminGate({ onSuccess }: Props) {
     <div className="admin-gate">
       <form className="admin-gate-card" onSubmit={onSubmit}>
         <div className="admin-gate-brand">
-          <img className="admin-gate-word" src="/logo-wordmark.png?v=2" alt="BarberBjorn" width="220" height="231" />
+          <img className="admin-gate-word" src="/logo-wordmark.png?v=3" alt="Bjorn’s Barber" width="220" height="209" />
           <span className="admin-gate-rule" aria-hidden="true" />
           <p className="admin-gate-kicker">Dashboard</p>
         </div>
