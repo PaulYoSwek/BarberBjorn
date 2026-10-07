@@ -59,6 +59,7 @@ export function validateBooking(
       const found = day?.slots.find((item) => item.start === input.slot)
       if (!day || day.closed) errors.slot = t.weekendError
       else if (!found) errors.slot = t.fieldError
+      else if (!found.fits) errors.slot = t.noFitError
       else if (found.taken) errors.slot = t.takenError
       else if (found.past) errors.slot = t.pastError
     }

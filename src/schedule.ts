@@ -49,8 +49,10 @@ export type Slot = {
   time: string
   /** The chosen service would overlap a closed or booked time: not bookable. */
   taken: boolean
-  /** This half-hour itself is closed or booked, exactly as the dashboard shows it. */
+  /** This quarter-hour itself is closed or booked, exactly as the dashboard shows it. */
   held: boolean
+  /** The whole appointment ends by closing time when it starts here. */
+  fits: boolean
   past: boolean
 }
 
@@ -174,8 +176,10 @@ export function agendaDays(
     const close = minutesOf(hours.close)
     const held = holdsOn(date, schedule)
     const slots: Slot[] = []
-    for (let start = open; start + span <= close; start += SLOT_MINUTES) {
+    // Every quarter-hour up to closing is shown, like the dashboard; late starts simply do not fit.
+    for (let start = open; start < close; start += SLOT_MINUTES) {
       const end = start + span
+      const fits = end <= close
       const taken = held.some((hold) => overlaps(start, end, hold.start, hold.end))
       const own = held.some((hold) => overlaps(start, start + SLOT_MINUTES, hold.start, hold.end))
       const past = date < today || (date === today && start <= nowMinutes)
@@ -184,6 +188,7 @@ export function agendaDays(
         time: clock(start),
         taken,
         held: own,
+        fits,
         past,
       })
     }
@@ -192,6 +197,6 @@ export function agendaDays(
 }
 
 export function firstBookableWeek(days: AgendaDay[], size = 7): number {
-  const index = days.findIndex((day) => !day.closed && day.slots.some((slot) => !slot.taken && !slot.past))
+  const index = days.findIndex((day) => !day.closed && day.slots.some((slot) => slot.fits && !slot.taken && !slot.past))
   return index < 0 ? 0 : Math.floor(index / size)
 }

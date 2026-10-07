@@ -24,14 +24,19 @@ test('only offers starts that still fit the service before close', () => {
   const beard = agendaDays('beard', saturday)[7]
   expect(SERVICE_MINUTES).toEqual({ cut: 45, beard: 30, both: 75 })
   expect(SLOT_MINUTES).toBe(15)
+  // Every quarter-hour up to closing is a cell, like the dashboard; late starts do not fit.
+  const lastFit = (day: { slots: { time: string; fits: boolean }[] }) => day.slots.filter((slot) => slot.fits).at(-1)?.time
   expect(cut.slots[0].time).toBe('09:00')
   expect(cut.slots[1].time).toBe('09:15')
-  expect(cut.slots.at(-1)?.time).toBe('17:15')
-  expect(beard.slots.at(-1)?.time).toBe('17:30')
-  expect(cut.slots.some((slot) => slot.time === '17:30')).toBe(false)
+  expect(cut.slots).toHaveLength(36)
+  expect(cut.slots.at(-1)?.time).toBe('17:45')
+  expect(lastFit(cut)).toBe('17:15')
+  expect(cut.slots.find((slot) => slot.time === '17:30')?.fits).toBe(false)
+  expect(lastFit(beard)).toBe('17:30')
   const both = agendaDays('both', saturday)[7]
-  expect(both.slots.at(-1)?.time).toBe('16:45')
-  expect(both.slots).toHaveLength(32)
+  expect(both.slots).toHaveLength(36)
+  expect(lastFit(both)).toBe('16:45')
+  expect(both.slots.filter((slot) => !slot.fits).map((slot) => slot.time)).toEqual(['17:00', '17:15', '17:30', '17:45'])
 })
 
 test('marks overlapping and past times so they stay visible but blocked', () => {
@@ -73,7 +78,7 @@ test('a half-hour block occupies that span for overlap', () => {
 
 test('live minutes move the last bookable start', () => {
   const days = agendaDays('cut', saturday, { minutes: { cut: 90, beard: 20, both: 60 } })
-  expect(days[7].slots.at(-1)?.time).toBe('16:30')
+  expect(days[7].slots.filter((slot) => slot.fits).at(-1)?.time).toBe('16:30')
 })
 
 test('pending-only extra bookings are not used — only the bookings array occupies', () => {
@@ -123,7 +128,7 @@ test('a length off the grid rounds up to whole quarter-hours for fitting and ove
   // 50 minutes counts as 60: 09:00 would run until 10:00, which is free; 09:15 would hit 10:00.
   expect(monday.slots.find((slot) => slot.time === '09:00')?.taken).toBe(false)
   expect(monday.slots.find((slot) => slot.time === '09:15')?.taken).toBe(true)
-  expect(monday.slots.at(-1)?.time).toBe('17:00')
+  expect(monday.slots.filter((slot) => slot.fits).at(-1)?.time).toBe('17:00')
 })
 
 test('a confirmed booking of 75 minutes blocks five quarter-hours and every start that would overlap', () => {

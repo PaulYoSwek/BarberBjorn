@@ -56,7 +56,7 @@ export function isFree(
   for (const day of days) {
     const found = day.slots.find((slot) => slot.start === start)
     if (found) {
-      return !found.taken && !found.past
+      return found.fits && !found.taken && !found.past
     }
   }
   const startMin = clockMinutes(start.slice(11, 16))

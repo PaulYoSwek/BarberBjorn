@@ -169,3 +169,11 @@ test('accepts a weekday four weeks out', () => {
   )
   expect(result.ok).toBe(true)
 })
+
+test('a start that would run past closing time is refused with its own message', () => {
+  const late = validateBooking({ ...base, service: 'both', slot: '2026-10-06T17:00:00' }, copy.nl, today)
+  expect(late.ok).toBe(false)
+  if (!late.ok) expect(late.errors.slot).toBe('Deze dienst past hier niet meer voor sluitingstijd. Kies een eerdere tijd.')
+  const lastFit = validateBooking({ ...base, service: 'both', slot: '2026-10-06T16:45:00' }, copy.nl, today)
+  expect(lastFit.ok).toBe(true)
+})

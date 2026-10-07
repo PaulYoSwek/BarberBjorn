@@ -616,9 +616,13 @@ test('choosing a start shows the whole appointment and the end time', async () =
     expect(screen.getByRole('button', { name: 'di 6 okt 09:30' })).toHaveClass('is-span')
     expect(screen.getByRole('button', { name: 'di 6 okt 09:45' })).not.toHaveClass('is-span')
     expect(screen.getByTestId('booking-summary')).toHaveTextContent('di 6 okt 09:00–09:45')
-    // The last starts of the day only offer what still fits before closing at 18:00.
+    // Every quarter-hour up to closing is shown; starts where the cut would run past 18:00 are grey.
     expect(screen.getByRole('button', { name: 'di 6 okt 17:15' })).toBeEnabled()
-    expect(screen.queryByRole('button', { name: 'di 6 okt 17:30' })).not.toBeInTheDocument()
+    const late = screen.getByRole('button', { name: 'di 6 okt 17:30' })
+    expect(late).toBeDisabled()
+    expect(late).toHaveClass('is-nofit')
+    expect(late).toHaveAttribute('title', 'Deze dienst past hier niet meer voor sluitingstijd. Kies een eerdere tijd.')
+    expect(screen.getByRole('button', { name: 'di 6 okt 17:45' })).toBeDisabled()
   } finally {
     vi.useRealTimers()
   }
@@ -672,6 +676,35 @@ test('the agenda re-reads the schedule when the window regains focus', async () 
     expect(screen.getByRole('button', { name: 'di 6 okt 12:45' })).toBeDisabled()
     // 12:30 to 13:15 ends exactly where the closed quarter starts, so it still fits.
     expect(screen.getByRole('button', { name: 'di 6 okt 12:30' })).toBeEnabled()
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
+test('the last start that fits highlights the appointment all the way to closing time', async () => {
+  window.history.replaceState(null, '', '/?lang=nl')
+  localStorage.clear()
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-05T12:00:00'))
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  try {
+    render(
+      <LanguageProvider>
+        <BookingForm />
+      </LanguageProvider>,
+    )
+    // Knippen + baard (75 min), closing at 18:00: 16:45 is the last start that fits.
+    for (const time of ['17:00', '17:15', '17:30', '17:45']) {
+      const cell = screen.getByRole('button', { name: `di 6 okt ${time}` })
+      expect(cell).toBeDisabled()
+      expect(cell).toHaveClass('is-nofit')
+    }
+    await user.click(screen.getByRole('button', { name: 'di 6 okt 16:45' }))
+    expect(screen.getByRole('button', { name: 'di 6 okt 16:45' })).toHaveClass('is-on')
+    for (const time of ['17:00', '17:15', '17:30', '17:45']) {
+      expect(screen.getByRole('button', { name: `di 6 okt ${time}` })).toHaveClass('is-span')
+    }
+    expect(screen.getByTestId('booking-summary')).toHaveTextContent('di 6 okt 16:45–18:00')
   } finally {
     vi.useRealTimers()
   }

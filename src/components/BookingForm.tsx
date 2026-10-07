@@ -177,7 +177,7 @@ export function BookingForm() {
   useEffect(() => {
     setWeek((current) => {
       const page = days.slice(current * WEEK, current * WEEK + WEEK)
-      const open = page.some((day) => !day.closed && day.slots.some((slot) => !slot.taken && !slot.past))
+      const open = page.some((day) => !day.closed && day.slots.some((slot) => slot.fits && !slot.taken && !slot.past))
       return open ? current : firstBookableWeek(days, WEEK)
     })
   }, [days])
@@ -187,7 +187,7 @@ export function BookingForm() {
     if (input.kind !== 'slot' || !input.slot) return
     const day = days.find((item) => item.date === input.slot.slice(0, 10))
     const found = day?.slots.find((item) => item.start === input.slot)
-    if (!found || found.taken || found.past) {
+    if (!found || !found.fits || found.taken || found.past) {
       setInput((current) => (current.slot === input.slot ? { ...current, slot: '' } : current))
     }
   }, [days, input.kind, input.slot])
@@ -347,7 +347,7 @@ export function BookingForm() {
                     {!day.closed && (
                       <div className="agenda-slots">
                         {day.slots.map((slot) => {
-                          const blocked = slot.taken || slot.past
+                          const blocked = !slot.fits || slot.taken || slot.past
                           const on = input.slot === slot.start
                           const inSpan = !on && covered.has(slot.start)
                           const inPreview = !on && !inSpan && previewed.has(slot.start)
@@ -357,7 +357,7 @@ export function BookingForm() {
                             ? 'is-past'
                             : slot.held
                               ? 'is-taken'
-                              : slot.taken
+                              : slot.taken || !slot.fits
                                 ? 'is-nofit'
                                 : undefined
                           return (
@@ -365,7 +365,7 @@ export function BookingForm() {
                               key={slot.start}
                               type="button"
                               aria-label={`${label} ${slot.time}`}
-                              title={kind === 'is-nofit' ? t.noFitHint : undefined}
+                              title={kind === 'is-nofit' ? (slot.fits ? t.noFitHint : t.noFitError) : undefined}
                               aria-pressed={on}
                               disabled={blocked}
                               className={
