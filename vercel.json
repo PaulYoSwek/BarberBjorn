@@ -1,36 +1,36 @@
 {
   "redirects": [
     {
-      "source": "/:path*",
+      "source": "/(.*)",
       "has": [
         {
           "type": "host",
           "value": "barberbjorn.nl"
         }
       ],
-      "destination": "https://www.bjornsbarber.nl/:path*",
+      "destination": "https://www.bjornsbarber.nl/$1",
       "permanent": true
     },
     {
-      "source": "/:path*",
+      "source": "/(.*)",
       "has": [
         {
           "type": "host",
           "value": "www.barberbjorn.nl"
         }
       ],
-      "destination": "https://www.bjornsbarber.nl/:path*",
+      "destination": "https://www.bjornsbarber.nl/$1",
       "permanent": true
     },
     {
-      "source": "/:path*",
+      "source": "/(.*)",
       "has": [
         {
           "type": "host",
           "value": "barber-bjorn.vercel.app"
         }
       ],
-      "destination": "https://www.bjornsbarber.nl/:path*",
+      "destination": "https://www.bjornsbarber.nl/$1",
       "permanent": true
     }
   ],
