@@ -58,7 +58,7 @@ export const PRIVACY: Record<Lang, PrivacyText> = {
           'Supabase: de database met afspraken en klanten. De servers staan in Londen (Verenigd Koninkrijk).',
           'Vercel: hosting van de website.',
           'Resend: het versturen van de bevestigingsmails.',
-          'Mapbox: de kaart bovenaan de pagina. Mapbox ontvangt je IP-adres om de kaart te kunnen tonen. Het meesturen van gebruiksstatistiek naar Mapbox hebben we uitgezet.',
+          'Mapbox: de kaart bovenaan de pagina. Mapbox ontvangt je IP-adres om de kaart te kunnen tonen en telt dat de kaart is geladen. Prestatiemetingen naar Mapbox hebben we uitgezet.',
         ],
       },
       {
@@ -167,7 +167,7 @@ export const PRIVACY: Record<Lang, PrivacyText> = {
           'Supabase: the database with appointments and clients. Its servers are in London (United Kingdom).',
           'Vercel: hosting of the website.',
           'Resend: sending the confirmation mails.',
-          'Mapbox: the map at the top of the page. Mapbox receives your IP address to show the map. Sending usage statistics to Mapbox is switched off.',
+          'Mapbox: the map at the top of the page. Mapbox receives your IP address to show the map and counts that the map was loaded. Performance measurements to Mapbox are switched off.',
         ],
       },
       {

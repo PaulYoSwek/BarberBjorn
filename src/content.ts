@@ -62,7 +62,7 @@ export type Copy = {
 }
 
 /** Public origin of the site, used for canonical and social tags. */
-export const SITE_URL = 'https://www.barberbjorn.nl'
+export const SITE_URL = 'https://www.bjornsbarber.nl'
 
 /** The studio that built the site. Linked from the footer. */
 export const CREDIT = {

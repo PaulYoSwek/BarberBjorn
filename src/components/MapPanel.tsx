@@ -75,8 +75,6 @@ export function MapPanel() {
         if (cancelled || !node.current) return
         const lib = module.default
         lib.accessToken = token
-        // No usage statistics to Mapbox (see the privacy statement).
-        lib.config.EVENTS_URL = null
         let map: MapboxMap
         try {
           map = new lib.Map({
@@ -86,9 +84,11 @@ export function MapPanel() {
             zoom: 15,
             cooperativeGestures: true,
             attributionControl: false,
+            // No performance measurements to Mapbox (see the privacy statement).
             performanceMetricsCollection: false,
           })
-        } catch {
+        } catch (error) {
+          console.error('Map could not start', error)
           setFailed(true)
           return
         }
@@ -103,11 +103,13 @@ export function MapPanel() {
         })
         map.on('error', (event) => {
           if (removed || !isMapOrStyleFailure(event as MapErrorEvent, map)) return
+          console.error('Map failed', (event as MapErrorEvent).error)
           removeMap()
           setFailed(true)
         })
       })
-      .catch(() => {
+      .catch((error: unknown) => {
+        console.error('Map library could not load', error)
         if (!cancelled) setFailed(true)
       })
     return () => {
