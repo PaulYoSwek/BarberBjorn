@@ -19,6 +19,10 @@ test('shows the placeholder contact', () => {
   expect(screen.getByRole('link', { name: '+31 6 48163783' })).toHaveAttribute('href', 'tel:+31648163783')
   expect(screen.getByRole('link', { name: 'Privacy en cookies' })).toHaveAttribute('href', '/privacy')
   expect(screen.getByText('Ferdinandstraat 21, Axel')).toBeInTheDocument()
+  const instagram = screen.getByRole('link', { name: 'Instagram @bjornrijckaert' })
+  expect(instagram).toHaveAttribute('href', 'https://www.instagram.com/bjornrijckaert')
+  expect(instagram).toHaveAttribute('target', '_blank')
+  expect(instagram.getAttribute('rel')).toContain('noopener')
 })
 
 test('credits TurboTurtle with a followed backlink in both languages', () => {

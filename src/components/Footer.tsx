@@ -14,6 +14,20 @@ export function Footer() {
           <p>{CONTACT.addressLine}</p>
           <a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>
           <a href={CONTACT.phoneHref}>{CONTACT.phone}</a>
+          <a
+            className="footer-instagram"
+            href={CONTACT.instagram}
+            target="_blank"
+            rel="noopener noreferrer me"
+            aria-label={`Instagram ${CONTACT.instagramHandle}`}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" strokeWidth="1.8" />
+              <circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+              <circle cx="17.4" cy="6.6" r="1.2" fill="currentColor" />
+            </svg>
+            {CONTACT.instagramHandle}
+          </a>
         </address>
       </div>
       <div className="footer-meta">

@@ -1105,3 +1105,7 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
   .admin-tabs.is-more button:nth-child(-n + 4) { display: none; }
   .admin-more { display: block; }
 }
+
+.footer a.footer-instagram { display: inline-flex; align-items: center; gap: 8px; }
+.footer-instagram svg { width: 20px; height: 20px; flex: 0 0 auto; color: var(--yellow); }
+.footer-instagram:hover svg { color: #ffd21a; }

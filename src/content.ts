@@ -77,6 +77,8 @@ export const CONTACT = {
   phoneHref: 'tel:+31648163783',
   addressLine: 'Ferdinandstraat 21, Axel',
   addressFull: 'Ferdinandstraat 21, 4571 AN Axel',
+  instagram: 'https://www.instagram.com/bjornrijckaert',
+  instagramHandle: '@bjornrijckaert',
 }
 
 const services = {
