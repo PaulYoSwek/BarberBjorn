@@ -2,7 +2,7 @@
   "id": "/admin",
   "name": "Bjorn’s Barber Dashboard",
   "short_name": "BB Dashboard",
-  "description": "Agenda, inbox en klanten van Bjorn’s Barber.",
+  "description": "Agenda, afspraken en klanten van Bjorn’s Barber.",
   "start_url": "/admin",
   "scope": "/admin",
   "display": "standalone",

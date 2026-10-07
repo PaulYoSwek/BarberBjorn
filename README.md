@@ -4,7 +4,7 @@ Landing page and booking system for Bjorn’s Barber, kapper en barbier in Axel.
 Built by [TurboTurtle](https://turboturtle.nl).
 
 - `/` — the public site (NL/EN) with live booking.
-- `/admin` — Bjorn's dashboard: agenda, inbox, mail, settings.
+- `/admin` — Bjorn's dashboard: agenda, afspraken, klanten, financiën, producten, mail, settings.
 - Supabase (Postgres + edge functions) holds hours, bookings, prices and mail templates. Resend sends mail.
 
 ## Run locally
@@ -74,7 +74,7 @@ handles deletion requests.
 ## Money
 
 - **Producten**: products with price and stock. Stock moves when a product is put on a booking's bon.
-- **Bon** (on a confirmed booking in the Inbox): the service price can be changed or a discount entered,
+- **Bon** (on a confirmed booking under Afspraken): the service price can be changed or a discount entered,
   either way round; products are added from the list. Saved as `bookings.charged` and `booking_items`.
 - **Financiën**: income per month, year or all time, counting confirmed appointments that already happened.
   "Download CSV voor de boekhouder" gives one line per appointment (semicolon separated, Dutch decimals);

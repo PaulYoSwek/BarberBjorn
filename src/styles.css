@@ -1005,35 +1005,36 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
 .admin-legend li.is-shut { gap: 6px; }
 .admin-field-hint { display: block; font-size: 0.74rem; color: #6b665c; margin-top: 2px; }
 
-/* Order ("Bon") */
-.order { display: grid; gap: 10px; padding: 12px; background: #f7f4ec; border: 1px solid #e4dfd4; }
+/* Order ("Bon"): stacked by default, wider rows only when the card itself is wide. */
+.order { display: grid; gap: 12px; padding: 12px; background: #f7f4ec; border: 1px solid #e4dfd4; container-type: inline-size; }
 .order-title { margin: 0; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #6b665c; }
 .order-line {
-  display: grid; grid-template-columns: minmax(0, 1.4fr) auto repeat(3, minmax(70px, 0.7fr)) auto; gap: 8px; align-items: end;
-  padding: 8px 0; border-top: 1px solid #e4dfd4;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: end;
+  padding-top: 10px; border-top: 1px solid #e4dfd4;
 }
-.order-line.is-service { grid-template-columns: minmax(0, 1.4fr) auto repeat(2, minmax(70px, 0.7fr)); border-top: 0; padding-top: 0; }
-.order-name { font-weight: 600; font-size: 0.9rem; align-self: center; overflow-wrap: anywhere; }
+.order-line.is-service { grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 0; padding-top: 0; }
+.order-head { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-width: 0; }
+.order-name { font-weight: 600; font-size: 0.95rem; min-width: 0; overflow-wrap: anywhere; }
 .order-stock { display: block; font-style: normal; font-size: 0.72rem; color: #8a1600; font-weight: 700; }
-.order-list { font-size: 0.78rem; color: #6b665c; align-self: center; white-space: nowrap; }
-.order-line label { display: grid; gap: 2px; font-size: 0.72rem; color: #5c574e; }
-.order-line input { min-height: 38px; width: 100%; min-width: 0; padding: 0 8px; border: 1px solid #2a2a2a; background: #fff; font-size: 16px; }
-.order-remove { min-width: 36px; min-height: 38px; border: 1px solid #2a2a2a; background: #fff; font-size: 1.1rem; cursor: pointer; align-self: end; }
+.order-list { font-size: 0.8rem; color: #6b665c; white-space: nowrap; flex: 0 0 auto; }
+.order-line label { display: grid; gap: 3px; font-size: 0.74rem; color: #5c574e; min-width: 0; }
+.order-line input { min-height: 40px; width: 100%; min-width: 0; padding: 0 8px; border: 1px solid #2a2a2a; background: #fff; font-size: 16px; }
+.order-remove {
+  min-width: 32px; min-height: 32px; padding: 0 8px; border: 1px solid #2a2a2a; background: #fff; font-size: 0.78rem;
+  font-weight: 600; cursor: pointer; flex: 0 0 auto;
+}
 .order-add { display: grid; gap: 4px; font-size: 0.78rem; font-weight: 600; }
-.order-add select { min-height: 44px; padding: 0 8px; border: 1px solid #2a2a2a; background: #fff; font-size: 16px; max-width: 100%; }
-.order-totals { margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-.order-totals div { padding: 6px 8px; background: #fff; border: 1px solid #e4dfd4; }
-.order-totals dt { font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: #6b665c; }
+.order-add select { min-height: 44px; padding: 0 8px; border: 1px solid #2a2a2a; background: #fff; font-size: 16px; width: 100%; max-width: 100%; }
+.order-totals { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.order-totals div { padding: 6px 8px; background: #fff; border: 1px solid #e4dfd4; min-width: 0; }
+.order-totals dt { font-size: 0.64rem; letter-spacing: 0.06em; text-transform: uppercase; color: #6b665c; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .order-totals dd { margin: 0; font-weight: 700; }
 .order-totals .is-total { background: #101010; color: #f4f1ea; border-color: #101010; }
 .order-totals .is-total dt { color: #f5c400; }
 .inbox-tag.is-money { background: #101010; color: #f4f1ea; border-color: #101010; font-weight: 700; }
 .inbox-tag.is-discount { background: #e3f0e6; border-color: #b9dcc4; color: #1d6b3a; font-weight: 600; }
-@media (max-width: 720px) {
-  .order-line { grid-template-columns: 1fr 1fr; }
-  .order-line.is-service { grid-template-columns: 1fr 1fr; }
-  .order-name, .order-list { grid-column: 1 / -1; }
-  .order-totals { grid-template-columns: 1fr 1fr; }
+@container (min-width: 560px) {
+  .order-totals { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
 /* Products */

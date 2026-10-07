@@ -161,8 +161,10 @@ export function OrderEditor({ row, products, prices, onSaved, onClose }: Props) 
       <p className="order-title">Bon</p>
       {notice ? <p role="alert">{notice}</p> : null}
       <div className="order-line is-service">
-        <span className="order-name">{serviceName(row.service)}</span>
-        <span className="order-list">{formatMoney(base.serviceList)}</span>
+        <div className="order-head">
+          <span className="order-name">{serviceName(row.service)}</span>
+          <span className="order-list">lijstprijs {formatMoney(base.serviceList)}</span>
+        </div>
         <label>
           Prijs
           <input inputMode="decimal" aria-label="Prijs dienst" value={serviceText} onChange={(event) => onServicePrice(event.target.value)} />
@@ -181,11 +183,21 @@ export function OrderEditor({ row, products, prices, onSaved, onClose }: Props) 
         const left = stockAfter(line.item.productId, line.item.quantity)
         return (
           <div key={line.item.id ?? `${line.item.productId}-${index}`} className="order-line">
-            <span className="order-name">
-              {line.item.name}
-              {left !== null && left < 0 ? <em className="order-stock">niet genoeg op voorraad</em> : null}
-            </span>
-            <span className="order-list">{formatMoney(line.item.listPrice)} p/st</span>
+            <div className="order-head">
+              <span className="order-name">
+                {line.item.name}
+                {left !== null && left < 0 ? <em className="order-stock">niet genoeg op voorraad</em> : null}
+              </span>
+              <span className="order-list">{formatMoney(line.item.listPrice)} p/st</span>
+              <button
+                type="button"
+                className="order-remove"
+                aria-label={`${line.item.name} verwijderen`}
+                onClick={() => setLines((current) => current.filter((_, at) => at !== index))}
+              >
+                Weg
+              </button>
+            </div>
             <label>
               Aantal
               <input
@@ -218,14 +230,6 @@ export function OrderEditor({ row, products, prices, onSaved, onClose }: Props) 
                 onChange={(event) => onLineDiscount(index, event.target.value)}
               />
             </label>
-            <button
-              type="button"
-              className="order-remove"
-              aria-label={`${line.item.name} verwijderen`}
-              onClick={() => setLines((current) => current.filter((_, at) => at !== index))}
-            >
-              ×
-            </button>
           </div>
         )
       })}

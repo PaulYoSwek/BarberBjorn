@@ -15,7 +15,7 @@ type Tab = 'agenda' | 'inbox' | 'klanten' | 'finance' | 'products' | 'mail' | 's
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'agenda', label: 'Agenda' },
-  { id: 'inbox', label: 'Inbox' },
+  { id: 'inbox', label: 'Afspraken' },
   { id: 'klanten', label: 'Klanten' },
   { id: 'finance', label: 'Financiën' },
   { id: 'products', label: 'Producten' },
@@ -86,7 +86,7 @@ export function AdminShell({ pending, onLogout }: Props) {
           return
         }
         if (reportError) {
-          setInboxError('Inbox laden mislukt.')
+          setInboxError('Afspraken laden mislukt.')
           setInboxLoaded(true)
         }
       })
@@ -149,7 +149,7 @@ export function AdminShell({ pending, onLogout }: Props) {
                 type="button"
                 className={on ? 'is-on' : undefined}
                 aria-current={on ? 'page' : undefined}
-                aria-label={badge ? `Inbox ${badge}` : undefined}
+                aria-label={badge ? `Afspraken ${badge}` : undefined}
                 onClick={() => {
                   setTab(item.id)
                   setMore(false)

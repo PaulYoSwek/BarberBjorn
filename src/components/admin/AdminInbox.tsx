@@ -184,8 +184,8 @@ export function AdminInbox({
     <div className="admin-inbox">
       <header className="admin-agenda-head">
         <div>
-          <p className="admin-kicker">Afspraken</p>
-          <h1>Inbox</h1>
+          <p className="admin-kicker">Overzicht</p>
+          <h1>Afspraken</h1>
         </div>
         <p className={`inbox-count${pendingCount > 0 ? ' is-new' : ''}`}>
           {pendingCount === 0 ? 'Alles bij' : `${pendingCount} nieuw`}
@@ -198,7 +198,7 @@ export function AdminInbox({
           {done}
         </p>
       ) : null}
-      {loading && rows.length === 0 && !error ? <p className="admin-hint">Inbox laden…</p> : null}
+      {loading && rows.length === 0 && !error ? <p className="admin-hint">Afspraken laden…</p> : null}
       {!loading && rows.length === 0 && !error ? (
         <p className="admin-hint">Nog geen afspraken. Nieuwe boekingen verschijnen hier vanzelf.</p>
       ) : null}

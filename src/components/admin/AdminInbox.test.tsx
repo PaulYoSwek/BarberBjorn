@@ -98,7 +98,7 @@ beforeEach(() => {
 test('pending rows offer accept and decline and the badge counts them', async () => {
   loadInbox.mockResolvedValue([confirmed, pending])
   render(<AdminShell />)
-  await userEvent.click(await screen.findByRole('button', { name: 'Inbox 1' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'Afspraken 1' }))
 
   const items = screen.getAllByRole('listitem')
   expect(items[0]).toHaveTextContent('Sam Pending')
@@ -128,7 +128,7 @@ test('a stale inbox load after a later accept does not restore pending buttons',
     .mockReturnValue(new Promise(() => {}))
 
   render(<AdminShell />)
-  await userEvent.click(await screen.findByRole('button', { name: 'Inbox 2' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'Afspraken 2' }))
   await userEvent.click(within(row('Sam Pending')).getByRole('button', { name: 'Accepteer' }))
   await waitFor(() => expect(loadInbox).toHaveBeenCalledTimes(2))
   await userEvent.click(within(row('Alex Late')).getByRole('button', { name: 'Accepteer' }))
@@ -154,7 +154,7 @@ test('a late loadInbox does not restore pending buttons after accept', async () 
   loadInbox.mockResolvedValueOnce([pending]).mockReturnValueOnce(reload)
 
   render(<AdminShell />)
-  await userEvent.click(await screen.findByRole('button', { name: 'Inbox 1' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'Afspraken 1' }))
   await userEvent.click(within(row('Sam Pending')).getByRole('button', { name: 'Accepteer' }))
 
   await waitFor(() => {
@@ -173,7 +173,7 @@ test('a late loadInbox does not restore pending buttons after accept', async () 
 test('accept hides the decision buttons when the inbox reload fails', async () => {
   loadInbox.mockResolvedValueOnce([pending])
   render(<AdminShell />)
-  await userEvent.click(await screen.findByRole('button', { name: 'Inbox 1' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'Afspraken 1' }))
   loadInbox.mockRejectedValue(new Error('reload failed'))
 
   const pendingRow = row('Sam Pending')
@@ -190,7 +190,7 @@ test('accept hides the decision buttons when the inbox reload fails', async () =
 test('decline calls decideInbox while the row is still pending', async () => {
   loadInbox.mockResolvedValue([pending])
   render(<AdminShell />)
-  await userEvent.click(await screen.findByRole('button', { name: 'Inbox 1' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'Afspraken 1' }))
   await userEvent.click(within(row('Sam Pending')).getByRole('button', { name: 'Weiger' }))
   expect(decideInbox).toHaveBeenCalledWith('pend-1', 'decline')
 })
@@ -198,15 +198,15 @@ test('decline calls decideInbox while the row is still pending', async () => {
 test('a failed inbox load shows an error and no fake clients', async () => {
   loadInbox.mockRejectedValue(new Error('permission denied'))
   render(<AdminShell />)
-  await userEvent.click(screen.getByRole('button', { name: /Inbox/ }))
-  expect(await screen.findByRole('alert')).toHaveTextContent('Inbox laden mislukt.')
+  await userEvent.click(screen.getByRole('button', { name: /Afspraken/ }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Afspraken laden mislukt.')
   expect(screen.queryByText('Jan de Vries')).not.toBeInTheDocument()
 })
 
 test('an empty inbox says so', async () => {
   loadInbox.mockResolvedValue([])
   render(<AdminShell />)
-  await userEvent.click(screen.getByRole('button', { name: /Inbox/ }))
+  await userEvent.click(screen.getByRole('button', { name: /Afspraken/ }))
   expect(await screen.findByText(/Nog geen afspraken/)).toBeInTheDocument()
 })
 
@@ -221,7 +221,7 @@ test('accept reports an overlap in plain words', async () => {
   loadInbox.mockResolvedValue([pending])
   decideInbox.mockResolvedValue({ ok: false, error: 'overlap' })
   render(<AdminShell />)
-  await userEvent.click(await screen.findByRole('button', { name: 'Inbox 1' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'Afspraken 1' }))
   await userEvent.click(within(row('Sam Pending')).getByRole('button', { name: 'Accepteer' }))
   expect(await screen.findByRole('alert')).toHaveTextContent('Die tijd is al bezet')
   expect(within(row('Sam Pending')).getByRole('button', { name: 'Accepteer' })).toBeInTheDocument()
@@ -230,7 +230,7 @@ test('accept reports an overlap in plain words', async () => {
 test('unsent mail offers a resend that opens Mail for that client', async () => {
   loadInbox.mockResolvedValue([{ ...confirmed, mail_sent: false }])
   render(<AdminShell />)
-  await userEvent.click(await screen.findByRole('button', { name: 'Inbox' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'Afspraken' }))
   const card = row('Kim Confirmed')
   expect(within(card).getByText('Mail niet gegaan')).toBeInTheDocument()
   await userEvent.click(within(card).getByRole('button', { name: 'Opnieuw mailen' }))
@@ -241,7 +241,7 @@ test('unsent mail offers a resend that opens Mail for that client', async () => 
 test('a pending request is not flagged as unsent mail and sits under Te beoordelen', async () => {
   loadInbox.mockResolvedValue([pending, confirmed])
   render(<AdminShell />)
-  await userEvent.click(await screen.findByRole('button', { name: 'Inbox 1' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'Afspraken 1' }))
   expect(within(row('Sam Pending')).queryByText('Mail niet gegaan')).not.toBeInTheDocument()
   expect(within(screen.getByRole('region', { name: 'Te beoordelen' })).getByText('Sam Pending')).toBeInTheDocument()
   expect(screen.getByText('1 nieuw')).toBeInTheDocument()
@@ -258,7 +258,7 @@ test('Opnieuw mailen opens Mail with the booking template already filled in', as
   loadTemplates.mockResolvedValue(TEMPLATES)
   loadInbox.mockResolvedValue([{ ...confirmed, mail_sent: false }])
   render(<AdminShell />)
-  await userEvent.click(await screen.findByRole('button', { name: 'Inbox' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'Afspraken' }))
   await userEvent.click(within(row('Kim Confirmed')).getByRole('button', { name: 'Opnieuw mailen' }))
   expect(screen.getByLabelText('Sjabloon')).toHaveValue('thanks')
   await waitFor(() => expect(screen.getByLabelText('Onderwerp')).toHaveValue('Je afspraak staat vast'))
@@ -271,7 +271,7 @@ test('Ander tijdstip moves the booking, confirms it and reports the mail', async
     { ...pending, start: '2027-01-12T11:00:00', status: 'confirmed', mail_sent: true },
   ])
   render(<AdminShell />)
-  await userEvent.click(await screen.findByRole('button', { name: 'Inbox 1' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'Afspraken 1' }))
   await userEvent.click(within(row('Sam Pending')).getByRole('button', { name: 'Ander tijdstip' }))
   const form = screen.getByRole('form', { name: 'Sam Pending verplaatsen' })
   expect(within(form).getByLabelText('Nieuwe dag')).toHaveValue('2026-10-08')
@@ -290,7 +290,7 @@ test('moving onto a taken time explains it and keeps the form open', async () =>
   moveBooking.mockResolvedValue({ ok: false, error: 'overlap' })
   loadInbox.mockResolvedValue([pending])
   render(<AdminShell />)
-  await userEvent.click(await screen.findByRole('button', { name: 'Inbox 1' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'Afspraken 1' }))
   await userEvent.click(within(row('Sam Pending')).getByRole('button', { name: 'Ander tijdstip' }))
   await userEvent.click(screen.getByRole('button', { name: 'Verplaats en mail' }))
   expect(await screen.findByRole('alert')).toHaveTextContent('Die tijd is dicht of al bezet')
@@ -301,7 +301,7 @@ test('the bon changes price and discount both ways, adds products and saves', as
   saveOrder.mockResolvedValue({ ok: true })
   loadInbox.mockResolvedValue([{ ...confirmed, price: '€15' }])
   render(<AdminShell />)
-  await userEvent.click(await screen.findByRole('button', { name: 'Inbox' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'Afspraken' }))
   // The shell passes products and prices itself; the editor is driven through the card.
   await userEvent.click(within(row('Kim Confirmed')).getByRole('button', { name: 'Bon Kim Confirmed' }))
   const bon = screen.getByRole('form', { name: 'Bon Kim Confirmed' })
@@ -340,7 +340,7 @@ test('the bon changes price and discount both ways, adds products and saves', as
 test('a product that is out of stock warns on the bon', async () => {
   loadInbox.mockResolvedValue([confirmed])
   render(<AdminShell />)
-  await userEvent.click(await screen.findByRole('button', { name: 'Inbox' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'Afspraken' }))
   await userEvent.click(within(row('Kim Confirmed')).getByRole('button', { name: 'Bon Kim Confirmed' }))
   const bon = screen.getByRole('form', { name: 'Bon Kim Confirmed' })
   await userEvent.selectOptions(within(bon).getByLabelText('Product toevoegen'), 'p2')
