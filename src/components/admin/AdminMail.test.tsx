@@ -34,6 +34,9 @@ const client = {
   status: 'confirmed' as const,
   lang: 'nl' as const,
   mail_sent: true,
+  price: null,
+  charged: null,
+  items: [],
 }
 
 beforeEach(() => {

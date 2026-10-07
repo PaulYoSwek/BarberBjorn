@@ -70,3 +70,13 @@ third party means updating the statement and possibly adding a consent banner.
 The statement promises that client data is deleted at most 2 years after a client's last appointment.
 Deleting is manual for now: Klanten, edit the client, "Klant en afspraken verwijderen". The same button
 handles deletion requests.
+
+## Money
+
+- **Producten**: products with price and stock. Stock moves when a product is put on a booking's bon.
+- **Bon** (on a confirmed booking in the Inbox): the service price can be changed or a discount entered,
+  either way round; products are added from the list. Saved as `bookings.charged` and `booking_items`.
+- **Financiën**: income per month, year or all time, counting confirmed appointments that already happened.
+  "Download CSV voor de boekhouder" gives one line per appointment (semicolon separated, Dutch decimals);
+  "Rapport afdrukken" prints the report (save as PDF). VAT rates are constants in `src/finance.ts`
+  (9% services, 21% products, prices include VAT); change them there if the rates differ.

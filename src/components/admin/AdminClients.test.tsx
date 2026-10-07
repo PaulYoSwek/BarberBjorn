@@ -32,6 +32,8 @@ function row(id: string, name: string, email: string, start: string, extra: Reco
     lang: 'nl' as const,
     mail_sent: true,
     price: null,
+    charged: null,
+    items: [],
     ...extra,
   }
 }

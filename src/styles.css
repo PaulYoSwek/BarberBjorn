@@ -1004,3 +1004,103 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
 .admin-legend li.is-shut::before { display: none; }
 .admin-legend li.is-shut { gap: 6px; }
 .admin-field-hint { display: block; font-size: 0.74rem; color: #6b665c; margin-top: 2px; }
+
+/* Order ("Bon") */
+.order { display: grid; gap: 10px; padding: 12px; background: #f7f4ec; border: 1px solid #e4dfd4; }
+.order-title { margin: 0; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #6b665c; }
+.order-line {
+  display: grid; grid-template-columns: minmax(0, 1.4fr) auto repeat(3, minmax(70px, 0.7fr)) auto; gap: 8px; align-items: end;
+  padding: 8px 0; border-top: 1px solid #e4dfd4;
+}
+.order-line.is-service { grid-template-columns: minmax(0, 1.4fr) auto repeat(2, minmax(70px, 0.7fr)); border-top: 0; padding-top: 0; }
+.order-name { font-weight: 600; font-size: 0.9rem; align-self: center; overflow-wrap: anywhere; }
+.order-stock { display: block; font-style: normal; font-size: 0.72rem; color: #8a1600; font-weight: 700; }
+.order-list { font-size: 0.78rem; color: #6b665c; align-self: center; white-space: nowrap; }
+.order-line label { display: grid; gap: 2px; font-size: 0.72rem; color: #5c574e; }
+.order-line input { min-height: 38px; width: 100%; min-width: 0; padding: 0 8px; border: 1px solid #2a2a2a; background: #fff; font-size: 16px; }
+.order-remove { min-width: 36px; min-height: 38px; border: 1px solid #2a2a2a; background: #fff; font-size: 1.1rem; cursor: pointer; align-self: end; }
+.order-add { display: grid; gap: 4px; font-size: 0.78rem; font-weight: 600; }
+.order-add select { min-height: 44px; padding: 0 8px; border: 1px solid #2a2a2a; background: #fff; font-size: 16px; max-width: 100%; }
+.order-totals { margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.order-totals div { padding: 6px 8px; background: #fff; border: 1px solid #e4dfd4; }
+.order-totals dt { font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: #6b665c; }
+.order-totals dd { margin: 0; font-weight: 700; }
+.order-totals .is-total { background: #101010; color: #f4f1ea; border-color: #101010; }
+.order-totals .is-total dt { color: #f5c400; }
+.inbox-tag.is-money { background: #101010; color: #f4f1ea; border-color: #101010; font-weight: 700; }
+.inbox-tag.is-discount { background: #e3f0e6; border-color: #b9dcc4; color: #1d6b3a; font-weight: 600; }
+@media (max-width: 720px) {
+  .order-line { grid-template-columns: 1fr 1fr; }
+  .order-line.is-service { grid-template-columns: 1fr 1fr; }
+  .order-name, .order-list { grid-column: 1 / -1; }
+  .order-totals { grid-template-columns: 1fr 1fr; }
+}
+
+/* Products */
+.admin-products { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.admin-check { display: flex !important; align-items: center; gap: 8px; font-size: 0.9rem; align-self: end; min-height: 44px; }
+.admin-check input { width: 20px; height: 20px; min-height: 0; }
+.admin-product-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.admin-product { display: grid; gap: 8px; padding: 14px; border: 1px solid #2a2a2a; background: #fff; box-shadow: inset 4px 0 0 #101010; }
+.admin-product.is-low { box-shadow: inset 4px 0 0 #d9731a; }
+.admin-product.is-off { opacity: 0.6; box-shadow: inset 4px 0 0 #d9d3c7; }
+.admin-product-head { display: flex; justify-content: space-between; align-items: start; gap: 10px; }
+.admin-product-head h2 { margin: 0; font-family: var(--font-display); font-size: 1.15rem; letter-spacing: -0.03em; overflow-wrap: anywhere; }
+.admin-product-head strong { font-family: var(--font-display); font-size: 1.2rem; letter-spacing: -0.03em; white-space: nowrap; }
+.admin-product-stock { margin: 0; font-size: 0.85rem; color: #5c574e; }
+.admin-product.is-low .admin-product-stock { color: #8a4b00; font-weight: 600; }
+.admin-product .admin-actions { margin-top: 0; }
+
+/* Finance */
+.admin-finance { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.finance-controls { display: grid; gap: 10px; padding: 12px; border: 1px solid #e4dfd4; background: #f7f4ec; }
+.finance-kinds { display: flex; gap: 0; }
+.finance-kinds button { min-height: 40px; padding: 0 14px; border: 1px solid #2a2a2a; background: #fff; font-weight: 600; cursor: pointer; margin-right: -1px; }
+.finance-kinds button.is-on { background: #101010; color: #f4f1ea; }
+.finance-controls label { display: grid; gap: 4px; font-size: 0.8rem; max-width: 280px; }
+.finance-controls select { min-height: 44px; padding: 0 8px; border: 1px solid #2a2a2a; background: #fff; font-size: 16px; }
+.finance-export { display: flex; flex-wrap: wrap; gap: 8px; }
+.finance-export button { min-height: 44px; padding: 0 14px; border: 1px solid #2a2a2a; background: #fff; font-weight: 600; cursor: pointer; }
+.finance-export button:disabled { opacity: 0.5; cursor: default; }
+.finance-report { display: grid; gap: 16px; padding: 18px; background: #fff; border: 1px solid #2a2a2a; }
+.finance-report-head h2 { margin: 0; font-family: var(--font-display); font-size: 1.8rem; font-weight: 720; letter-spacing: -0.04em; }
+.finance-report-meta { margin: 4px 0 0; font-size: 0.82rem; color: #6b665c; }
+.finance-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.finance-tiles .is-total { background: #101010; color: #f4f1ea; border-color: #101010; }
+.finance-tiles .is-total dt { color: #f5c400; }
+.finance-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.finance-table caption { text-align: left; font-weight: 700; padding: 0 0 6px; font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase; color: #6b665c; }
+.finance-table th, .finance-table td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #e4dfd4; vertical-align: top; }
+.finance-table thead th { font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: #6b665c; }
+.finance-table tbody th { font-weight: 600; }
+.finance-table tr.is-total th, .finance-table tr.is-total td { font-weight: 700; background: #f7f4ec; }
+.finance-table td:last-child, .finance-table td:nth-last-child(2), .finance-table th:last-child { text-align: right; white-space: nowrap; }
+.finance-table.is-vat td:nth-child(2) { text-align: right; white-space: nowrap; }
+.finance-empty { text-align: center !important; color: #6b665c; }
+.finance-upcoming { font-weight: 600; }
+@media (max-width: 720px) {
+  .finance-tiles { grid-template-columns: 1fr 1fr; }
+  .finance-report { padding: 12px; }
+  /* Only the tables scroll sideways; the tiles stay within the screen. */
+  .finance-table { display: block; overflow-x: auto; max-width: 100%; white-space: nowrap; }
+  .finance-table.is-vat { white-space: normal; }
+}
+@media print {
+  .admin-bar, .admin-tabs, .finance-controls, .finance-upcoming, .admin-agenda-head, .admin-card > :not(.admin-finance) { display: none !important; }
+  .admin, .admin-card { background: #fff; padding: 0; margin: 0; border: 0; width: auto; }
+  .finance-report { border: 0; padding: 0; }
+  .finance-table { min-width: 0; font-size: 11pt; }
+  .finance-tiles .is-total { background: #fff; color: #101010; border: 1px solid #101010; }
+  .finance-tiles .is-total dt { color: #101010; }
+}
+
+/* Tabs: seven do not fit a phone; the last ones hide behind "Meer". */
+.admin-more { display: none; }
+@media (max-width: 720px) {
+  .admin-tabs { grid-template-columns: repeat(5, 1fr); }
+  .admin-tabs button:nth-child(n + 5):not(.admin-more) { display: none; }
+  .admin-tabs.is-more button:nth-child(n + 5) { display: block; }
+  .admin-tabs.is-more { grid-template-columns: repeat(4, 1fr); }
+  .admin-tabs.is-more button:nth-child(-n + 4) { display: none; }
+  .admin-more { display: block; }
+}

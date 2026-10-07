@@ -16,6 +16,8 @@ export const DEMO_INBOX: InboxRow[] = [
     lang: 'nl',
     mail_sent: true,
     price: null,
+    charged: null,
+    items: [],
   },
   {
     id: 'demo-sara',
@@ -30,6 +32,8 @@ export const DEMO_INBOX: InboxRow[] = [
     lang: 'nl',
     mail_sent: true,
     price: null,
+    charged: null,
+    items: [],
   },
   {
     id: 'demo-omar',
@@ -44,6 +48,8 @@ export const DEMO_INBOX: InboxRow[] = [
     lang: 'en',
     mail_sent: true,
     price: null,
+    charged: null,
+    items: [],
   },
   {
     id: 'demo-lisa',
@@ -58,6 +64,8 @@ export const DEMO_INBOX: InboxRow[] = [
     lang: 'nl',
     mail_sent: true,
     price: null,
+    charged: null,
+    items: [],
   },
   {
     id: 'demo-thomas',
@@ -72,6 +80,8 @@ export const DEMO_INBOX: InboxRow[] = [
     lang: 'nl',
     mail_sent: true,
     price: null,
+    charged: null,
+    items: [],
   },
   {
     id: 'demo-tom',
@@ -86,6 +96,8 @@ export const DEMO_INBOX: InboxRow[] = [
     lang: 'nl',
     mail_sent: false,
     price: null,
+    charged: null,
+    items: [],
   },
 ]
 

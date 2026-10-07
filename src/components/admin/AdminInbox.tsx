@@ -1,7 +1,9 @@
 import { useRef, useState, type FormEvent } from 'react'
-import { copy } from '../../content'
+import { copy, type ServiceId } from '../../content'
+import { bookingMoney, formatMoney, type OrderItem, type Product } from '../../finance'
 import { decideInbox, moveBooking, type InboxRow } from '../../planning-api'
 import { serviceName } from './admin-defaults'
+import { OrderEditor } from './OrderEditor'
 
 const STATUS_LABEL: Record<InboxRow['status'], string> = {
   pending: 'Nieuw',
@@ -16,6 +18,9 @@ type Props = {
   onChanged: (id: string, status: 'confirmed' | 'declined') => void
   onResend: (id: string) => void
   onMoved?: (id: string, start: string, sent: boolean) => void
+  products?: Product[]
+  prices?: Partial<Record<ServiceId, string>>
+  onOrderSaved?: (id: string, charged: number | null, items: OrderItem[]) => void
 }
 
 const MOVE_ERRORS: Record<string, string> = {
@@ -96,12 +101,23 @@ function PhoneIcon() {
   )
 }
 
-export function AdminInbox({ rows, loading = false, error, onChanged, onResend, onMoved }: Props) {
+export function AdminInbox({
+  rows,
+  loading = false,
+  error,
+  onChanged,
+  onResend,
+  onMoved,
+  products = [],
+  prices = {},
+  onOrderSaved,
+}: Props) {
   const [notice, setNotice] = useState<string | null>(null)
   const [done, setDone] = useState<string | null>(null)
   const [decidingId, setDecidingId] = useState<string | null>(null)
   const decidingRef = useRef<string | null>(null)
   const [moving, setMoving] = useState<{ id: string; date: string; time: string } | null>(null)
+  const [orderId, setOrderId] = useState<string | null>(null)
   const [movingBusy, setMovingBusy] = useState(false)
 
   function startMove(row: InboxRow) {
@@ -209,7 +225,21 @@ export function AdminInbox({ rows, loading = false, error, onChanged, onResend, 
                       <span className="inbox-tag is-service">
                         {serviceName(row.service)} · {row.minutes} min
                       </span>
-                      {row.price ? <span className="inbox-tag">{row.price}</span> : null}
+                      {(() => {
+                        const money = bookingMoney(row, prices)
+                        const changed = row.charged !== null || (row.items ?? []).length > 0
+                        return (
+                          <>
+                            <span className={`inbox-tag${changed ? ' is-money' : ''}`}>{formatMoney(money.total)}</span>
+                            {money.discount > 0 ? <span className="inbox-tag is-discount">korting {formatMoney(money.discount)}</span> : null}
+                            {money.pieces > 0 ? (
+                              <span className="inbox-tag">
+                                {money.pieces} product{money.pieces === 1 ? '' : 'en'}
+                              </span>
+                            ) : null}
+                          </>
+                        )
+                      })()}
                       {row.kind === 'custom' ? <span className="inbox-tag is-custom">Ander tijdstip</span> : null}
                     </p>
                     <p className="inbox-contact">
@@ -224,6 +254,19 @@ export function AdminInbox({ rows, loading = false, error, onChanged, onResend, 
                         </a>
                       ) : null}
                     </p>
+                    {orderId === row.id ? (
+                      <OrderEditor
+                        row={row}
+                        products={products}
+                        prices={prices}
+                        onClose={() => setOrderId(null)}
+                        onSaved={(id, charged, items) => {
+                          setOrderId(null)
+                          setDone(`Bon van ${row.name} opgeslagen: ${formatMoney(bookingMoney({ ...row, charged, items }, prices).total)}.`)
+                          onOrderSaved?.(id, charged, items)
+                        }}
+                      />
+                    ) : null}
                     {isMoving && moving ? (
                       <form
                         className="inbox-move"
@@ -259,8 +302,23 @@ export function AdminInbox({ rows, loading = false, error, onChanged, onResend, 
                         </div>
                       </form>
                     ) : null}
-                    {!isMoving && (row.status === 'pending' || unsent || movable) ? (
+                    {!isMoving && orderId !== row.id && (row.status === 'pending' || unsent || movable || row.status === 'confirmed') ? (
                       <div className="inbox-actions">
+                        {row.status === 'confirmed' ? (
+                          <button
+                            type="button"
+                            className="inbox-order-open"
+                            aria-label={`Bon ${row.name}`}
+                            onClick={() => {
+                              setMoving(null)
+                              setNotice(null)
+                              setDone(null)
+                              setOrderId(row.id)
+                            }}
+                          >
+                            Bon
+                          </button>
+                        ) : null}
                         {unsent ? <span className="inbox-warn">Mail niet gegaan</span> : null}
                         {row.status === 'pending' ? (
                           <>

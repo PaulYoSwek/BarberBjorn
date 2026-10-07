@@ -92,6 +92,23 @@ servePost(async (req) => {
     return json(req, 200, { ok: true, id: (saved.data as { id: string }).id })
   }
 
+  if (record.type === 'product') {
+    const id = typeof record.id === 'string' ? record.id : ''
+    const name = typeof record.name === 'string' ? record.name.trim() : ''
+    const price = typeof record.price === 'number' && Number.isFinite(record.price) ? Math.round(record.price * 100) / 100 : NaN
+    const stock = typeof record.stock === 'number' && Number.isInteger(record.stock) ? record.stock : NaN
+    const active = record.active === undefined ? true : record.active === true
+    if (name.length < 1 || name.length > 80) return json(req, 400, { ok: false, error: 'name' })
+    if (!Number.isFinite(price) || price < 0 || price > 10_000) return json(req, 400, { ok: false, error: 'price' })
+    if (!Number.isFinite(stock) || stock < -1000 || stock > 100_000) return json(req, 400, { ok: false, error: 'stock' })
+    const fields = { name, price, stock, active }
+    const saved = id
+      ? await db.from('products').update(fields).eq('id', id).select('id').single()
+      : await db.from('products').insert(fields).select('id').single()
+    if (saved.error) throw new Error(saved.error.message)
+    return json(req, 200, { ok: true, id: (saved.data as { id: string }).id })
+  }
+
   if (record.type === 'clientDelete') {
     const id = typeof record.id === 'string' ? record.id : ''
     const email = typeof record.email === 'string' ? record.email.trim().toLowerCase() : ''

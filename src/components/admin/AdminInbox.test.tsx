@@ -4,12 +4,15 @@ import { beforeEach, expect, test, vi } from 'vitest'
 import { defaultSchedule } from '../../schedule'
 import { AdminShell } from './AdminShell'
 
-const { loadInbox, decideInbox, loadPublicSchedule, moveBooking, loadTemplates } = vi.hoisted(() => ({
+const { loadInbox, decideInbox, loadPublicSchedule, moveBooking, loadTemplates, saveOrder, loadProducts, loadServices } = vi.hoisted(() => ({
   loadInbox: vi.fn(),
   decideInbox: vi.fn(),
   loadPublicSchedule: vi.fn(),
   moveBooking: vi.fn(),
   loadTemplates: vi.fn(),
+  saveOrder: vi.fn(),
+  loadProducts: vi.fn(),
+  loadServices: vi.fn(),
 }))
 
 vi.mock('../../planning-api', async (importOriginal) => {
@@ -21,8 +24,16 @@ vi.mock('../../planning-api', async (importOriginal) => {
     loadPublicSchedule,
     moveBooking,
     loadTemplates,
+    saveOrder,
+    loadProducts,
+    loadServices,
   }
 })
+
+const PRODUCTS = [
+  { id: 'p1', name: 'Wax', price: 12.5, stock: 5, active: true },
+  { id: 'p2', name: 'Kam', price: 4, stock: 0, active: true },
+]
 
 const pending = {
   id: 'pend-1',
@@ -36,6 +47,9 @@ const pending = {
   status: 'pending' as const,
   lang: 'nl' as const,
   mail_sent: false,
+  price: null,
+  charged: null,
+  items: [],
 }
 
 const confirmed = {
@@ -50,6 +64,9 @@ const confirmed = {
   status: 'confirmed' as const,
   lang: 'nl' as const,
   mail_sent: true,
+  price: null,
+  charged: null,
+  items: [],
 }
 
 function row(name: string) {
@@ -67,6 +84,15 @@ beforeEach(() => {
   moveBooking.mockReset()
   loadTemplates.mockReset()
   loadTemplates.mockResolvedValue([])
+  saveOrder.mockReset()
+  loadProducts.mockReset()
+  loadProducts.mockResolvedValue({ ready: true, products: PRODUCTS })
+  loadServices.mockReset()
+  loadServices.mockResolvedValue([
+    { id: 'cut', price: '€30', minutes: 45 },
+    { id: 'beard', price: '€15', minutes: 30 },
+    { id: 'both', price: '€40', minutes: 75 },
+  ])
 })
 
 test('pending rows offer accept and decline and the badge counts them', async () => {
@@ -269,4 +295,54 @@ test('moving onto a taken time explains it and keeps the form open', async () =>
   await userEvent.click(screen.getByRole('button', { name: 'Verplaats en mail' }))
   expect(await screen.findByRole('alert')).toHaveTextContent('Die tijd is dicht of al bezet')
   expect(screen.getByRole('form', { name: 'Sam Pending verplaatsen' })).toBeInTheDocument()
+})
+
+test('the bon changes price and discount both ways, adds products and saves', async () => {
+  saveOrder.mockResolvedValue({ ok: true })
+  loadInbox.mockResolvedValue([{ ...confirmed, price: '€15' }])
+  render(<AdminShell />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Inbox' }))
+  // The shell passes products and prices itself; the editor is driven through the card.
+  await userEvent.click(within(row('Kim Confirmed')).getByRole('button', { name: 'Bon Kim Confirmed' }))
+  const bon = screen.getByRole('form', { name: 'Bon Kim Confirmed' })
+  const price = within(bon).getByLabelText('Prijs dienst')
+  const discount = within(bon).getByLabelText('Korting dienst')
+  expect(price).toHaveValue('15')
+  expect(discount).toHaveValue('0')
+  await userEvent.clear(price)
+  await userEvent.type(price, '12,50')
+  expect(discount).toHaveValue('2,50')
+  await userEvent.clear(discount)
+  await userEvent.type(discount, '5')
+  expect(price).toHaveValue('10')
+  expect(within(bon).getByTestId('order-total')).toHaveTextContent('€10')
+  // Products: pick Wax twice (same line, quantity 2) and give it a discount.
+  await userEvent.selectOptions(within(bon).getByLabelText('Product toevoegen'), 'p1')
+  await userEvent.selectOptions(within(bon).getByLabelText('Product toevoegen'), 'p1')
+  expect(within(bon).getByLabelText('Aantal Wax')).toHaveValue(2)
+  await userEvent.clear(within(bon).getByLabelText('Korting Wax'))
+  await userEvent.type(within(bon).getByLabelText('Korting Wax'), '2,50')
+  expect(within(bon).getByLabelText('Prijs Wax')).toHaveValue('10')
+  expect(within(bon).getByTestId('order-total')).toHaveTextContent('€30')
+  await userEvent.click(within(bon).getByRole('button', { name: 'Bon opslaan' }))
+  expect(saveOrder).toHaveBeenCalledWith('conf-1', {
+    charged: 10,
+    items: [{ productId: 'p1', name: 'Wax', listPrice: 12.5, price: 10, quantity: 2 }],
+  })
+  expect(await screen.findByRole('status')).toHaveTextContent('Bon van Kim Confirmed opgeslagen: €30.')
+  const card = row('Kim Confirmed')
+  expect(within(card).getByText('€30')).toHaveClass('is-money')
+  expect(within(card).getByText('korting €10')).toBeInTheDocument()
+  expect(within(card).getByText('2 producten')).toBeInTheDocument()
+  expect(loadProducts).toHaveBeenCalledTimes(2)
+})
+
+test('a product that is out of stock warns on the bon', async () => {
+  loadInbox.mockResolvedValue([confirmed])
+  render(<AdminShell />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Inbox' }))
+  await userEvent.click(within(row('Kim Confirmed')).getByRole('button', { name: 'Bon Kim Confirmed' }))
+  const bon = screen.getByRole('form', { name: 'Bon Kim Confirmed' })
+  await userEvent.selectOptions(within(bon).getByLabelText('Product toevoegen'), 'p2')
+  expect(within(bon).getByText('niet genoeg op voorraad')).toBeInTheDocument()
 })

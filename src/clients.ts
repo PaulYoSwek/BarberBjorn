@@ -21,6 +21,10 @@ export type ClientBooking = {
   start: string
   status: 'confirmed' | 'pending' | 'declined'
   price: string | null
+  /** Service price after discount, when it was changed. */
+  charged?: number | null
+  /** Products sold with the appointment. */
+  items?: { price: number; quantity: number }[]
 }
 
 export type DayPart = 'ochtend' | 'middag' | 'avond'
@@ -175,7 +179,9 @@ export function summarizeClients(
     if (booking.status !== 'confirmed') continue
     if (booking.start <= today) {
       summary.visits += 1
-      summary.paid += parsePrice(booking.price ?? prices[booking.service] ?? null)
+      const service = booking.charged ?? parsePrice(booking.price ?? prices[booking.service] ?? null)
+      const products = (booking.items ?? []).reduce((sum, item) => sum + item.price * item.quantity, 0)
+      summary.paid += service + products
       summary.lastVisit = booking.start
     } else {
       summary.upcoming += 1

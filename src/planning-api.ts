@@ -3,6 +3,7 @@ import type { BookingInput, BookingKind } from './booking'
 import type { ClientRecord } from './clients'
 import { MAIL_KEYS, type MailKey } from './mail-templates'
 import type { BlockPattern } from './planning'
+import type { OrderItem, Product } from './finance'
 import type { Lang, ServiceId } from './content'
 import {
   AGENDA_DAYS,
@@ -291,6 +292,10 @@ export type InboxRow = {
   mail_sent: boolean
   /** Price stored when the booking was made; null for older bookings. */
   price: string | null
+  /** Service price actually charged after a discount; null means the list price. */
+  charged: number | null
+  /** Products sold with this appointment. */
+  items: OrderItem[]
 }
 
 export type ServiceSave = { id: ServiceId; price: string; minutes: number }
@@ -317,6 +322,27 @@ type BookingRow = {
   lang?: string | null
   mail_sent: boolean | null
   price?: string | null
+  charged?: number | null
+  items?: unknown
+}
+
+function toItems(value: unknown): OrderItem[] {
+  if (!Array.isArray(value)) return []
+  const items: OrderItem[] = []
+  for (const raw of value) {
+    if (!raw || typeof raw !== 'object') continue
+    const item = raw as Record<string, unknown>
+    if (typeof item.name !== 'string') continue
+    items.push({
+      ...(typeof item.id === 'string' ? { id: item.id } : {}),
+      productId: typeof item.productId === 'string' ? item.productId : null,
+      name: item.name,
+      listPrice: Number(item.listPrice) || 0,
+      price: Number(item.price) || 0,
+      quantity: Math.max(1, Math.round(Number(item.quantity) || 1)),
+    })
+  }
+  return items
 }
 
 function isKind(value: string): value is BookingKind {
@@ -353,6 +379,8 @@ function toInbox(rows: BookingRow[]): InboxRow[] {
       lang: row.lang === 'en' ? 'en' : 'nl',
       mail_sent: Boolean(row.mail_sent),
       price: typeof row.price === 'string' && row.price ? row.price : null,
+      charged: typeof row.charged === 'number' && Number.isFinite(row.charged) ? row.charged : null,
+      items: toItems(row.items),
     })
   }
   return inbox
@@ -501,4 +529,43 @@ export async function loadAdminBlocks(): Promise<ScheduleBlock[]> {
   const record = (data ?? {}) as { blocks?: unknown }
   if (!Array.isArray(record.blocks)) throw new Error('offline')
   return (record.blocks as BlockRow[]).map(toBlock)
+}
+
+export type ProductList = { ready: boolean; products: Product[] }
+
+/** Every product, with stock. `ready` is false until the products table exists. */
+export async function loadProducts(): Promise<ProductList> {
+  if (!supabase) throw new Error('offline')
+  const { data, error } = await supabase.functions.invoke('products-list', { body: {} })
+  if (error) throw new Error(await invokeDetail(error))
+  const failed = failurePayload(data)
+  if (failed) throw new Error(failed)
+  const record = (data ?? {}) as { ready?: unknown; products?: unknown }
+  const products: Product[] = []
+  if (Array.isArray(record.products)) {
+    for (const raw of record.products) {
+      if (!raw || typeof raw !== 'object') continue
+      const row = raw as Record<string, unknown>
+      if (typeof row.id !== 'string' || typeof row.name !== 'string') continue
+      products.push({
+        id: row.id,
+        name: row.name,
+        price: Number(row.price) || 0,
+        stock: Math.round(Number(row.stock) || 0),
+        active: row.active !== false,
+      })
+    }
+  }
+  return { ready: record.ready !== false, products }
+}
+
+export type ProductSave = { id?: string; name: string; price: number; stock: number; active: boolean }
+
+export function saveProduct(product: ProductSave) {
+  return invokeOk('admin-write', { type: 'product', ...product })
+}
+
+/** What an appointment costs: service price after discount and the products sold. */
+export function saveOrder(bookingId: string, order: { charged: number | null; items: OrderItem[] }) {
+  return invokeOk('order-write', { id: bookingId, charged: order.charged, items: order.items })
 }
