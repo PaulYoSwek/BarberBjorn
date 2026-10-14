@@ -345,8 +345,8 @@ img, video { max-width: 100%; display: block; }
 }
 .about {
   background: var(--about); color: var(--text-on-dark);
-  display: grid; grid-template-columns: 1.05fr 0.95fr; height: 620px;
-  overflow: hidden;
+  display: grid; grid-template-columns: 1.05fr 0.95fr; min-height: 620px;
+  overflow: hidden; align-items: stretch;
 }
 .about img {
   width: 100%; height: 100%; min-height: 0; object-fit: cover; object-position: 62% 18%;
@@ -360,7 +360,13 @@ img, video { max-width: 100%; display: block; }
   align-self: center;
 }
 .about-shard h2 { font-family: var(--font-display); font-size: 2.4rem; letter-spacing: -0.045em; line-height: 0.95; margin: 0 0 16px; }
-.about-shard p { margin: 0 0 12px; border-left: 2px solid var(--ink); padding-left: 12px; }
+.about-text { border-left: 2px solid var(--ink); padding-left: 14px; }
+.about-text p { margin: 0 0 12px; line-height: 1.55; max-width: 58ch; }
+.about-text p:last-child { margin-bottom: 0; }
+.about-closing {
+  margin: 18px 0 0; font-family: var(--font-display); font-size: 1.15rem; font-weight: 720;
+  letter-spacing: -0.02em; line-height: 1.25;
+}
 .about-shard .kicker { border: 0; padding: 0; color: #9a7b00; }
 @media (max-width: 800px) {
   .about { height: auto; grid-template-columns: 1fr; }

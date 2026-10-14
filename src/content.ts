@@ -51,6 +51,7 @@ export type Copy = {
   portraitAlt: string
   aboutTitle: string
   aboutLines: string[]
+  aboutClosing: string
   faqKicker: string
   faqTitle: string
   faq: { q: string; a: string }[]
@@ -150,17 +151,18 @@ export const copy: Record<Lang, Copy> = {
     weekPrev: 'Vorige week',
     weekNext: 'Volgende week',
     closedLabel: 'dicht',
-    aboutKicker: 'OVER BJORN',
+    aboutKicker: 'DE BARBER',
     portraitAlt: 'Bjorn, kapper en barbier bij Bjorn’s Barber in Axel',
-    aboutTitle: 'Alleen hij. Alle tijd.',
+    aboutTitle: 'Over Bjorn’s Barber',
     faqKicker: 'VRAGEN',
     faqTitle: 'Voor je komt.',
     aboutLines: [
-      'Hij knipt hier zelf. Geen tweede stoel.',
-      'Jij kiest de muziek. Er is een drankje, en een praatje als je wilt.',
-      'Niet gehaast. Je gaat weg als het echt goed zit.',
-      'Hij zegt het ook als iets je beter staat.',
+      'Mijn naam is Bjorn en ik ben de eigenaar van Bjorn’s Barber. Inmiddels heb ik 8 jaar ervaring als barber en met veel plezier werk ik iedere dag aan het vak waar ik mijn passie in heb gevonden.',
+      'Ik ben begonnen als barber omdat ik het mooi vind dat je echt één-op-één met een klant werkt. Je neemt de tijd voor iemand, luistert naar wat hij wil en zorgt ervoor dat hij uiteindelijk met een tevreden gevoel de deur uitgaat. Dat persoonlijke contact is voor mij minstens zo belangrijk als het eindresultaat.',
+      'Bij Bjorn’s Barber draait het daarom niet om zoveel mogelijk klanten op een dag. Ik doe geen lopendebandwerk. Iedere klant krijgt mijn volledige aandacht en ik neem de tijd om te zorgen dat het kapsel past bij de persoon.',
+      'Na 8 jaar ervaring blijf ik mezelf ontwikkelen en streven naar de beste kwaliteit. Mijn doel is simpel: zorgen dat je tevreden de stoel uitkomt én graag weer terugkomt.',
     ],
+    aboutClosing: 'Persoonlijke aandacht. Kwaliteit. En een kapsel waar je met vertrouwen mee naar buiten loopt.',
     faq: [
       { q: 'Moet ik een afspraak maken?', a: 'Ja. Zo blijft de stoel echt van jou. Gebruik het formulier, of bel.' },
       { q: 'Hoe lang duurt het?', a: 'Knippen 45 minuten, een baard 30 minuten, knippen + baard vijf kwartier. Hij werkt niet op de klok.' },
@@ -230,17 +232,18 @@ export const copy: Record<Lang, Copy> = {
     weekPrev: 'Previous week',
     weekNext: 'Next week',
     closedLabel: 'closed',
-    aboutKicker: 'ABOUT BJORN',
+    aboutKicker: 'THE BARBER',
     portraitAlt: 'Bjorn, the barber at Bjorn’s Barber in Axel',
-    aboutTitle: 'Just him. All the time.',
+    aboutTitle: 'About Bjorn’s Barber',
     faqKicker: 'QUESTIONS',
     faqTitle: 'Before you sit.',
     aboutLines: [
-      'He cuts here himself. No second chair.',
-      "You pick the music. There's a drink, and a chat if you want one.",
-      'No rush. You leave when it actually looks right.',
-      "He'll say so when something else would suit you better.",
+      'My name is Bjorn and I own Bjorn’s Barber. I have 8 years of experience as a barber now, and every day I enjoy working at the craft I found my passion in.',
+      'I became a barber because I love working truly one-on-one with a client. You take your time for someone, listen to what he wants and make sure he walks out the door feeling satisfied. That personal contact matters at least as much to me as the end result.',
+      'That is why Bjorn’s Barber is not about seeing as many clients as possible in a day. I don’t do assembly-line work. Every client gets my full attention, and I take the time to make sure the haircut suits the person.',
+      'After 8 years I keep developing and aiming for the best quality. My goal is simple: you leave the chair satisfied and you are happy to come back.',
     ],
+    aboutClosing: 'Personal attention. Quality. And a haircut you walk out with confidently.',
     faq: [
       { q: 'Do I need an appointment?', a: 'Yes. That way the chair is actually yours. Use the form, or call.' },
       { q: 'How long does it take?', a: "A cut takes 45 minutes, a beard 30 minutes, cut + beard an hour and a quarter. He doesn't work to the clock." },

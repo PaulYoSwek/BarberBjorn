@@ -26,6 +26,6 @@ test('the page speaks Dutch and then English', async () => {
   expect(screen.getByRole('button', { name: 'NL' })).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'EN' }))
   expect(screen.getByText('A proper cut. No rush.')).toBeInTheDocument()
-  expect(screen.getByText('Just him. All the time.')).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'About Bjorn’s Barber' })).toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'Book a visit' })).toHaveAttribute('href', '#afspraak')
 })

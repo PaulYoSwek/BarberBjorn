@@ -11,9 +11,12 @@ export function About() {
       <div className="about-shard">
         <p className="kicker">{t.aboutKicker}</p>
         <h2>{t.aboutTitle}</h2>
-        {t.aboutLines.map((line) => (
-          <p key={line}>{line}</p>
-        ))}
+        <div className="about-text">
+          {t.aboutLines.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+        </div>
+        <p className="about-closing">{t.aboutClosing}</p>
       </div>
     </section>
   )
