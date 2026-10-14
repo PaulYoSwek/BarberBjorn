@@ -143,7 +143,7 @@ test('a free slot books through submitBook', async () => {
     })
     expect(await screen.findByText('Je afspraak staat vast. Je krijgt een bevestiging per mail.')).toBeInTheDocument()
     expect(assign).not.toHaveBeenCalled()
-    expect(screen.queryByText(/mailto:hallo@barberbjorn.nl/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/mailto:bjorn899@hotmail.com/)).not.toBeInTheDocument()
   } finally {
     vi.useRealTimers()
   }

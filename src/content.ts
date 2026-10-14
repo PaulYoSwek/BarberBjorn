@@ -74,7 +74,7 @@ export const CREDIT = {
 }
 
 export const CONTACT = {
-  email: 'hallo@barberbjorn.nl',
+  email: 'bjorn899@hotmail.com',
   phone: '+31 6 48163783',
   phoneHref: 'tel:+31648163783',
   addressLine: 'Ferdinandstraat 21, Axel',

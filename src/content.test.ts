@@ -12,7 +12,7 @@ test('dutch and english carry the same keys and the locked facts', () => {
   expect(copy.nl.days.filter((day) => day.closed).map((day) => day.key)).toEqual(['sat', 'sun'])
   expect(copy.nl.faq).toHaveLength(4)
   expect(copy.en.faq).toHaveLength(4)
-  expect(CONTACT.email).toBe('hallo@barberbjorn.nl')
+  expect(CONTACT.email).toBe('bjorn899@hotmail.com')
   expect(CONTACT.phone).toBe('+31 6 48163783')
   expect(CONTACT.phoneHref).toBe('tel:+31648163783')
 })

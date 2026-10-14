@@ -136,7 +136,7 @@ test('builds a Dutch mailto body with the chosen time', () => {
     expect(result.body).toContain('Telefoon: 06 12 34 56 78')
     expect(result.body).toContain('Tijd: 2026-10-06 09:00')
     expect(result.body).toContain('Dit is een aanvraag, nog geen bevestiging.')
-    expect(mailtoHref('hallo@barberbjorn.nl', result.subject, result.body)).toContain('mailto:hallo@barberbjorn.nl')
+    expect(mailtoHref('bjorn899@hotmail.com', result.subject, result.body)).toContain('mailto:bjorn899@hotmail.com')
   }
 })
 
