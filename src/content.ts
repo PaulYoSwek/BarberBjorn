@@ -155,7 +155,7 @@ export const copy: Record<Lang, Copy> = {
     portraitAlt: 'Bjorn, kapper en barbier bij Bjorn’s Barber in Axel',
     aboutTitle: 'Over Bjorn’s Barber',
     faqKicker: 'VRAGEN',
-    faqTitle: 'Voor je komt.',
+    faqTitle: 'Voordat je langskomt.',
     aboutLines: [
       'Mijn naam is Bjorn en ik ben de eigenaar van Bjorn’s Barber. Inmiddels heb ik 8 jaar ervaring als barber en met veel plezier werk ik iedere dag aan het vak waar ik mijn passie in heb gevonden.',
       'Ik ben begonnen als barber omdat ik het mooi vind dat je echt één-op-één met een klant werkt. Je neemt de tijd voor iemand, luistert naar wat hij wil en zorgt ervoor dat hij uiteindelijk met een tevreden gevoel de deur uitgaat. Dat persoonlijke contact is voor mij minstens zo belangrijk als het eindresultaat.',
