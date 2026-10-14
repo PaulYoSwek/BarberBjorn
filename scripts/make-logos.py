@@ -80,5 +80,16 @@ og.alpha_composite(logo, (x, y))
 ImageDraw.Draw(og).rectangle([600 - 42, y + logo.height + 30, 600 + 42, y + logo.height + 34], fill=YELLOW)
 og.convert("RGB").save("public/og-image.jpg", "JPEG", quality=88, optimize=True)
 
+# The site loads these: WebP is a third of the PNG, and each is no bigger than it is shown.
+def fit(image: Image.Image, width: int) -> Image.Image:
+    return image.resize((width, round(image.height * width / image.width)), Image.LANCZOS)
+
+
+name.save("public/logo-name.webp", "WEBP", lossless=True)  # hero title, up to 460px wide (2x = 920)
+fit(mark, 136).save("public/logo-mark-small.webp", "WEBP", lossless=True)  # hero stamp, 68px
+fit(mark, 136).save("public/logo-mark-small.png", optimize=True)
+fit(full, 520).save("public/logo-wordmark-small.webp", "WEBP", lossless=True)  # splash and footer, up to 260px
+fit(full, 520).save("public/logo-wordmark-small.png", optimize=True)
+
 for name_, image in [("wordmark", full), ("mark", mark), ("name", name)]:
     print(name_, image.size)

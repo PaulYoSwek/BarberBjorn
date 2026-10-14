@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { expect, test } from 'vitest'
+import { expect, test, vi } from 'vitest'
 import { LanguageProvider } from '../language'
 import { Hero } from './Hero'
 
@@ -49,4 +49,35 @@ test('the map shows a small shop address', () => {
   expect(address).toHaveTextContent('Ferdinandstraat 21')
   expect(address).toHaveTextContent('4571 AN Axel')
   expect(address?.closest('.hero-map')).toBeTruthy()
+})
+
+test('the video waits for an idle page and phones get the small file', () => {
+  // jsdom has no requestIdleCallback; stand one in that runs at once.
+  const idle = vi.fn((fn: () => void) => {
+    fn()
+    return 1
+  })
+  Object.defineProperty(window, 'requestIdleCallback', { value: idle, configurable: true, writable: true })
+  const media = window.matchMedia
+  window.matchMedia = ((query: string) => ({ ...media(query), matches: query.includes('max-width') })) as typeof window.matchMedia
+  try {
+    renderHero()
+    expect(document.querySelector('video')).toHaveAttribute('src', '/hero-mobile.mp4')
+    expect(document.querySelector('video')).toHaveAttribute('preload', 'none')
+  } finally {
+    window.matchMedia = media
+    Object.defineProperty(window, 'requestIdleCallback', { value: undefined, configurable: true, writable: true })
+  }
+})
+
+test('reduced motion means no video at all', () => {
+  const media = window.matchMedia
+  window.matchMedia = ((query: string) => ({ ...media(query), matches: query.includes('reduced-motion') })) as typeof window.matchMedia
+  try {
+    renderHero()
+    expect(document.querySelector('video')).toBeNull()
+    expect(screen.getByText('Een goede knip. Zonder haast.')).toBeInTheDocument()
+  } finally {
+    window.matchMedia = media
+  }
 })

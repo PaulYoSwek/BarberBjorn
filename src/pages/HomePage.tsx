@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { About } from '../components/About'
 import { BookingForm } from '../components/BookingForm'
 import { Faq } from '../components/Faq'
@@ -11,16 +11,59 @@ import { Splash } from '../components/Splash'
 import { useLang } from '../language'
 import { useHeadTags } from '../seo'
 
+const SPLASH_SEEN = 'barber-splash-seen'
+
+function splashSeen(): boolean {
+  try {
+    return sessionStorage.getItem(SPLASH_SEEN) === '1'
+  } catch {
+    return false
+  }
+}
+
+function rememberSplash() {
+  try {
+    sessionStorage.setItem(SPLASH_SEEN, '1')
+  } catch {
+    /* private mode: the intro simply plays again */
+  }
+}
+
 const BOOKING_CUT: RopeEdge = { of: 'prev', left: 1, right: 0.88 }
 const FOOTER_CUT: RopeEdge = { of: 'next', left: 0.18, right: 0 }
 
 export function HomePage() {
   const { t, lang } = useLang()
-  const [ready, setReady] = useState(false)
+  // The intro plays once per visit, not again on every page you come back to.
+  const [ready, setReady] = useState(splashSeen)
   useHeadTags({ title: t.seoTitle, description: t.seoDescription, lang })
+
+  // The page is built by script, so the browser cannot scroll to #afspraak on its
+  // own. Jump there at once (a smooth scroll this early gets cancelled while the
+  // page is still loading) and once more when loading is done, in case it shifted.
+  useEffect(() => {
+    if (!ready) return
+    const id = decodeURIComponent(window.location.hash.slice(1))
+    if (!id) return
+    const go = () => document.getElementById(id)?.scrollIntoView?.({ behavior: 'instant' })
+    const timer = window.setTimeout(go, 0)
+    if (document.readyState !== 'complete') window.addEventListener('load', go, { once: true })
+    return () => {
+      window.clearTimeout(timer)
+      window.removeEventListener('load', go)
+    }
+  }, [ready])
+
   return (
     <>
-      {!ready && <Splash onDone={() => setReady(true)} />}
+      {!ready && (
+        <Splash
+          onDone={() => {
+            rememberSplash()
+            setReady(true)
+          }}
+        />
+      )}
       <LanguageSwitch hidden={!ready} />
       <main>
         <Hero />

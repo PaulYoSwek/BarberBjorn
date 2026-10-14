@@ -58,6 +58,7 @@ export type Copy = {
   faq: { q: string; a: string }[]
   mapLabel: string
   directionsCta: string
+  mapOpen: string
   creditLabel: string
   notFoundTitle: string
   notFoundBody: string
@@ -172,6 +173,7 @@ export const copy: Record<Lang, Copy> = {
     ],
     mapLabel: 'Ferdinandstraat 21, Axel',
     directionsCta: 'Route',
+    mapOpen: 'Kaart openen',
     creditLabel: 'Website door',
     notFoundTitle: 'Die pagina is er niet.',
     notFoundBody: 'Het adres klopt niet, of de pagina is weg.',
@@ -252,6 +254,7 @@ export const copy: Record<Lang, Copy> = {
     ],
     mapLabel: 'Ferdinandstraat 21, Axel',
     directionsCta: 'Directions',
+    mapOpen: 'Open the map',
     creditLabel: 'Website by',
     notFoundTitle: 'That page is not here.',
     notFoundBody: 'The address is wrong, or the page is gone.',

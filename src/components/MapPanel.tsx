@@ -1,6 +1,7 @@
 import type { Map as MapboxMap } from 'mapbox-gl'
 import { useEffect, useRef, useState } from 'react'
 import { CONTACT } from '../content'
+import { whenIdle } from '../idle'
 import { useLang } from '../language'
 import { FALLBACK_PIN } from '../pin'
 
@@ -49,19 +50,45 @@ function isMapOrStyleFailure(event: MapErrorEvent, map: MapboxMap) {
 const PIN_SVG =
   '<svg viewBox="0 0 28 38" aria-hidden="true"><path fill="#f5c400" stroke="#101010" stroke-width="1.6" d="M14 36.5 3.2 16.2A11.2 11.2 0 1 1 24.8 16.2Z"/><circle cx="14" cy="14" r="4.2" fill="#101010"/></svg>'
 
+const STYLE = 'mapbox/dark-v11'
+const ZOOM = 15
+
+/** A still of the map around the shop from Mapbox, sized to the panel. */
+export function staticMapUrl(width: number, height: number, accessToken = token): string {
+  const w = Math.max(100, Math.min(1280, Math.round(width)))
+  const h = Math.max(100, Math.min(1280, Math.round(height)))
+  const at = `${FALLBACK_PIN.lng},${FALLBACK_PIN.lat}`
+  return `https://api.mapbox.com/styles/v1/${STYLE}/static/pin-l+f5c400(${at})/${at},${ZOOM},0/${w}x${h}@2x?access_token=${accessToken}`
+}
+
+/** Phones get the still and load the live map on a tap; wider screens get it once the page is idle. */
+function liveMapWithoutAsking(): boolean {
+  return !window.matchMedia('(max-width: 800px), (pointer: coarse)').matches
+}
+
 /**
- * The map library is large, so it loads in its own chunk after the page is
- * interactive. Without a token, or when the map fails, the address stays as text.
+ * The map library is half a megabyte, so the panel shows a still of the map
+ * first and loads the live map only after the page is idle (or on a tap, on
+ * phones). Without a token, or when the map fails, the address stays as text.
  */
 export function MapPanel() {
-  const { lang } = useLang()
+  const { t, lang } = useLang()
+  const wrap = useRef<HTMLDivElement>(null)
   const node = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapboxMap | null>(null)
   const [failed, setFailed] = useState(!token)
   const [loaded, setLoaded] = useState(false)
+  const [live, setLive] = useState(false)
+  const [still, setStill] = useState<{ w: number; h: number } | null>(null)
 
   useEffect(() => {
-    if (!token || !node.current) return
+    if (!token || !wrap.current) return
+    setStill({ w: wrap.current.clientWidth || 400, h: wrap.current.clientHeight || 340 })
+    if (liveMapWithoutAsking()) return whenIdle(() => setLive(true))
+  }, [])
+
+  useEffect(() => {
+    if (!token || !live || !node.current) return
     let cancelled = false
     let removed = false
     const removeMap = () => {
@@ -116,7 +143,7 @@ export function MapPanel() {
       cancelled = true
       removeMap()
     }
-  }, [])
+  }, [live])
 
   useEffect(() => {
     if (!loaded) return
@@ -128,5 +155,14 @@ export function MapPanel() {
   }, [lang, loaded])
 
   if (failed) return <p className="map-fallback">{CONTACT.addressFull}</p>
-  return <div ref={node} className="map-canvas" />
+  return (
+    <div ref={wrap} className="map-canvas">
+      <div ref={node} className="map-live" />
+      {!loaded && still ? (
+        <button type="button" className="map-still" aria-label={t.mapOpen} onClick={() => setLive(true)}>
+          <img src={staticMapUrl(still.w, still.h)} alt="" width={still.w} height={still.h} decoding="async" />
+        </button>
+      ) : null}
+    </div>
+  )
 }

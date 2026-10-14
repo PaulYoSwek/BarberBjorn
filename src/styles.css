@@ -170,6 +170,13 @@ img, video { max-width: 100%; display: block; }
 }
 /* Two classes so this beats `.mapboxgl-map { position: relative }`, whose stylesheet loads later with the map. */
 .hero-map .map-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hero-map .map-live { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* The still of the map sits on top until the live map has drawn. */
+.map-still {
+  position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%;
+  margin: 0; padding: 0; border: 0; background: #141414; cursor: pointer;
+}
+.map-still img { width: 100%; height: 100%; object-fit: cover; }
 .mapboxgl-ctrl-logo,
 .mapboxgl-ctrl-attrib,
 .mapboxgl-ctrl-bottom-left,
@@ -367,7 +374,7 @@ img, video { max-width: 100%; display: block; }
   margin: 18px 0 0; font-family: var(--font-display); font-size: 1.15rem; font-weight: 720;
   letter-spacing: -0.02em; line-height: 1.25;
 }
-.about-shard .kicker { border: 0; padding: 0; color: #9a7b00; }
+.about-shard .kicker { border: 0; padding: 0; color: #6b5500; }
 @media (max-width: 800px) {
   .about { height: auto; grid-template-columns: 1fr; }
   .about img { height: 340px; -webkit-mask-image: linear-gradient(#000 70%, transparent); mask-image: linear-gradient(#000 70%, transparent); }
@@ -382,7 +389,7 @@ img, video { max-width: 100%; display: block; }
   align-items: start;
 }
 .faq-intro { position: sticky; top: 72px; z-index: 4; }
-.faq-intro .kicker { color: #9a7b00; }
+.faq-intro .kicker { color: #6b5500; }
 .faq-intro h2 {
   margin: 0;
   font-family: var(--font-display);
@@ -399,8 +406,9 @@ img, video { max-width: 100%; display: block; }
 }
 .faq article:last-child { border-bottom: 1px solid rgba(16,16,16,.18); }
 .faq span {
-  font-family: var(--font-display); color: var(--yellow);
-  font-size: 1.05rem; letter-spacing: -0.04em; line-height: 1.2; padding-top: 4px;
+  font-family: var(--font-display); color: var(--ink); background: var(--yellow);
+  font-size: 1.05rem; letter-spacing: -0.04em; line-height: 1.2; padding: 3px 7px 2px;
+  width: max-content; margin-top: 2px;
 }
 .faq h3 {
   margin: 0 0 8px;

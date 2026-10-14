@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { CONTACT } from '../content'
+import { prefersStills, whenIdle } from '../idle'
 import { useLang } from '../language'
 import { mapsDirectionsUrl } from '../pin'
 import { MapPanel } from './MapPanel'
@@ -22,8 +23,19 @@ function seamStyle(el: HTMLElement, narrow: boolean): CSSProperties {
 export function Hero() {
   const { t } = useLang()
   const [videoOn, setVideoOn] = useState(true)
+  // The video (2 MB; 200 KB on phones) starts only once everything else is in.
+  const [videoSrc, setVideoSrc] = useState('')
   const seamWrap = useRef<HTMLDivElement>(null)
   const [seam, setSeam] = useState<CSSProperties>({})
+
+  useEffect(() => {
+    if (prefersStills()) {
+      setVideoOn(false)
+      return
+    }
+    const small = window.matchMedia('(max-width: 800px)').matches
+    return whenIdle(() => setVideoSrc(small ? '/hero-mobile.mp4' : '/hero.mp4'))
+  }, [])
 
   useEffect(() => {
     const el = seamWrap.current
@@ -43,7 +55,8 @@ export function Hero() {
       {videoOn && (
         <video
           className="hero-video"
-          src="/hero.mp4"
+          src={videoSrc || undefined}
+          preload="none"
           poster="/hero-poster.jpg"
           muted
           loop
@@ -53,13 +66,24 @@ export function Hero() {
           aria-hidden="true"
           tabIndex={-1}
           onError={() => setVideoOn(false)}
+          onLoadedData={(event) => {
+            // Belt and braces: autoplay applies to a source set after mount, but ask once anyway.
+            const playing = event.currentTarget.play?.()
+            if (playing && typeof playing.catch === 'function') playing.catch(() => {})
+          }}
         />
       )}
       <div className="hero-scrim" />
-      <img className="hero-stamp" src="/logo-mark.png?v=3" alt="" width="68" height="68" decoding="async" />
+      <picture>
+        <source srcSet="/logo-mark-small.webp?v=4" type="image/webp" />
+        <img className="hero-stamp" src="/logo-mark-small.png?v=4" alt="" width="68" height="68" decoding="async" />
+      </picture>
       <div className="hero-copy">
         <h1 className="hero-title">
-          <img className="hero-name" src="/logo-name.png?v=3" alt="Bjorn’s Barber" width="460" height="200" fetchPriority="high" />
+          <picture>
+            <source srcSet="/logo-name.webp?v=4" type="image/webp" />
+            <img className="hero-name" src="/logo-name.png?v=3" alt="Bjorn’s Barber" width="460" height="200" fetchPriority="high" />
+          </picture>
           <span className="sr-only">{t.heroHidden}</span>
         </h1>
         <p>{t.tagline}</p>

@@ -307,13 +307,12 @@ export function BookingForm() {
                 <button
                   key={item.id}
                   type="button"
-                  aria-label={item.name[lang]}
                   aria-pressed={on}
                   className={on ? 'is-on' : undefined}
                   onClick={() => setService(item.id)}
                 >
-                  {item.name[lang]}
-                  <span aria-hidden="true">{mins} min</span>
+                  {item.name[lang]}{' '}
+                  <span>{mins} min</span>
                 </button>
               )
             })}
