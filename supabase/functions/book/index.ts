@@ -6,7 +6,7 @@ import { serviceClient } from '../_shared/db.ts'
 import { confirmedOverlaps, lostOverlapRace } from '../_shared/holds.ts'
 import { json, readJson, servePost } from '../_shared/http.ts'
 import { parseBooking, takenMessage, validationMessage } from '../_shared/input.ts'
-import { sendBookingMail } from '../_shared/notify.ts'
+import { notifyBjorn, sendBookingMail } from '../_shared/notify.ts'
 import { salonNow, salonWallToUtc } from '../_shared/salon.ts'
 import { loadSchedule, offersService, serviceMinutes } from '../_shared/schedule.ts'
 
@@ -57,6 +57,11 @@ servePost(async (req) => {
     return json(req, 409, { ok: false, error: takenMessage(input.lang) })
   }
   await rememberClient(db, input)
+  await notifyBjorn(
+    db,
+    { name: input.name.trim(), email: input.email.trim(), phone: input.phone.trim(), service: input.service, start: input.slot, minutes },
+    'booked',
+  )
   let sent = false
   try {
     sent = (

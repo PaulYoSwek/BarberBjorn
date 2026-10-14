@@ -4,6 +4,7 @@ import { insertBooking, rememberClient, servicePrice } from '../_shared/clients.
 import { serviceClient } from '../_shared/db.ts'
 import { json, readJson, servePost } from '../_shared/http.ts'
 import { parseBooking, validationMessage } from '../_shared/input.ts'
+import { notifyBjorn, sendBookingMail } from '../_shared/notify.ts'
 import { salonNow, salonWallToUtc } from '../_shared/salon.ts'
 import { loadSchedule, offersService, serviceMinutes } from '../_shared/schedule.ts'
 
@@ -29,7 +30,22 @@ servePost(async (req) => {
     lang: input.lang,
     mail_sent: false,
   })
-  if (inserted.error) throw new Error(inserted.error.message)
+  if (inserted.error || !inserted.data) throw new Error(inserted.error?.message ?? 'insert')
   await rememberClient(db, input)
-  return json(req, 200, { ok: true })
+  const person = { name: input.name.trim(), email: input.email.trim(), phone: input.phone.trim() }
+  let sent = false
+  try {
+    const row = inserted.data as { id: string }
+    sent = (
+      await sendBookingMail(
+        db,
+        { id: row.id, ...person, service: input.service, start: input.slot, lang: input.lang },
+        'received',
+      )
+    ).sent
+  } catch {
+    sent = false
+  }
+  await notifyBjorn(db, { ...person, service: input.service, start: input.slot, minutes: serviceMinutes(schedule, input.service) }, 'request')
+  return json(req, 200, { ok: true, sent })
 })

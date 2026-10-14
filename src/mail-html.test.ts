@@ -1,0 +1,29 @@
+import { expect, test } from 'vitest'
+import { mailHtml } from './mail-html'
+import { templateFor } from './mail-templates'
+
+test('the html mail keeps Bjorn’s paragraphs and line breaks and escapes what he types', () => {
+  const html = mailHtml('Hoi <Sam>,\n\nKnippen\ndinsdag 6 oktober om 10:00\n\nTot dan,\nBjorn', 'nl', 'Je afspraak')
+  expect(html).toContain('Hoi &lt;Sam&gt;,</p>')
+  expect(html).toContain('Knippen<br>dinsdag 6 oktober om 10:00</p>')
+  expect(html).not.toContain('<Sam>')
+  expect(html).toContain('<title>Je afspraak</title>')
+  // The preview line in the inbox skips the greeting.
+  expect(html).toMatch(/display:none[^>]*>Knippen</)
+})
+
+test('the html mail carries the logo, a booking button and the contact details', () => {
+  const html = mailHtml('Hi Sam', 'en')
+  expect(html).toContain('https://www.bjornsbarber.nl/logo-lockup-white.png')
+  expect(html).toContain('href="https://www.bjornsbarber.nl/#afspraak"')
+  expect(html).toContain('Book a visit')
+  expect(html).toContain('Ferdinandstraat 21, 4571 AN Axel')
+  expect(html).toContain('href="tel:+31648163783"')
+})
+
+test('mailing a time request again picks the received mail until Bjorn decides', () => {
+  expect(templateFor({ status: 'pending', kind: 'custom' })).toBe('received')
+  expect(templateFor({ status: 'confirmed', kind: 'custom' })).toBe('accepted')
+  expect(templateFor({ status: 'declined', kind: 'custom' })).toBe('declined')
+  expect(templateFor({ status: 'confirmed', kind: 'slot' })).toBe('thanks')
+})

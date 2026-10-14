@@ -1,12 +1,13 @@
 import { CONTACT, copy, type Lang } from './content.ts'
 
-export type MailKey = 'thanks' | 'accepted' | 'declined' | 'moved'
+export type MailKey = 'thanks' | 'received' | 'accepted' | 'declined' | 'moved'
 
-export const MAIL_KEYS: MailKey[] = ['thanks', 'accepted', 'declined', 'moved']
+export const MAIL_KEYS: MailKey[] = ['thanks', 'received', 'accepted', 'declined', 'moved']
 
 /** Dashboard names for the templates. */
 export const MAIL_LABEL: Record<MailKey, string> = {
   thanks: 'Bedankt voor je boeking',
+  received: 'Aanvraag ander tijdstip ontvangen',
   accepted: 'Ander tijdstip bevestigd',
   declined: 'Ander tijdstip geweigerd',
   moved: 'Afspraak verplaatst',
@@ -49,6 +50,36 @@ ${ADDRESS}
 Can't make it after all? Just reply to this mail and we'll find another time.
 
 See you then,
+Bjorn`,
+    },
+  },
+  received: {
+    nl: {
+      subject: 'We hebben je aanvraag ontvangen',
+      body: `Hoi {{name}},
+
+Bedankt voor je aanvraag. Je vroeg om:
+
+{{service}}
+{{date}} om {{time}}
+
+Bjorn kijkt of dat past en je krijgt zo snel mogelijk een mail of het doorgaat.
+
+Groet,
+Bjorn`,
+    },
+    en: {
+      subject: 'We received your request',
+      body: `Hi {{name}},
+
+Thanks for your request. You asked for:
+
+{{service}}
+{{date}} at {{time}}
+
+Bjorn will check whether that works and you'll get a mail as soon as possible.
+
+Best,
 Bjorn`,
     },
   },
@@ -151,6 +182,7 @@ export function humanDate(date: string, lang: Lang): string {
 /** Which template fits a booking when Bjorn mails it again. */
 export function templateFor(booking: { status: string; kind: string }): MailKey {
   if (booking.status === 'declined') return 'declined'
+  if (booking.kind === 'custom' && booking.status === 'pending') return 'received'
   if (booking.kind === 'custom') return 'accepted'
   return 'thanks'
 }
