@@ -7,8 +7,9 @@ import { AdminPage } from '../../pages/AdminPage'
 import { AdminShell } from './AdminShell'
 import { DEMO_INBOX, DEMO_SCHEDULE } from './demo'
 
-const { adminWrite, loadPublicSchedule, loadInbox, loadAdminBlocks } = vi.hoisted(() => ({
+const { adminWrite, adminBook, loadPublicSchedule, loadInbox, loadAdminBlocks } = vi.hoisted(() => ({
   adminWrite: vi.fn(),
+  adminBook: vi.fn(),
   loadPublicSchedule: vi.fn(),
   loadInbox: vi.fn(),
   loadAdminBlocks: vi.fn(),
@@ -19,6 +20,7 @@ vi.mock('../../planning-api', async (importOriginal) => {
   return {
     ...actual,
     adminWrite,
+    adminBook,
     loadPublicSchedule,
     loadInbox,
     loadAdminBlocks,
@@ -33,6 +35,8 @@ beforeEach(() => {
   localStorage.clear()
   adminWrite.mockReset()
   adminWrite.mockResolvedValue({ ok: true })
+  adminBook.mockReset()
+  adminBook.mockResolvedValue({ ok: true, sent: true })
   loadPublicSchedule.mockReset()
   loadPublicSchedule.mockResolvedValue(DEMO_SCHEDULE)
   loadInbox.mockReset()
@@ -460,4 +464,66 @@ test('reasons from the dashboard read replace the public blocks, which have none
   loadAdminBlocks.mockResolvedValue([{ date: '2026-10-06', time: '09:00', reason: 'Pauze', color: 'green' }])
   await openReady()
   expect(await screen.findByRole('button', { name: 'di 6 okt 09:00 dicht Pauze' })).toHaveStyle({ background: '#2e8b57' })
+})
+
+test('in plan mode a free quarter-hour opens a form that books the appointment', async () => {
+  await openReady()
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  await user.click(screen.getByRole('radio', { name: 'Afspraak te plannen' }))
+  await user.click(screen.getByRole('button', { name: 'ma 5 okt 12:00 vrij' }))
+  expect(adminWrite).not.toHaveBeenCalled()
+  const dialog = screen.getByRole('dialog', { name: 'Afspraak plannen' })
+  expect(dialog).toHaveTextContent('ma 5 okt · 12:00–12:45')
+  await user.selectOptions(screen.getByLabelText('Dienst'), 'both')
+  expect(dialog).toHaveTextContent('12:00–13:15')
+  // A known client fills in their own contact details.
+  await user.type(screen.getByLabelText('Naam'), 'Jan de Vries')
+  expect(screen.getByLabelText('E-mail (mag leeg)')).toHaveValue('jan@example.com')
+  expect(screen.getByLabelText('Telefoon (mag leeg)')).toHaveValue('06 12345678')
+  // The dashboard fetches the appointments again; the new one is there now.
+  loadInbox.mockResolvedValue([
+    ...DEMO_INBOX,
+    { ...DEMO_INBOX[0], id: 'planned', service: 'both', start: '2026-10-05T12:00:00', minutes: 75 },
+  ])
+  await user.click(screen.getByRole('button', { name: 'Inplannen' }))
+  expect(adminBook).toHaveBeenCalledWith({
+    service: 'both',
+    start: '2026-10-05T12:00:00',
+    name: 'Jan de Vries',
+    email: 'jan@example.com',
+    phone: '06 12345678',
+    mail: true,
+  })
+  expect(screen.queryByRole('dialog', { name: 'Afspraak plannen' })).not.toBeInTheDocument()
+  expect(screen.getByRole('status')).toHaveTextContent('Afspraak ingepland: Jan de Vries, 12:00.')
+  expect(await screen.findByRole('button', { name: 'ma 5 okt 12:00 geboekt Jan de Vries' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'ma 5 okt 13:00 geboekt Jan de Vries' })).toBeInTheDocument()
+})
+
+test('a planned appointment cannot run into another booking', async () => {
+  await openReady()
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  await user.click(screen.getByRole('radio', { name: 'Afspraak te plannen' }))
+  // Jan is booked at 10:00; a 45-minute cut from 09:30 would run into him.
+  await user.click(screen.getByRole('button', { name: 'ma 5 okt 09:30 vrij' }))
+  expect(screen.getByText('Deze tijd loopt over een andere afspraak heen.')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Inplannen' })).toBeDisabled()
+  await user.selectOptions(screen.getByLabelText('Dienst'), 'beard')
+  expect(screen.getByRole('button', { name: 'Inplannen' })).toBeEnabled()
+  await user.click(screen.getByRole('button', { name: 'Annuleren' }))
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+})
+
+test('a refused plan keeps the form open with the reason', async () => {
+  adminBook.mockResolvedValue({ ok: false, error: 'overlap' })
+  await openReady()
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  await user.click(screen.getByRole('radio', { name: 'Afspraak te plannen' }))
+  await user.click(screen.getByRole('button', { name: 'ma 5 okt 15:00 vrij' }))
+  await user.type(screen.getByLabelText('Naam'), 'Piet')
+  expect(screen.queryByLabelText('Stuur een bevestiging per mail')).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Inplannen' }))
+  expect(adminBook).toHaveBeenCalledWith(expect.objectContaining({ name: 'Piet', email: '', mail: false }))
+  expect(screen.getByRole('alert')).toHaveTextContent('Op dit tijdstip staat al een afspraak.')
+  expect(screen.getByRole('dialog', { name: 'Afspraak plannen' })).toBeInTheDocument()
 })

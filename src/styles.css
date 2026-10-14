@@ -1117,3 +1117,36 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
 .footer-instagram:hover svg { color: #ffd21a; }
 
 .plates strong.is-loading { visibility: hidden; }
+
+.admin-mode { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600; color: #5c574e; }
+.admin-mode span { margin-right: 4px; }
+.admin-mode button {
+  min-height: 40px; padding: 0 14px; width: auto; border: 1px solid #101010;
+  background: #fff; color: #101010; font-weight: 700; font-size: 0.82rem;
+}
+.admin-mode button[aria-checked="true"] { background: #101010; color: #f4f1ea; }
+.admin-modal {
+  position: fixed; inset: 0; z-index: 40; display: grid; place-items: center;
+  padding: 16px; background: rgb(16 16 16 / 0.55); overflow-y: auto;
+}
+.admin-plan {
+  width: min(440px, 100%); background: #fff; border: 1px solid #101010;
+  box-shadow: inset 4px 0 0 #f5c400, 0 18px 48px rgb(0 0 0 / 0.25);
+  padding: 18px 18px 18px 22px; display: grid; gap: 10px;
+}
+.admin-plan h2 { margin: 0 0 4px; font-size: 1.2rem; }
+.admin-plan .admin-kicker { margin: 0; }
+.admin-plan label { display: grid; gap: 4px; font-size: 0.8rem; font-weight: 600; }
+.admin-plan input:not([type="checkbox"]), .admin-plan select {
+  min-height: 44px; border: 1px solid #2a2a2a; background: #fff; padding: 0 10px; font: inherit; font-weight: 400; min-width: 0;
+}
+.admin-plan input[aria-invalid="true"] { border-color: #b3261e; }
+.admin-plan .admin-plan-check { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+.admin-plan-check input { width: 18px; height: 18px; accent-color: #101010; }
+.admin-plan-warn { margin: 0; padding: 8px 10px; background: #fbf3cc; font-size: 0.82rem; }
+.admin-plan-warn.is-stop { background: #f9dedc; color: #8c1d18; }
+.admin-plan [role="alert"] { margin: 0; color: #8c1d18; font-size: 0.85rem; font-weight: 600; }
+.admin-plan-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.admin-plan-actions button { min-height: 44px; padding: 0 16px; border: 1px solid #101010; background: #fff; font-weight: 700; width: auto; }
+.admin-plan-actions .admin-plan-go { background: #f5c400; }
+.admin-plan-actions button:disabled { opacity: 0.5; }

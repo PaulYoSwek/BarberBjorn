@@ -509,6 +509,32 @@ export async function moveBooking(id: string, start: string): Promise<MoveResult
   }
 }
 
+export type AdminBooking = {
+  service: ServiceId
+  /** Salon wall time, e.g. 2026-10-14T10:15:00. */
+  start: string
+  name: string
+  email: string
+  phone: string
+  /** Mail the client a confirmation (only when there is an email address). */
+  mail: boolean
+}
+
+/** Bjorn plans an appointment himself; it is confirmed straight away. */
+export async function adminBook(booking: AdminBooking): Promise<MoveResult> {
+  if (!supabase) return { ok: false, error: 'offline' }
+  try {
+    const { data, error } = await supabase.functions.invoke('admin-book', { body: booking })
+    const failed = failurePayload(data)
+    if (failed) return { ok: false, error: failed }
+    if (error) return { ok: false, error: await invokeDetail(error) }
+    const sent = Boolean(data && typeof data === 'object' && (data as { sent?: unknown }).sent === true)
+    return { ok: true, sent }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'offline' }
+  }
+}
+
 /** Remove a client and all their bookings (for example after a privacy request). */
 export function deleteClient(client: { id?: string | null; email: string; phone: string }) {
   return invokeOk('admin-write', {

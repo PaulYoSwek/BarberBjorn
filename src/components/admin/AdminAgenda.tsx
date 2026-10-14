@@ -13,7 +13,9 @@ import {
   type ScheduleBlock,
   type Weekday,
 } from '../../schedule'
+import type { ServiceId } from '../../content'
 import { serviceName } from './admin-defaults'
+import { AdminPlan, type PlanCheck } from './AdminPlan'
 
 const WEEK = 7
 const DEFAULT_OPEN: DayHours = { open: '09:00', close: '18:00' }
@@ -160,9 +162,16 @@ const STATUS_LABEL: Record<InboxRow['status'], string> = {
   declined: 'Geweigerd',
 }
 
-type Props = { clients?: InboxRow[] }
+type Props = {
+  clients?: InboxRow[]
+  prices?: Partial<Record<ServiceId, string>>
+  onBooked?: (row: InboxRow) => void
+}
 
-export function AdminAgenda({ clients = [] }: Props) {
+/** What a tap on a free quarter-hour does. */
+type Mode = 'shut' | 'plan'
+
+export function AdminAgenda({ clients = [], prices, onBooked }: Props) {
   const people = clients
   const [cloud, setCloud] = useState<Schedule>(defaultSchedule)
   const [edition, setEdition] = useState(0)
@@ -174,6 +183,8 @@ export function AdminAgenda({ clients = [] }: Props) {
   const [copying, setCopying] = useState(false)
   const [detail, setDetail] = useState<InboxRow | null>(null)
   const [note, setNote] = useState<Note>(NO_NOTE)
+  const [mode, setMode] = useState<Mode>('shut')
+  const [plan, setPlan] = useState<{ date: string; time: string; stamp: string } | null>(null)
   const local = useRef<LocalEdits>({ blocks: new Map(), exceptions: new Map(), week: null })
 
   function touch() {
@@ -430,6 +441,30 @@ export function AdminAgenda({ clients = [] }: Props) {
 
   const hours = hoursDay ? hoursFor(hoursDay) : null
 
+  /** What a new appointment from this start would run into, exactly as the grid shows it. */
+  function planCheck(date: string, time: string, minutes: number): PlanCheck {
+    const day = days.find((item) => item.date === date)
+    const dayHours = day ? hoursFor(day) : { closed: true as const }
+    const start = minutesOf(time)
+    const result: PlanCheck = { booked: false, shut: 'closed' in dayHours, late: false }
+    if (!('closed' in dayHours)) {
+      result.late = start < minutesOf(dayHours.open) || start + minutes > minutesOf(dayHours.close)
+    }
+    for (let at = start; at < start + minutes; at += SLOT_MINUTES) {
+      const stamp = clock(at)
+      if (clientAt(date, stamp, people) || booked(date, stamp, view)) result.booked = true
+      else if (blockAt(date, stamp, view)) result.shut = true
+    }
+    return result
+  }
+
+  function planned(row: InboxRow) {
+    setPlan(null)
+    setDone(`Afspraak ingepland: ${row.name}, ${row.start.slice(11, 16)}.${row.mail_sent ? ' Bevestiging is gemaild.' : ''}`)
+    publishLiveSchedule()
+    onBooked?.(row)
+  }
+
   function togglePick(date: string) {
     setPicked((current) => {
       const inView = current.filter((item) => visible.some((day) => day.date === item))
@@ -510,7 +545,22 @@ export function AdminAgenda({ clients = [] }: Props) {
             </div>
           </section>
         ) : null}
-        <section className="admin-note" aria-label="Reden voor dichte tijden">
+        <div className="admin-mode" role="radiogroup" aria-label="Tik op een kwartier om">
+          <span>Tik op een kwartier om</span>
+          <button type="button" role="radio" aria-checked={mode === 'shut'} onClick={() => setMode('shut')}>
+            Dicht te zetten
+          </button>
+          <button type="button" role="radio" aria-checked={mode === 'plan'} onClick={() => setMode('plan')}>
+            Afspraak te plannen
+          </button>
+        </div>
+        {mode === 'plan' ? (
+          <p className="admin-hint">
+            Tik op een vrij kwartier om daar een afspraak in te plannen. Hij staat meteen vast en is op de website
+            geboekt.
+          </p>
+        ) : null}
+        <section className="admin-note" aria-label="Reden voor dichte tijden" hidden={mode === 'plan'}>
           <p className="admin-hours-title">Dichtzetten met reden</p>
           <div className="admin-note-row">
             <label>
@@ -569,6 +619,19 @@ export function AdminAgenda({ clients = [] }: Props) {
       </p>
       {!ready && !notice ? <p className="admin-hint">Agenda laden…</p> : null}
       {notice ? <p role="alert">{notice}</p> : null}
+      {plan ? (
+        <AdminPlan
+          date={plan.date}
+          time={plan.time}
+          stamp={plan.stamp}
+          minutes={view.minutes}
+          prices={prices}
+          people={people}
+          check={planCheck}
+          onClose={() => setPlan(null)}
+          onBooked={planned}
+        />
+      ) : null}
       {detail ? (
         <div className="admin-booking" role="dialog" aria-label="Boeking">
           <p className="admin-kicker">Boeking</p>
@@ -662,6 +725,10 @@ export function AdminAgenda({ clients = [] }: Props) {
                         onClick={() => {
                           if (state === 'booked') {
                             if (client) setDetail(client)
+                            return
+                          }
+                          if (mode === 'plan') {
+                            setPlan({ date: day.date, time, stamp })
                             return
                           }
                           toggle(day.date, time, state !== 'shut')

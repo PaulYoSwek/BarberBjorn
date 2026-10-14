@@ -106,6 +106,12 @@ export function AdminShell({ pending, onLogout }: Props) {
     pullInbox(false)
   }
 
+  /** Bjorn planned an appointment himself: show it at once, then fetch the real row. */
+  function onBooked(row: InboxRow) {
+    setRows((current) => [...current, row])
+    pullInbox(false)
+  }
+
   function markMailSent(id: string) {
     setRows((current) => current.map((row) => (row.id === id ? { ...row, mail_sent: true } : row)))
   }
@@ -178,7 +184,7 @@ export function AdminShell({ pending, onLogout }: Props) {
         </div>
       </header>
       <div className="admin-card">
-        {tab === 'agenda' ? <AdminAgenda clients={rows} /> : null}
+        {tab === 'agenda' ? <AdminAgenda clients={rows} prices={prices} onBooked={onBooked} /> : null}
         {tab === 'finance' ? <AdminFinance rows={rows} prices={prices} /> : null}
         {tab === 'products' ? (
           <AdminProducts products={products} ready={productsReady} loaded={productsLoaded} onChanged={pullProducts} />
