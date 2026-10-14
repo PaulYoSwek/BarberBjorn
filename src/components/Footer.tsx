@@ -10,8 +10,8 @@ export function Footer() {
     <footer className="footer">
       <div className="footer-main">
         <picture>
-          <source srcSet="/logo-wordmark-small.webp?v=4" type="image/webp" />
-          <img src="/logo-wordmark-small.png?v=4" alt="Bjorn’s Barber" width="132" height="125" loading="lazy" decoding="async" />
+          <source srcSet="/logo-wordmark-small.webp?v=5" type="image/webp" />
+          <img src="/logo-wordmark-small.png?v=5" alt="Bjorn’s Barber" width="132" height="125" loading="lazy" decoding="async" />
         </picture>
         <address className="footer-contact">
           <p>{CONTACT.addressLine}</p>

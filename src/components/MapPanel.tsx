@@ -1,7 +1,7 @@
 import type { Map as MapboxMap } from 'mapbox-gl'
 import { useEffect, useRef, useState } from 'react'
 import { CONTACT } from '../content'
-import { whenIdle } from '../idle'
+import { onFirstInteraction } from '../idle'
 import { useLang } from '../language'
 import { FALLBACK_PIN } from '../pin'
 
@@ -61,15 +61,16 @@ export function staticMapUrl(width: number, height: number, accessToken = token)
   return `https://api.mapbox.com/styles/v1/${STYLE}/static/pin-l+f5c400(${at})/${at},${ZOOM},0/${w}x${h}@2x?access_token=${accessToken}`
 }
 
-/** Phones get the still and load the live map on a tap; wider screens get it once the page is idle. */
+/** Phones get a still and load the live map on a tap; wider screens load it on the first movement. */
 function liveMapWithoutAsking(): boolean {
   return !window.matchMedia('(max-width: 800px), (pointer: coarse)').matches
 }
 
 /**
- * The map library is half a megabyte, so the panel shows a still of the map
- * first and loads the live map only after the page is idle (or on a tap, on
- * phones). Without a token, or when the map fails, the address stays as text.
+ * The map library is half a megabyte. On phones the panel shows a still of the
+ * map and loads the live map when it is tapped; on wider screens the live map
+ * comes on the visitor's first movement, so it never delays what they see first.
+ * Without a token, or when the map fails, the address stays as text.
  */
 export function MapPanel() {
   const { t, lang } = useLang()
@@ -83,8 +84,8 @@ export function MapPanel() {
 
   useEffect(() => {
     if (!token || !wrap.current) return
+    if (liveMapWithoutAsking()) return onFirstInteraction(() => setLive(true))
     setStill({ w: wrap.current.clientWidth || 400, h: wrap.current.clientHeight || 340 })
-    if (liveMapWithoutAsking()) return whenIdle(() => setLive(true))
   }, [])
 
   useEffect(() => {

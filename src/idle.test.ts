@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from 'vitest'
-import { prefersStills, whenIdle } from './idle'
+import { onFirstInteraction, prefersStills, whenIdle } from './idle'
 
 afterEach(() => {
   vi.useRealTimers()
@@ -31,4 +31,28 @@ test('stills are preferred with reduced motion or data saving', () => {
   Object.defineProperty(navigator, 'connection', { value: { saveData: true }, configurable: true })
   expect(prefersStills()).toBe(true)
   Object.defineProperty(navigator, 'connection', { value: undefined, configurable: true })
+})
+
+test('first-interaction work runs once on the first movement, or after the fallback', () => {
+  vi.useFakeTimers()
+  const work = vi.fn()
+  onFirstInteraction(work, 3000)
+  window.dispatchEvent(new Event('pointermove'))
+  window.dispatchEvent(new Event('scroll'))
+  vi.advanceTimersByTime(5000)
+  expect(work).toHaveBeenCalledTimes(1)
+
+  const later = vi.fn()
+  onFirstInteraction(later, 3000)
+  vi.advanceTimersByTime(2999)
+  expect(later).not.toHaveBeenCalled()
+  vi.advanceTimersByTime(1)
+  expect(later).toHaveBeenCalledTimes(1)
+
+  const never = vi.fn()
+  const cancel = onFirstInteraction(never, 100)
+  cancel()
+  window.dispatchEvent(new Event('keydown'))
+  vi.advanceTimersByTime(1000)
+  expect(never).not.toHaveBeenCalled()
 })

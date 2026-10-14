@@ -42,7 +42,7 @@ img, video { max-width: 100%; display: block; }
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   animation: splash-hide 4.2s linear forwards;
 }
-.splash-mark { width: min(248px, 56vw); animation: splash-mark 4.2s cubic-bezier(.16, .84, .24, 1) forwards; }
+.splash-mark { width: min(248px, 56vw); height: auto; animation: splash-mark 4.2s cubic-bezier(.16, .84, .24, 1) forwards; }
 .splash-meet {
   width: 84px; height: 3px; margin: 10px 0 12px; background: var(--yellow);
   transform: scaleX(0); animation: splash-line 4.2s ease forwards;

@@ -36,3 +36,35 @@ export function prefersStills(): boolean {
   const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection
   return connection?.saveData === true
 }
+
+const INTERACTIONS = ['pointermove', 'pointerdown', 'keydown', 'scroll', 'touchstart'] as const
+
+/**
+ * Runs `work` on the visitor's first movement, or after `fallbackMs` once the
+ * page has loaded, whichever comes first. Returns a function that cancels it.
+ */
+export function onFirstInteraction(work: () => void, fallbackMs = 3000): () => void {
+  let done = false
+  let timer: number | undefined
+  const fire = () => {
+    if (done) return
+    done = true
+    stop()
+    work()
+  }
+  const stop = () => {
+    for (const type of INTERACTIONS) window.removeEventListener(type, fire)
+    if (timer !== undefined) window.clearTimeout(timer)
+    window.removeEventListener('load', arm)
+  }
+  const arm = () => {
+    if (!done) timer = window.setTimeout(fire, fallbackMs)
+  }
+  for (const type of INTERACTIONS) window.addEventListener(type, fire, { passive: true, once: true })
+  if (document.readyState === 'complete') arm()
+  else window.addEventListener('load', arm, { once: true })
+  return () => {
+    done = true
+    stop()
+  }
+}

@@ -88,8 +88,8 @@ def fit(image: Image.Image, width: int) -> Image.Image:
 name.save("public/logo-name.webp", "WEBP", lossless=True)  # hero title, up to 460px wide (2x = 920)
 fit(mark, 136).save("public/logo-mark-small.webp", "WEBP", lossless=True)  # hero stamp, 68px
 fit(mark, 136).save("public/logo-mark-small.png", optimize=True)
-fit(full, 520).save("public/logo-wordmark-small.webp", "WEBP", lossless=True)  # splash and footer, up to 260px
-fit(full, 520).save("public/logo-wordmark-small.png", optimize=True)
+fit(full, 640).save("public/logo-wordmark-small.webp", "WEBP", lossless=True)  # splash (up to 248px on 3x phones) and footer
+fit(full, 640).save("public/logo-wordmark-small.png", optimize=True)
 
 for name_, image in [("wordmark", full), ("mark", mark), ("name", name)]:
     print(name_, image.size)

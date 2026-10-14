@@ -21,8 +21,8 @@ export function Splash({ onDone }: Props) {
       />
       <div className="splash-lockup">
         <picture>
-          <source srcSet="/logo-wordmark-small.webp?v=4" type="image/webp" />
-          <img className="splash-mark" src="/logo-wordmark-small.png?v=4" alt="Bjorn’s Barber" width="520" height="500" />
+          <source srcSet="/logo-wordmark-small.webp?v=5" type="image/webp" />
+          <img className="splash-mark" src="/logo-wordmark-small.png?v=5" alt="Bjorn’s Barber" width="640" height="607" />
         </picture>
         <div className="splash-meet" />
       </div>
