@@ -31,6 +31,9 @@ body {
 button, input, select, textarea { font: inherit; color: inherit; }
 html { color-scheme: light; }
 img, video { max-width: 100%; display: block; }
+/* These logos sit in <picture> for WebP; the wrapper must not become a box, or the
+   image's max-width resolves against an empty shrink-to-fit parent and collapses to 0. */
+.splash-lockup picture, .hero picture, .footer-main picture { display: contents; }
 :focus-visible { outline: 2px solid var(--yellow); outline-offset: 3px; }
 .splash { position: fixed; inset: 0; z-index: 30; }
 .splash-curtain {
