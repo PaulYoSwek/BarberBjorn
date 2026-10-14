@@ -709,3 +709,37 @@ test('the last start that fits highlights the appointment all the way to closing
     vi.useRealTimers()
   }
 })
+
+test('a service added in the dashboard can be booked; a hidden one is not offered', async () => {
+  window.history.replaceState(null, '', '/?lang=nl')
+  localStorage.clear()
+  loadServices.mockResolvedValue([
+  { id: 'cut', price: '€27,50', minutes: 45, name: { nl: 'Knippen', en: 'Cut' }, detail: { nl: 'Haar', en: 'Hair' }, sort: 1, active: true },
+  { id: 'beard', price: '€20', minutes: 30, name: { nl: 'Baard', en: 'Beard' }, detail: { nl: '', en: '' }, sort: 2, active: true },
+  { id: 'both', price: '€35', minutes: 75, name: { nl: 'Knippen + baard', en: 'Cut + beard' }, detail: { nl: '', en: '' }, sort: 3, active: true },
+  { id: 'kids', price: '€15', minutes: 30, name: { nl: 'Kinderen knippen', en: 'Kids cut' }, detail: { nl: 'Tot 12 jaar', en: 'Up to 12' }, sort: 4, active: true },
+  { id: 'old', price: '€99', minutes: 60, name: { nl: 'Oude dienst', en: '' }, detail: { nl: '', en: '' }, sort: 5, active: false },
+])
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-05T12:00:00'))
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  try {
+    render(
+      <LanguageProvider>
+        <BookingForm />
+      </LanguageProvider>,
+    )
+    const kids = await screen.findByRole('button', { name: 'Kinderen knippen' })
+    expect(screen.queryByRole('button', { name: 'Oude dienst' })).not.toBeInTheDocument()
+    await user.click(kids)
+    expect(screen.getByTestId('booking-summary')).toHaveTextContent('Kinderen knippen · 30 min')
+    await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
+    await user.type(screen.getByLabelText('Naam'), 'Sam')
+    await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
+    await user.type(screen.getByLabelText('Telefoon'), '06 12345678')
+    await user.click(screen.getByRole('button', { name: 'Boeken' }))
+    expect(submitBook).toHaveBeenCalledWith(expect.objectContaining({ service: 'kids', slot: '2026-10-06T09:00:00' }))
+  } finally {
+    vi.useRealTimers()
+  }
+})

@@ -4,8 +4,9 @@ import { beforeEach, expect, test, vi } from 'vitest'
 import { defaultSchedule } from '../../schedule'
 import { AdminShell } from './AdminShell'
 
-const { loadServices, saveServices, loadTemplates, saveTemplates, loadInbox, loadPublicSchedule } = vi.hoisted(() => ({
+const { loadServices, saveServices, deleteService, loadTemplates, saveTemplates, loadInbox, loadPublicSchedule } = vi.hoisted(() => ({
   loadServices: vi.fn(),
+  deleteService: vi.fn(),
   saveServices: vi.fn(),
   loadTemplates: vi.fn(),
   saveTemplates: vi.fn(),
@@ -19,6 +20,7 @@ vi.mock('../../planning-api', async (importOriginal) => {
     ...actual,
     loadServices,
     saveServices,
+    deleteService,
     loadTemplates,
     saveTemplates,
     loadInbox,
@@ -44,6 +46,8 @@ const templates = [
 beforeEach(() => {
   loadServices.mockReset()
   saveServices.mockReset()
+  deleteService.mockReset()
+  deleteService.mockResolvedValue({ ok: true, hidden: true })
   loadTemplates.mockReset()
   saveTemplates.mockReset()
   loadInbox.mockReset()
@@ -69,9 +73,9 @@ test('changing cut minutes to 50 snaps to 45 and saving calls saveServices', asy
   await userEvent.type(price, '€32')
   await userEvent.click(screen.getByRole('button', { name: 'Opslaan' }))
   expect(saveServices).toHaveBeenCalledWith([
-    { id: 'cut', price: '€32', minutes: 45 },
-    { id: 'beard', price: '€15', minutes: 30 },
-    { id: 'both', price: '€40', minutes: 75 },
+    expect.objectContaining({ id: 'cut', price: '€32', minutes: 45, name: { nl: 'Knippen', en: 'Cut' }, sort: 1, active: true }),
+    expect.objectContaining({ id: 'beard', price: '€15', minutes: 30, sort: 2 }),
+    expect.objectContaining({ id: 'both', price: '€40', minutes: 75, sort: 3 }),
   ])
 })
 
@@ -112,4 +116,62 @@ test('a failed template load does not save seed templates', async () => {
   await userEvent.click(await screen.findByRole('button', { name: 'Opslaan' }))
   await waitFor(() => expect(saveServices).toHaveBeenCalled())
   expect(saveTemplates).not.toHaveBeenCalled()
+})
+
+test('a new service gets an id from its name and is saved after the others', async () => {
+  const user = userEvent.setup()
+  render(<AdminShell />)
+  await user.click(screen.getByRole('button', { name: 'Settings' }))
+  await user.click(await screen.findByRole('button', { name: '+ Dienst toevoegen' }))
+  await user.type(screen.getByLabelText('Nieuwe dienst naam'), 'Kinderen knippen')
+  await user.type(screen.getByLabelText('Kinderen knippen omschrijving'), 'Tot 12 jaar')
+  await user.type(screen.getByLabelText('Kinderen knippen prijs'), '17,5')
+  await user.tab()
+  expect(screen.getByLabelText('Kinderen knippen prijs')).toHaveValue('€17,50')
+  await user.clear(screen.getByLabelText('Kinderen knippen minuten'))
+  await user.type(screen.getByLabelText('Kinderen knippen minuten'), '20')
+  // Hide beard from the site.
+  await user.click(screen.getByLabelText('Baard zichtbaar op de website'))
+  await user.click(screen.getByRole('button', { name: 'Opslaan' }))
+  const saved = saveServices.mock.calls[0][0]
+  expect(saved).toHaveLength(4)
+  expect(saved[1]).toMatchObject({ id: 'beard', active: false })
+  expect(saved[3]).toEqual({
+    id: 'kinderen-knippen',
+    price: '€17,50',
+    minutes: 15,
+    name: { nl: 'Kinderen knippen', en: '' },
+    detail: { nl: 'Tot 12 jaar', en: '' },
+    sort: 4,
+    active: true,
+  })
+  expect(await screen.findByRole('status')).toHaveTextContent('Opgeslagen.')
+})
+
+test('a service without a name or price is not saved', async () => {
+  const user = userEvent.setup()
+  render(<AdminShell />)
+  await user.click(screen.getByRole('button', { name: 'Settings' }))
+  await user.click(await screen.findByRole('button', { name: '+ Dienst toevoegen' }))
+  await user.click(screen.getByRole('button', { name: 'Opslaan' }))
+  expect(screen.getByRole('alert')).toHaveTextContent('Geef elke dienst een naam.')
+  expect(saveServices).not.toHaveBeenCalled()
+})
+
+test('services can be reordered and a used one is hidden instead of deleted', async () => {
+  const user = userEvent.setup()
+  render(<AdminShell />)
+  await user.click(screen.getByRole('button', { name: 'Settings' }))
+  await user.click(await screen.findByRole('button', { name: 'Knippen + baard omhoog' }))
+  await user.click(screen.getByRole('button', { name: 'Knippen verwijderen' }))
+  await user.click(screen.getByRole('button', { name: 'Echt verwijderen' }))
+  expect(deleteService).toHaveBeenCalledWith('cut')
+  expect(await screen.findByRole('status')).toHaveTextContent('Knippen staat op afspraken en is daarom verborgen')
+  expect(screen.getByLabelText('Knippen zichtbaar op de website')).not.toBeChecked()
+  await user.click(screen.getByRole('button', { name: 'Opslaan' }))
+  expect(saveServices.mock.calls[0][0].map((item: { id: string; sort: number }) => [item.id, item.sort])).toEqual([
+    ['cut', 1],
+    ['both', 2],
+    ['beard', 3],
+  ])
 })

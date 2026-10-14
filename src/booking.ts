@@ -1,4 +1,5 @@
-import type { Copy, ServiceId } from './content.ts'
+import { copy, type Copy, type ServiceId } from './content.ts'
+import { SERVICE_ID, serviceLabel } from './service-catalog.ts'
 import { agendaDays, type Schedule } from './schedule.ts'
 
 export type BookingKind = 'slot' | 'custom'
@@ -18,8 +19,9 @@ export type BookingResult =
   | { ok: true; subject: string; body: string }
   | { ok: false; errors: Partial<Record<Field, string>> }
 
+/** A well-formed id; the server checks that the service is actually offered. */
 function isService(value: string): value is ServiceId {
-  return value === 'cut' || value === 'beard' || value === 'both'
+  return SERVICE_ID.test(value)
 }
 
 const SLOT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/
@@ -67,7 +69,7 @@ export function validateBooking(
 
   if (Object.keys(errors).length > 0) return { ok: false, errors }
 
-  const serviceName = t.services.find((item) => item.id === input.service)?.name ?? ''
+  const serviceName = serviceLabel(input.service, t === copy.en ? 'en' : 'nl')
   const lines = [
     `${t.serviceLabel}: ${serviceName}`,
     `${t.nameLabel}: ${input.name.trim()}`,

@@ -4,7 +4,7 @@ import { copy, type Lang } from '../../../src/content.ts'
 export type BookingBody = BookingInput & { lang: Lang }
 
 function isService(value: unknown): value is BookingInput['service'] {
-  return value === 'cut' || value === 'beard' || value === 'both' || value === ''
+  return typeof value === 'string' && (value === '' || /^[a-z0-9-]{1,40}$/.test(value))
 }
 
 export function parseBooking(value: unknown, kind: BookingInput['kind']): BookingBody | null {

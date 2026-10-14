@@ -7,7 +7,7 @@ import { serviceClient } from '../_shared/db.ts'
 import { json, readJson, rejectUnlessSession, servePost } from '../_shared/http.ts'
 
 const WEEKDAYS: Weekday[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
-const SERVICES = new Set(['cut', 'beard', 'both'])
+const SERVICE_ID = /^[a-z0-9-]{1,40}$/
 const TEMPLATE_KEYS = new Set<string>(MAIL_KEYS)
 const LANGS = new Set(['nl', 'en'])
 const CLOCK = /^\d{2}:\d{2}$/
@@ -227,21 +227,53 @@ servePost(async (req) => {
     const rows = []
     for (const item of record.services) {
       if (!item || typeof item !== 'object') return json(req, 400, { ok: false, error: 'invalid' })
-      const service = item as { id?: unknown; price?: unknown; minutes?: unknown }
-      if (typeof service.id !== 'string' || !SERVICES.has(service.id)) return json(req, 400, { ok: false, error: 'invalid' })
+      const service = item as Record<string, unknown> & { id?: unknown; price?: unknown; minutes?: unknown }
+      if (typeof service.id !== 'string' || !SERVICE_ID.test(service.id)) return json(req, 400, { ok: false, error: 'invalid' })
       if (typeof service.price !== 'string' || !service.price.trim()) return json(req, 400, { ok: false, error: 'invalid' })
       if (typeof service.minutes !== 'number' || !Number.isInteger(service.minutes) || service.minutes <= 0 || service.minutes > 480) {
         return json(req, 400, { ok: false, error: 'invalid' })
       }
       // The agenda runs in quarter-hours, so every length must be a whole number of them.
       if (service.minutes % 15 !== 0) return json(req, 400, { ok: false, error: 'minutes' })
-      rows.push({ id: service.id, price: euroPrice(service.price.trim()), minutes: service.minutes })
+      const row: Record<string, unknown> = { id: service.id, price: euroPrice(service.price.trim()), minutes: service.minutes }
+      // Names, description, order and visibility are optional, so an older dashboard still saves prices.
+      for (const [key, max] of [['name_nl', 60], ['name_en', 60], ['detail_nl', 120], ['detail_en', 120]] as const) {
+        if (service[key] === undefined) continue
+        if (typeof service[key] !== 'string') return json(req, 400, { ok: false, error: 'invalid' })
+        row[key] = (service[key] as string).trim().slice(0, max)
+      }
+      if (service.name_nl !== undefined && !row.name_nl) return json(req, 400, { ok: false, error: 'name' })
+      if (service.sort !== undefined) {
+        if (typeof service.sort !== 'number' || !Number.isInteger(service.sort)) return json(req, 400, { ok: false, error: 'invalid' })
+        row.sort = service.sort
+      }
+      if (service.active !== undefined) {
+        if (typeof service.active !== 'boolean') return json(req, 400, { ok: false, error: 'invalid' })
+        row.active = service.active
+      }
+      rows.push(row)
     }
     if (rows.length > 0) {
       const saved = await db.from('services').upsert(rows)
       if (saved.error) throw new Error(saved.error.message)
     }
     return json(req, 200, { ok: true })
+  }
+
+  if (record.type === 'serviceDelete') {
+    const id = typeof record.id === 'string' ? record.id : ''
+    if (!SERVICE_ID.test(id)) return json(req, 400, { ok: false, error: 'invalid' })
+    // A service on appointments keeps its row (hidden), so those appointments keep their name and price.
+    const used = await db.from('bookings').select('id', { count: 'exact', head: true }).eq('service', id)
+    if (used.error) throw new Error(used.error.message)
+    if ((used.count ?? 0) > 0) {
+      const hidden = await db.from('services').update({ active: false }).eq('id', id)
+      if (hidden.error) throw new Error(hidden.error.message)
+      return json(req, 200, { ok: true, hidden: true })
+    }
+    const removed = await db.from('services').delete().eq('id', id)
+    if (removed.error) throw new Error(removed.error.message)
+    return json(req, 200, { ok: true, hidden: false })
   }
 
   if (record.type === 'templates') {

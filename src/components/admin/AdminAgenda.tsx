@@ -13,7 +13,6 @@ import {
   type ScheduleBlock,
   type Weekday,
 } from '../../schedule'
-import type { ServiceId } from '../../content'
 import { serviceName } from './admin-defaults'
 import { AdminPlan, type PlanCheck } from './AdminPlan'
 
@@ -164,14 +163,13 @@ const STATUS_LABEL: Record<InboxRow['status'], string> = {
 
 type Props = {
   clients?: InboxRow[]
-  prices?: Partial<Record<ServiceId, string>>
   onBooked?: (row: InboxRow) => void
 }
 
 /** What a tap on a free quarter-hour does. */
 type Mode = 'shut' | 'plan'
 
-export function AdminAgenda({ clients = [], prices, onBooked }: Props) {
+export function AdminAgenda({ clients = [], onBooked }: Props) {
   const people = clients
   const [cloud, setCloud] = useState<Schedule>(defaultSchedule)
   const [edition, setEdition] = useState(0)
@@ -624,8 +622,6 @@ export function AdminAgenda({ clients = [], prices, onBooked }: Props) {
           date={plan.date}
           time={plan.time}
           stamp={plan.stamp}
-          minutes={view.minutes}
-          prices={prices}
           people={people}
           check={planCheck}
           onClose={() => setPlan(null)}

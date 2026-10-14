@@ -5,6 +5,7 @@ import { MAIL_KEYS, type MailKey } from './mail-templates'
 import type { BlockPattern } from './planning'
 import type { OrderItem, Product } from './finance'
 import type { Lang, ServiceId } from './content'
+import { completeService, SERVICE_ID, type ServiceInfo } from './service-catalog'
 import {
   AGENDA_DAYS,
   dateIso,
@@ -50,6 +51,12 @@ type ServiceRow = {
   id: string
   price: string
   minutes: number
+  name_nl?: string | null
+  name_en?: string | null
+  detail_nl?: string | null
+  detail_en?: string | null
+  sort?: number | null
+  active?: boolean | null
 }
 
 function isWeekday(value: string): value is Weekday {
@@ -57,7 +64,7 @@ function isWeekday(value: string): value is Weekday {
 }
 
 function isServiceId(value: string): value is ServiceId {
-  return value === 'cut' || value === 'beard' || value === 'both'
+  return SERVICE_ID.test(value)
 }
 
 function dayHours(row: { closed: boolean; open: string | null; close: string | null }): DayHours {
@@ -171,12 +178,18 @@ export async function loadPublicSchedule(): Promise<Schedule> {
 
 export async function loadServices(): Promise<ServiceSave[]> {
   if (!supabase) return []
-  const rows = await read<ServiceRow>('services', 'id, price, minutes')
-  return rows.filter(isServiceRow).map((row) => ({
-    id: row.id,
-    price: row.price,
-    minutes: row.minutes,
-  }))
+  const rows = await read<ServiceRow>('services', 'id, price, minutes, name_nl, name_en, detail_nl, detail_en, sort, active')
+  return rows.filter(isServiceRow).map((row) =>
+    completeService({
+      id: row.id,
+      price: row.price,
+      minutes: row.minutes,
+      name: { nl: row.name_nl ?? '', en: row.name_en ?? '' },
+      detail: { nl: row.detail_nl ?? '', en: row.detail_en ?? '' },
+      sort: row.sort ?? undefined,
+      active: row.active ?? true,
+    }),
+  )
 }
 
 function isServiceRow(row: ServiceRow): row is ServiceRow & { id: ServiceId } {
@@ -298,7 +311,7 @@ export type InboxRow = {
   items: OrderItem[]
 }
 
-export type ServiceSave = { id: ServiceId; price: string; minutes: number }
+export type ServiceSave = ServiceInfo
 
 export type TemplateKey = MailKey
 export type TemplateLang = 'nl' | 'en'
@@ -445,7 +458,34 @@ export function sendClientMail(
 }
 
 export function saveServices(services: ServiceSave[]) {
-  return invokeOk('admin-write', { type: 'services', services })
+  return invokeOk('admin-write', {
+    type: 'services',
+    services: services.map((item) => ({
+      id: item.id,
+      price: item.price,
+      minutes: item.minutes,
+      name_nl: item.name.nl,
+      name_en: item.name.en,
+      detail_nl: item.detail.nl,
+      detail_en: item.detail.en,
+      sort: item.sort,
+      active: item.active,
+    })),
+  })
+}
+
+/** Remove a service. One that is on bookings is hidden instead, so old appointments keep their name. */
+export async function deleteService(id: ServiceId): Promise<{ ok: true; hidden: boolean } | { ok: false; error: string }> {
+  if (!supabase) return { ok: false, error: 'offline' }
+  try {
+    const { data, error } = await supabase.functions.invoke('admin-write', { body: { type: 'serviceDelete', id } })
+    const failed = failurePayload(data)
+    if (failed) return { ok: false, error: failed }
+    if (error) return { ok: false, error: await invokeDetail(error) }
+    return { ok: true, hidden: Boolean(data && typeof data === 'object' && (data as { hidden?: unknown }).hidden === true) }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'offline' }
+  }
 }
 
 export function saveTemplates(templates: TemplateSave[]) {

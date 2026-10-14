@@ -240,7 +240,7 @@ export function reportCsv(
         booking.start.slice(11, 16),
         booking.name,
         booking.email,
-        serviceNames[booking.service],
+        serviceNames[booking.service] ?? booking.service,
         money.serviceList,
         money.servicePrice,
         products,

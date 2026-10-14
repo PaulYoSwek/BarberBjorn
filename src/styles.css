@@ -212,7 +212,7 @@ img, video { max-width: 100%; display: block; }
 .booking-top p { margin: 0; max-width: 42ch; }
 .booking-services {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--service-cols, 3), minmax(0, 1fr));
   gap: 8px;
   width: 100%;
   position: relative;
@@ -1116,7 +1116,19 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
 .footer-instagram svg { width: 20px; height: 20px; flex: 0 0 auto; color: var(--yellow); }
 .footer-instagram:hover svg { color: #ffd21a; }
 
-.plates strong.is-loading { visibility: hidden; }
+.plates.is-loading { visibility: hidden; }
+.services-more {
+  list-style: none; margin: 28px 0 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 10px;
+}
+.services-more li {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 16px 18px; background: var(--paper); color: var(--text);
+  box-shadow: inset 4px 0 0 var(--yellow);
+}
+.services-more h3 { margin: 0; font-family: var(--font-display); font-size: 1.15rem; font-weight: 500; letter-spacing: -0.02em; }
+.services-more p { margin: 4px 0 0; font-weight: 300; opacity: 0.72; font-size: 0.92rem; }
+.services-more strong { font-family: var(--font-display); font-size: 1.9rem; letter-spacing: -0.04em; white-space: nowrap; }
 
 .admin-mode { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600; color: #5c574e; }
 .admin-mode span { margin-right: 4px; }
@@ -1150,3 +1162,28 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
 .admin-plan-actions button { min-height: 44px; padding: 0 16px; border: 1px solid #101010; background: #fff; font-weight: 700; width: auto; }
 .admin-plan-actions .admin-plan-go { background: #f5c400; }
 .admin-plan-actions button:disabled { opacity: 0.5; }
+
+.admin-section-title { margin: 8px 0 0; font-size: 1.1rem; }
+.admin-services { display: grid; gap: 12px; }
+.admin-services .admin-hint { margin: 0; }
+.admin-service-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; }
+@media (max-width: 640px) { .admin-service-grid { grid-template-columns: minmax(0, 1fr); } }
+.admin-service.is-hidden { opacity: 0.6; }
+.admin-service legend { display: flex; align-items: center; gap: 8px; }
+.admin-service-tag {
+  font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  background: #101010; color: #f4f1ea; padding: 2px 6px;
+}
+.admin-service-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.admin-service-actions .admin-check { display: flex; align-items: center; gap: 8px; margin-right: auto; font-weight: 600; }
+.admin-check input { width: 18px; height: 18px; min-height: 0; accent-color: #101010; }
+.admin-service-actions button {
+  min-height: 40px; min-width: 40px; width: auto; padding: 0 12px;
+  border: 1px solid #2a2a2a; background: #fff; font-weight: 600;
+}
+.admin-service-actions button:disabled { opacity: 0.35; }
+.admin-service-actions button.is-danger { background: #8c1d18; border-color: #8c1d18; color: #fff; }
+.admin-add-service {
+  justify-self: start; width: auto; min-height: 44px; padding: 0 16px;
+  border: 1px dashed #101010; background: #fbf3cc; font-weight: 700;
+}

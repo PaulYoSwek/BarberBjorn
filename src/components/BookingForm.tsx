@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import { todayIso, validateBooking, type BookingInput } from '../booking'
 import { copy, type ServiceId } from '../content'
+import { completeService, offered, SEED_SERVICES, setServiceCatalog, type ServiceInfo } from '../service-catalog'
 import { useLang } from '../language'
 import { setOpeningHours } from '../seo'
 import {
@@ -14,6 +15,7 @@ import {
   agendaDays,
   defaultSchedule,
   firstBookableWeek,
+  DEFAULT_MINUTES,
   SERVICE_MINUTES,
   spanStarts,
   type AgendaDay,
@@ -98,6 +100,7 @@ export function BookingForm() {
   const [submitError, setSubmitError] = useState('')
   const [schedule, setSchedule] = useState<Schedule>(defaultSchedule)
   const [minutes, setMinutes] = useState<Record<ServiceId, number> | null>(null)
+  const [services, setServices] = useState<ServiceInfo[]>(SEED_SERVICES)
   const [customDate, setCustomDate] = useState('')
   const [customTime, setCustomTime] = useState('')
   const inputRef = useRef(input)
@@ -143,8 +146,10 @@ export function BookingForm() {
     loadServices()
       .then((rows) => {
         if (cancelled || rows.length === 0) return
-        const next = { ...SERVICE_MINUTES }
+        const next: Record<ServiceId, number> = {}
         for (const row of rows) next[row.id] = row.minutes
+        setServiceCatalog(rows)
+        setServices(rows.map(completeService))
         setMinutes(next)
       })
       .catch(() => {})
@@ -167,6 +172,15 @@ export function BookingForm() {
     }),
     [schedule, minutes],
   )
+  const choices = useMemo(() => offered(services), [services])
+
+  // The chosen service was hidden or removed in the dashboard: fall back to one that is offered.
+  useEffect(() => {
+    if (choices.length === 0 || choices.some((item) => item.id === input.service)) return
+    const next = choices.find((item) => item.id === 'both') ?? choices[0]
+    setInput((current) => ({ ...current, service: next.id, slot: current.kind === 'slot' ? '' : current.slot }))
+  }, [choices, input.service])
+
   const days = useMemo(
     () => agendaDays(input.service, new Date(), agendaExtra),
     [input.service, agendaExtra],
@@ -250,7 +264,7 @@ export function BookingForm() {
       setStatus(input.kind === 'custom' ? 'request' : 'book')
       setLatched(true)
       if (input.kind === 'slot' && input.service) {
-        const holdMinutes = minutes?.[input.service] ?? SERVICE_MINUTES[input.service]
+        const holdMinutes = minutes?.[input.service] ?? SERVICE_MINUTES[input.service] ?? DEFAULT_MINUTES
         const hold = { start: input.slot, minutes: holdMinutes }
         sessionHolds.current = [...sessionHolds.current, hold]
         setSchedule((current) => ({
@@ -266,8 +280,8 @@ export function BookingForm() {
   }
 
   const service = input.service || 'both'
-  const duration = minutes?.[service] ?? SERVICE_MINUTES[service]
-  const serviceName = t.services.find((item) => item.id === service)?.name ?? ''
+  const duration = minutes?.[service] ?? SERVICE_MINUTES[service] ?? DEFAULT_MINUTES
+  const serviceName = choices.find((item) => item.id === service)?.name[lang] ?? ''
   const when = whenStamp(input.slot, days, t.days, t.monthShort, duration)
   // The cells an appointment would cover: the chosen start, or the start under the pointer.
   const covered = new Set(input.kind === 'slot' && input.slot ? spanStarts(input.slot, duration) : [])
@@ -280,20 +294,25 @@ export function BookingForm() {
           <p className="kicker">{t.bookKicker}</p>
           <h2>{t.bookTitle}</h2>
           <p>{t.bookIntro}</p>
-          <div className="booking-services" role="group" aria-label={t.serviceLabel}>
-            {t.services.map((item) => {
-              const mins = minutes?.[item.id] ?? SERVICE_MINUTES[item.id]
+          <div
+            className="booking-services"
+            role="group"
+            aria-label={t.serviceLabel}
+            style={{ '--service-cols': choices.length === 4 ? 2 : Math.min(3, Math.max(1, choices.length)) } as CSSProperties}
+          >
+            {choices.map((item) => {
+              const mins = minutes?.[item.id] ?? item.minutes
               const on = input.service === item.id
               return (
                 <button
                   key={item.id}
                   type="button"
-                  aria-label={item.name}
+                  aria-label={item.name[lang]}
                   aria-pressed={on}
                   className={on ? 'is-on' : undefined}
                   onClick={() => setService(item.id)}
                 >
-                  {item.name}
+                  {item.name[lang]}
                   <span aria-hidden="true">{mins} min</span>
                 </button>
               )

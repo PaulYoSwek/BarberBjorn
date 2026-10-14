@@ -43,25 +43,32 @@ const DAY_NAMES: Record<Weekday, string> = {
   sun: 'Sunday',
 }
 
-/** Rewrites the prices in the structured data to match the live services. */
-export function setOfferPrices(prices: Partial<Record<'cut' | 'beard' | 'both', string>>) {
+/** Rewrites the services and prices in the structured data to match what the site offers. */
+export function setOfferPrices(services: { price: string; minutes: number; name: { nl: string }; detail: { nl: string } }[]) {
   const script = document.getElementById('ld-business')
-  if (!script) return
+  if (!script || services.length === 0) return
   try {
     const data = JSON.parse(script.textContent || '{}') as {
       priceRange?: string
-      hasOfferCatalog?: { itemListElement?: { price?: string }[] }
+      hasOfferCatalog?: { itemListElement?: unknown[] }
     }
-    const order = ['cut', 'beard', 'both'] as const
-    const values = order.map((id) => {
-      const cleaned = (prices[id] ?? '').replace(/[^\d,.]/g, '').replace(',', '.')
+    const values = services.map((item) => {
+      const cleaned = item.price.replace(/[^\d,.]/g, '').replace(',', '.')
       const value = Number(cleaned)
       return cleaned && Number.isFinite(value) ? value : null
     })
-    const offers = data.hasOfferCatalog?.itemListElement ?? []
-    values.forEach((value, index) => {
-      if (value !== null && offers[index]) offers[index].price = value.toFixed(2)
-    })
+    if (data.hasOfferCatalog) {
+      data.hasOfferCatalog.itemListElement = services.map((item, index) => ({
+        '@type': 'Offer',
+        ...(values[index] !== null ? { price: (values[index] as number).toFixed(2) } : {}),
+        priceCurrency: 'EUR',
+        itemOffered: {
+          '@type': 'Service',
+          name: item.name.nl,
+          description: [item.detail.nl, `${item.minutes} minuten`].filter(Boolean).join('. ') + '.',
+        },
+      }))
+    }
     const known = values.filter((value): value is number => value !== null)
     if (known.length > 0) {
       const euro = (value: number) => `€${Number.isInteger(value) ? value : value.toFixed(2).replace('.', ',')}`

@@ -21,10 +21,11 @@ import { serviceName } from './admin-defaults'
 
 type Props = { rows: InboxRow[]; prices: Partial<Record<ServiceId, string>> }
 
-const SERVICE_NAMES: Record<ServiceId, string> = {
-  cut: serviceName('cut'),
-  beard: serviceName('beard'),
-  both: serviceName('both'),
+/** Every service name by id, including ones Bjorn added or hid. */
+function serviceNames(rows: { service: ServiceId }[]): Record<ServiceId, string> {
+  const names: Record<ServiceId, string> = {}
+  for (const row of rows) names[row.service] = serviceName(row.service)
+  return names
 }
 
 function monthLabel(month: string): string {
@@ -113,7 +114,7 @@ export function AdminFinance({ rows, prices }: Props) {
 
   function exportCsv() {
     const slug = period.kind === 'all' ? 'alles' : period.kind === 'year' ? period.year : period.month
-    download(`omzet-bjorns-barber-${slug}.csv`, reportCsv(inRange as Billable[], prices, SERVICE_NAMES))
+    download(`omzet-bjorns-barber-${slug}.csv`, reportCsv(inRange as Billable[], prices, serviceNames(inRange)))
   }
 
   return (
@@ -276,7 +277,7 @@ export function AdminFinance({ rows, prices }: Props) {
                   </td>
                   <td>{row.name}</td>
                   <td>
-                    {SERVICE_NAMES[row.service]} {formatMoney(money.servicePrice)}
+                    {serviceName(row.service)} {formatMoney(money.servicePrice)}
                   </td>
                   <td>
                     {(row.items ?? []).length === 0

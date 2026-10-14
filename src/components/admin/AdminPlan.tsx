@@ -2,10 +2,8 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { euroLabel } from '../../clients'
 import type { ServiceId } from '../../content'
 import { adminBook, type InboxRow } from '../../planning-api'
-import { SERVICE_MINUTES, SLOT_MINUTES } from '../../schedule'
-import { serviceName } from './admin-defaults'
-
-const SERVICES: ServiceId[] = ['cut', 'beard', 'both']
+import { SLOT_MINUTES } from '../../schedule'
+import { offered, serviceCatalog } from '../../service-catalog'
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 /** What lies under an appointment from a start time on, as the agenda shows it. */
@@ -16,8 +14,6 @@ type Props = {
   time: string
   /** Long weekday label, e.g. "di 13 okt". */
   stamp: string
-  minutes?: Partial<Record<ServiceId, number>>
-  prices?: Partial<Record<ServiceId, string>>
   people: InboxRow[]
   check: (date: string, time: string, minutes: number) => PlanCheck
   onClose: () => void
@@ -54,8 +50,9 @@ function knownPeople(people: InboxRow[]): InboxRow[] {
   return list
 }
 
-export function AdminPlan({ date, time, stamp, minutes, prices, people, check, onClose, onBooked }: Props) {
-  const [service, setService] = useState<ServiceId>('cut')
+export function AdminPlan({ date, time, stamp, people, check, onClose, onBooked }: Props) {
+  const services = offered(serviceCatalog())
+  const [service, setService] = useState<ServiceId>(services[0]?.id ?? 'cut')
   const [start, setStart] = useState(time)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -75,7 +72,8 @@ export function AdminPlan({ date, time, stamp, minutes, prices, people, check, o
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  const length = minutes?.[service] ?? SERVICE_MINUTES[service]
+  const chosen = services.find((item) => item.id === service) ?? services[0]
+  const length = chosen?.minutes ?? 30
   const under = check(date, start, length)
   const emailOk = !email.trim() || EMAIL.test(email.trim())
 
@@ -119,7 +117,7 @@ export function AdminPlan({ date, time, stamp, minutes, prices, people, check, o
       status: 'confirmed',
       lang: 'nl',
       mail_sent: result.sent,
-      price: prices?.[service] ?? null,
+      price: chosen?.price ?? null,
       charged: null,
       items: [],
     })
@@ -138,10 +136,9 @@ export function AdminPlan({ date, time, stamp, minutes, prices, people, check, o
         <label>
           Dienst
           <select ref={first} value={service} onChange={(event) => setService(event.target.value as ServiceId)}>
-            {SERVICES.map((id) => (
-              <option key={id} value={id}>
-                {serviceName(id)} · {minutes?.[id] ?? SERVICE_MINUTES[id]} min
-                {prices?.[id] ? ` · ${euroLabel(prices[id] as string)}` : ''}
+            {services.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name.nl} · {item.minutes} min · {euroLabel(item.price)}
               </option>
             ))}
           </select>

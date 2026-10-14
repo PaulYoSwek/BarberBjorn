@@ -1,6 +1,8 @@
 import type { ServiceId } from '../../../src/content.ts'
+import { SERVICE_ID } from '../../../src/service-catalog.ts'
 import {
   dateIso,
+  DEFAULT_MINUTES,
   defaultSchedule,
   SERVICE_MINUTES,
   type DayHours,
@@ -39,15 +41,12 @@ type WeekRow = { weekday: string; closed: boolean; open: string | null; close: s
 type ExceptionRow = { date: string; closed: boolean; open: string | null; close: string | null }
 type BlockRow = { date: string; time: string | null }
 type HoldRow = { id: string; start: string; minutes: number }
-type ServiceRow = { id: string; minutes: number }
+type ServiceRow = { id: string; minutes: number; active?: boolean | null }
 
 function isWeekday(value: string): value is Weekday {
   return (WEEKDAYS as readonly string[]).includes(value)
 }
 
-function isServiceId(value: string): value is ServiceId {
-  return value === 'cut' || value === 'beard' || value === 'both'
-}
 
 function dayHours(row: WeekRow): DayHours {
   if (row.closed || !row.open || !row.close) return { closed: true }
@@ -65,7 +64,7 @@ export async function loadSchedule(db: Db, exceptId?: string): Promise<Schedule>
     db.from('schedule_week').select('weekday, closed, open, close'),
     readBlocks(db),
     db.from('bookings').select('id, start, minutes').eq('status', 'confirmed'),
-    db.from('services').select('id, minutes'),
+    db.from('services').select('id, minutes, active'),
     db.from('schedule_exceptions').select('date, closed, open, close'),
   ])
   if (weekRes.error) throw new Error(weekRes.error.message)
@@ -84,9 +83,12 @@ export async function loadSchedule(db: Db, exceptId?: string): Promise<Schedule>
     exceptions[String(row.date).slice(0, 10)] = dayHours({ ...row, weekday: '' })
   }
 
-  const minutes = { ...SERVICE_MINUTES }
-  for (const row of (serviceRes.data ?? []) as ServiceRow[]) {
-    if (isServiceId(row.id) && Number.isFinite(row.minutes) && row.minutes > 0) minutes[row.id] = row.minutes
+  // Only services that are offered: a hidden one cannot be booked.
+  const serviceRows = (serviceRes.data ?? []) as ServiceRow[]
+  const minutes: Record<ServiceId, number> = serviceRows.length > 0 ? {} : { ...SERVICE_MINUTES }
+  for (const row of serviceRows) {
+    if (row.active === false || !SERVICE_ID.test(row.id)) continue
+    if (Number.isFinite(row.minutes) && row.minutes > 0) minutes[row.id] = row.minutes
   }
 
   const bookings = ((holdRes.data ?? []) as HoldRow[])
@@ -106,5 +108,10 @@ export async function loadSchedule(db: Db, exceptId?: string): Promise<Schedule>
 }
 
 export function serviceMinutes(schedule: Schedule, service: ServiceId): number {
-  return schedule.minutes?.[service] ?? SERVICE_MINUTES[service]
+  return schedule.minutes?.[service] ?? SERVICE_MINUTES[service] ?? DEFAULT_MINUTES
+}
+
+/** The service exists and is not hidden. */
+export function offersService(schedule: Schedule, service: string): service is ServiceId {
+  return Boolean(service) && Object.prototype.hasOwnProperty.call(schedule.minutes ?? {}, service)
 }

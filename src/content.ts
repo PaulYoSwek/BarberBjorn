@@ -1,5 +1,6 @@
 export type Lang = 'nl' | 'en'
-export type ServiceId = 'cut' | 'beard' | 'both'
+/** cut, beard and both are built in; Bjorn can add his own from the dashboard. */
+export type ServiceId = string
 
 export type Copy = {
   seoTitle: string

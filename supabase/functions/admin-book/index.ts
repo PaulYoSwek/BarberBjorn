@@ -4,16 +4,10 @@ import { confirmedOverlaps, lostOverlapRace } from '../_shared/holds.ts'
 import { json, readJson, rejectUnlessSession, servePost } from '../_shared/http.ts'
 import { sendBookingMail } from '../_shared/notify.ts'
 import { salonNow, salonWallToUtc } from '../_shared/salon.ts'
-import { loadSchedule, serviceMinutes } from '../_shared/schedule.ts'
+import { loadSchedule, offersService, serviceMinutes } from '../_shared/schedule.ts'
 
 const WALL = /^\d{4}-\d{2}-\d{2}T\d{2}:(00|15|30|45):00$/
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
-type Service = 'cut' | 'beard' | 'both'
-
-function isService(value: unknown): value is Service {
-  return value === 'cut' || value === 'beard' || value === 'both'
-}
 
 function text(value: unknown, max: number): string {
   return typeof value === 'string' ? value.trim().slice(0, max) : ''
@@ -34,18 +28,19 @@ servePost(async (req) => {
   const body = await readJson(req)
   if (!body || typeof body !== 'object') return json(req, 400, { ok: false, error: 'invalid' })
   const record = body as Record<string, unknown>
-  const service = record.service
+  const service = typeof record.service === 'string' ? record.service : ''
   const start = typeof record.start === 'string' ? record.start : ''
   const name = text(record.name, 80)
   const email = text(record.email, 160)
   const phone = text(record.phone, 40)
   const mail = record.mail === true
-  if (!isService(service) || !WALL.test(start) || !name) return json(req, 400, { ok: false, error: 'invalid' })
+  if (!service || !WALL.test(start) || !name) return json(req, 400, { ok: false, error: 'invalid' })
   if (email && !EMAIL.test(email)) return json(req, 400, { ok: false, error: 'email' })
   if (start <= wallOf(salonNow())) return json(req, 400, { ok: false, error: 'past' })
 
   const db = serviceClient()
   const schedule = await loadSchedule(db)
+  if (!offersService(schedule, service)) return json(req, 400, { ok: false, error: 'service' })
   const minutes = serviceMinutes(schedule, service)
   if ((await confirmedOverlaps(db, '', start, minutes)).length > 0) {
     return json(req, 409, { ok: false, error: 'overlap' })

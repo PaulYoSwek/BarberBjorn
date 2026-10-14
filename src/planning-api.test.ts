@@ -110,7 +110,10 @@ test('maps live week blocks and occupancy into a schedule', async () => {
   expect(zoned?.start).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/)
   expect(new Date(zoned!.start).getTime()).toBe(new Date('2026-10-06T12:00:00Z').getTime())
   expect(schedule.bookings).not.toEqual(defaultSchedule.bookings)
-  expect(listed).toEqual(tables.services)
+  // Rows without names get the built-in texts.
+  expect(listed.map(({ id, price, minutes }) => ({ id, price, minutes }))).toEqual(tables.services)
+  expect(listed.map((item) => item.name.nl)).toEqual(['Knippen', 'Baard', 'Knippen + baard'])
+  expect(listed.every((item) => item.active)).toBe(true)
 })
 
 test('submit wrappers fail closed without a supabase client', async () => {
@@ -252,9 +255,36 @@ test('decide send and save invoke the admin edge functions', async () => {
   expect(invoke).toHaveBeenCalledWith('send-mail', {
     body: { id: 'b1', key: 'accepted', subject: 'S', body: 'B' },
   })
-  const services = [{ id: 'cut' as const, price: '€30', minutes: 50 }]
+  const services = [
+    {
+      id: 'kids',
+      price: '€20',
+      minutes: 30,
+      name: { nl: 'Kinderen', en: 'Kids' },
+      detail: { nl: 'Tot 12 jaar', en: '' },
+      sort: 4,
+      active: true,
+    },
+  ]
   expect(await api.saveServices(services)).toEqual({ ok: true })
-  expect(invoke).toHaveBeenCalledWith('admin-write', { body: { type: 'services', services } })
+  expect(invoke).toHaveBeenCalledWith('admin-write', {
+    body: {
+      type: 'services',
+      services: [
+        {
+          id: 'kids',
+          price: '€20',
+          minutes: 30,
+          name_nl: 'Kinderen',
+          name_en: 'Kids',
+          detail_nl: 'Tot 12 jaar',
+          detail_en: '',
+          sort: 4,
+          active: true,
+        },
+      ],
+    },
+  })
   const templates = [{ key: 'thanks' as const, lang: 'nl' as const, subject: 'S', body: 'B' }]
   expect(await api.saveTemplates(templates)).toEqual({ ok: true })
   expect(invoke).toHaveBeenCalledWith('admin-write', { body: { type: 'templates', templates } })
@@ -277,7 +307,7 @@ test('loadInbox invokes inbox-list and does not select bookings', async () => {
     },
     {
       id: '2',
-      service: 'nope',
+      service: 'Not a service!',
       name: 'X',
       email: 'x@mail.nl',
       phone: '',

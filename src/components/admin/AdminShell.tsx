@@ -3,6 +3,7 @@ import { templateFor } from '../../mail-templates'
 import type { OrderItem, Product } from '../../finance'
 import type { ServiceId } from '../../content'
 import { isUnauthorized, loadInbox, loadProducts, loadServices, type InboxRow, type TemplateKey } from '../../planning-api'
+import { setServiceCatalog } from '../../service-catalog'
 import { AdminAgenda } from './AdminAgenda'
 import { AdminClients } from './AdminClients'
 import { AdminFinance } from './AdminFinance'
@@ -116,16 +117,22 @@ export function AdminShell({ pending, onLogout }: Props) {
     setRows((current) => current.map((row) => (row.id === id ? { ...row, mail_sent: true } : row)))
   }
 
-  useEffect(() => {
-    pullInbox(true)
-    void pullProducts()
+  function pullServices() {
     loadServices()
       .then((services) => {
         const next: Partial<Record<ServiceId, string>> = {}
         for (const service of services) next[service.id] = service.price
+        // Names resolve everywhere in the dashboard from here on.
+        setServiceCatalog(services)
         setPrices(next)
       })
       .catch(() => {})
+  }
+
+  useEffect(() => {
+    pullInbox(true)
+    void pullProducts()
+    pullServices()
     const onVisible = () => {
       if (document.visibilityState === 'visible') pullInbox(false)
     }
@@ -184,7 +191,7 @@ export function AdminShell({ pending, onLogout }: Props) {
         </div>
       </header>
       <div className="admin-card">
-        {tab === 'agenda' ? <AdminAgenda clients={rows} prices={prices} onBooked={onBooked} /> : null}
+        {tab === 'agenda' ? <AdminAgenda clients={rows} onBooked={onBooked} /> : null}
         {tab === 'finance' ? <AdminFinance rows={rows} prices={prices} /> : null}
         {tab === 'products' ? (
           <AdminProducts products={products} ready={productsReady} loaded={productsLoaded} onChanged={pullProducts} />
@@ -209,7 +216,7 @@ export function AdminShell({ pending, onLogout }: Props) {
         ) : null}
         {tab === 'klanten' ? <AdminClients rows={rows} onDeleted={() => pullInbox(false)} /> : null}
         {tab === 'mail' ? <AdminMail rows={rows} clientId={mailClientId} templateKey={mailKey} onSent={markMailSent} /> : null}
-        {tab === 'settings' ? <AdminSettings /> : null}
+        {tab === 'settings' ? <AdminSettings onServicesSaved={pullServices} /> : null}
       </div>
     </div>
   )

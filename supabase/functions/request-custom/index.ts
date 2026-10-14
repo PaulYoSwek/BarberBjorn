@@ -1,15 +1,11 @@
 import { todayIso, validateBooking } from '../../../src/booking.ts'
-import { copy, type ServiceId } from '../../../src/content.ts'
+import { copy } from '../../../src/content.ts'
 import { insertBooking, rememberClient, servicePrice } from '../_shared/clients.ts'
 import { serviceClient } from '../_shared/db.ts'
 import { json, readJson, servePost } from '../_shared/http.ts'
 import { parseBooking, validationMessage } from '../_shared/input.ts'
 import { salonNow, salonWallToUtc } from '../_shared/salon.ts'
-import { loadSchedule, serviceMinutes } from '../_shared/schedule.ts'
-
-function isService(value: string): value is ServiceId {
-  return value === 'cut' || value === 'beard' || value === 'both'
-}
+import { loadSchedule, offersService, serviceMinutes } from '../_shared/schedule.ts'
 
 servePost(async (req) => {
   const input = parseBooking(await readJson(req), 'custom')
@@ -19,7 +15,7 @@ servePost(async (req) => {
   const schedule = await loadSchedule(db)
   const checked = validateBooking(input, copy[input.lang], todayIso(now), now, schedule)
   if (!checked.ok) return json(req, 400, { ok: false, error: validationMessage(checked.errors, input.lang) })
-  if (!isService(input.service)) return json(req, 400, { ok: false, error: copy[input.lang].fieldError })
+  if (!offersService(schedule, input.service)) return json(req, 400, { ok: false, error: copy[input.lang].fieldError })
   const inserted = await insertBooking(db, {
     service: input.service,
     price: await servicePrice(db, input.service),

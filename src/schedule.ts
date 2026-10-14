@@ -3,6 +3,9 @@ import type { ServiceId } from './content.ts'
 /** Every length is a whole number of quarter-hours. */
 export const SLOT_MINUTES = 15
 
+/** Length of a service the agenda knows nothing about yet. */
+export const DEFAULT_MINUTES = 30
+
 export const SERVICE_MINUTES: Record<ServiceId, number> = {
   cut: 45,
   beard: 30,
@@ -158,7 +161,8 @@ export function agendaDays(
     bookings: extra.bookings ?? [],
     minutes: extra.minutes,
   }
-  const minutes = (schedule.minutes ?? SERVICE_MINUTES)[service || 'cut']
+  const id = service || 'cut'
+  const minutes = schedule.minutes?.[id] ?? SERVICE_MINUTES[id] ?? DEFAULT_MINUTES
   // The grid works in whole cells, so a length off the grid rounds up to the next quarter-hour.
   const span = spanCells(minutes) * SLOT_MINUTES
   const today = dateIso(now)

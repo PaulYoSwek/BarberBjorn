@@ -1,12 +1,9 @@
-import { copy, type ServiceId } from '../../content'
+import type { ServiceId } from '../../content'
+import { completeService, SEED_SERVICES, serviceLabel, sortServices } from '../../service-catalog'
 import { MAIL_KEYS, MAIL_LABEL, MAIL_TEMPLATES } from '../../mail-templates'
 import type { ServiceSave, TemplateKey, TemplateLang, TemplateSave } from '../../planning-api'
 
-export const SERVICE_SEED: ServiceSave[] = [
-  { id: 'cut', price: '€30', minutes: 45 },
-  { id: 'beard', price: '€15', minutes: 30 },
-  { id: 'both', price: '€40', minutes: 75 },
-]
+export const SERVICE_SEED: ServiceSave[] = SEED_SERVICES
 
 export const TEMPLATE_KEYS: TemplateKey[] = MAIL_KEYS
 export const TEMPLATE_LABEL: Record<TemplateKey, string> = MAIL_LABEL
@@ -18,11 +15,13 @@ export const TEMPLATE_SEED: TemplateSave[] = MAIL_KEYS.flatMap((key) =>
 export const TEMPLATE_LANGS: TemplateLang[] = ['nl', 'en']
 
 export function serviceName(id: ServiceId): string {
-  return copy.nl.services.find((item) => item.id === id)?.name ?? id
+  return serviceLabel(id, 'nl')
 }
 
+/** The stored services in their order; the built-in three when nothing is stored yet. */
 export function withServiceDefaults(rows: ServiceSave[]): ServiceSave[] {
-  return SERVICE_SEED.map((seed) => rows.find((row) => row.id === seed.id) ?? seed)
+  if (rows.length === 0) return SERVICE_SEED
+  return sortServices(rows.map(completeService))
 }
 
 export function withTemplateDefaults(rows: TemplateSave[]): TemplateSave[] {
