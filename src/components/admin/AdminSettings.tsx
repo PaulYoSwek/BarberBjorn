@@ -7,6 +7,7 @@ import {
   type ServiceSave,
   type TemplateSave,
 } from '../../planning-api'
+import { euroLabel } from '../../clients'
 import {
   serviceName,
   TEMPLATE_SEED,
@@ -90,7 +91,11 @@ export function AdminSettings() {
     setDone(null)
     try {
       const jobs: Promise<{ ok: true } | { ok: false; error: string }>[] = []
-      const snapped = services.map((item) => ({ ...item, minutes: Math.max(15, Math.round(item.minutes / 15) * 15) }))
+      const snapped = services.map((item) => ({
+        ...item,
+        price: euroLabel(item.price.trim()),
+        minutes: Math.max(15, Math.round(item.minutes / 15) * 15),
+      }))
       if (servicesReady) {
         setServices(snapped)
         jobs.push(saveServices(snapped))
@@ -137,6 +142,7 @@ export function AdminSettings() {
                 aria-label={`${name} prijs`}
                 value={service.price}
                 onChange={(event) => patchService(service.id, { price: event.target.value })}
+                onBlur={() => patchService(service.id, { price: euroLabel(service.price.trim()) })}
               />
             </label>
             <label>

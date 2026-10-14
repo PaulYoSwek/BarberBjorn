@@ -43,6 +43,36 @@ const DAY_NAMES: Record<Weekday, string> = {
   sun: 'Sunday',
 }
 
+/** Rewrites the prices in the structured data to match the live services. */
+export function setOfferPrices(prices: Partial<Record<'cut' | 'beard' | 'both', string>>) {
+  const script = document.getElementById('ld-business')
+  if (!script) return
+  try {
+    const data = JSON.parse(script.textContent || '{}') as {
+      priceRange?: string
+      hasOfferCatalog?: { itemListElement?: { price?: string }[] }
+    }
+    const order = ['cut', 'beard', 'both'] as const
+    const values = order.map((id) => {
+      const cleaned = (prices[id] ?? '').replace(/[^\d,.]/g, '').replace(',', '.')
+      const value = Number(cleaned)
+      return cleaned && Number.isFinite(value) ? value : null
+    })
+    const offers = data.hasOfferCatalog?.itemListElement ?? []
+    values.forEach((value, index) => {
+      if (value !== null && offers[index]) offers[index].price = value.toFixed(2)
+    })
+    const known = values.filter((value): value is number => value !== null)
+    if (known.length > 0) {
+      const euro = (value: number) => `€${Number.isInteger(value) ? value : value.toFixed(2).replace('.', ',')}`
+      data.priceRange = `${euro(Math.min(...known))} - ${euro(Math.max(...known))}`
+    }
+    script.textContent = JSON.stringify(data)
+  } catch {
+    /* leave the static prices in place */
+  }
+}
+
 /** Rewrites the opening hours in the structured data to match the live week. */
 export function setOpeningHours(week: Record<Weekday, DayHours>) {
   const script = document.getElementById('ld-business')

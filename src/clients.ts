@@ -69,6 +69,15 @@ export function parsePrice(price: string | null | undefined): number {
   return Number.isFinite(value) ? value : 0
 }
 
+/**
+ * A price as typed ("27,50", "€ 20", "35") → "€27,50", "€20", "€35".
+ * Text without a number is left as it is.
+ */
+export function euroLabel(text: string): string {
+  if (!/\d/.test(text)) return text
+  return formatEuro(parsePrice(text))
+}
+
 export function formatEuro(value: number): string {
   const rounded = Math.round(value * 100) / 100
   return Number.isInteger(rounded) ? `€${rounded}` : `€${rounded.toFixed(2).replace('.', ',')}`

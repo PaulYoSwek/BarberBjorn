@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest'
 import {
   clientKey,
+  euroLabel,
   EMPTY_FILTER,
   filterClients,
   formatEuro,
@@ -135,4 +136,12 @@ test('sorts by paid, last visit, name and newest', () => {
   expect(names({ sort: 'last' })).toEqual(['Ada', 'Bo', 'Cas'])
   expect(names({ sort: 'name' })).toEqual(['Ada', 'Bo', 'Cas'])
   expect(names({ sort: 'new' })).toEqual(['Cas', 'Ada', 'Bo'])
+})
+
+test('euroLabel always puts the euro sign on a price', () => {
+  expect(euroLabel('27,50')).toBe('€27,50')
+  expect(euroLabel('20')).toBe('€20')
+  expect(euroLabel('€ 35')).toBe('€35')
+  expect(euroLabel('€30')).toBe('€30')
+  expect(euroLabel('op aanvraag')).toBe('op aanvraag')
 })

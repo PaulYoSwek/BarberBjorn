@@ -99,7 +99,7 @@ export const copy: Record<Lang, Copy> = {
   nl: {
     seoTitle: 'Bjorn’s Barber · Kapper en barbier in Axel',
     seoDescription:
-      'Bjorn’s Barber is de kapper en barbier aan de Ferdinandstraat 21 in Axel. Knippen €30, baard €15, knippen + baard €40. Eén stoel, geen haast. Plan je afspraak online.',
+      'Bjorn’s Barber is de kapper en barbier aan de Ferdinandstraat 21 in Axel. Knippen, baard of allebei. Eén stoel, geen haast. Plan je afspraak online.',
     heroHidden: 'Bjorn’s Barber, kapper en barbier in Axel',
     tagline: 'Een goede knip. Zonder haast.',
     bookCta: 'Afspraak maken',
@@ -179,7 +179,7 @@ export const copy: Record<Lang, Copy> = {
   en: {
     seoTitle: 'Bjorn’s Barber · Barber in Axel',
     seoDescription:
-      'Bjorn’s Barber is the barber at Ferdinandstraat 21 in Axel, the Netherlands. Cut €30, beard €15, cut + beard €40. One chair, no rush. Book your visit online.',
+      'Bjorn’s Barber is the barber at Ferdinandstraat 21 in Axel, the Netherlands. Cut, beard or both. One chair, no rush. Book your visit online.',
     heroHidden: 'Bjorn’s Barber, barber in Axel',
     tagline: 'A proper cut. No rush.',
     bookCta: 'Book a visit',

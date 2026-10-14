@@ -38,3 +38,16 @@ test('replaces seed prices when live services are not empty', async () => {
   expect(screen.queryByText('€30')).not.toBeInTheDocument()
 })
 
+
+test('a price saved without the euro sign is shown with it', async () => {
+  loadServices.mockResolvedValue([
+    { id: 'cut', price: '27,50', minutes: 45 },
+    { id: 'beard', price: '20', minutes: 30 },
+    { id: 'both', price: ' 35 ', minutes: 75 },
+  ])
+  render(<LanguageProvider><Services /></LanguageProvider>)
+  expect(await screen.findByText('€27,50')).toBeInTheDocument()
+  expect(screen.getByText('€20')).toBeInTheDocument()
+  expect(screen.getByText('€35')).toBeInTheDocument()
+  expect(screen.queryByText('27,50')).not.toBeInTheDocument()
+})

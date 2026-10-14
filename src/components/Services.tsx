@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
 import type { ServiceId } from '../content'
 import { useLang } from '../language'
+import { euroLabel } from '../clients'
 import { loadServices } from '../planning-api'
+import { setOfferPrices } from '../seo'
 
 export function Services() {
   const { t } = useLang()
   const [prices, setPrices] = useState<Partial<Record<ServiceId, string>> | null>(null)
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -13,10 +16,14 @@ export function Services() {
       .then((rows) => {
         if (cancelled || rows.length === 0) return
         const next: Partial<Record<ServiceId, string>> = {}
-        for (const row of rows) next[row.id] = row.price
+        for (const row of rows) next[row.id] = euroLabel(row.price)
         setPrices(next)
+        setOfferPrices(next)
       })
       .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoaded(true)
+      })
     return () => {
       cancelled = true
     }
@@ -28,7 +35,7 @@ export function Services() {
       <div className="plates">
         {t.services.map((item) => (
           <article key={item.id} className={item.id === 'both' ? 'is-both' : undefined}>
-            <strong>{prices?.[item.id] ?? item.price}</strong>
+            <strong className={loaded ? undefined : 'is-loading'}>{euroLabel(prices?.[item.id] ?? item.price)}</strong>
             <h3>{item.name}</h3>
             <p>{item.detail}</p>
           </article>

@@ -13,6 +13,15 @@ const LANGS = new Set(['nl', 'en'])
 const CLOCK = /^\d{2}:\d{2}$/
 const DATE = /^\d{4}-\d{2}-\d{2}$/
 
+/** "27,50" / "€ 20" / "35" → "€27,50" / "€20" / "€35"; text without digits stays as typed. */
+function euroPrice(text: string): string {
+  const cleaned = text.replace(/[^\d,.]/g, '').replace(',', '.')
+  const value = Number(cleaned)
+  if (!cleaned || !Number.isFinite(value)) return text
+  const cents = Math.round(value * 100)
+  return cents % 100 === 0 ? `€${cents / 100}` : `€${Math.floor(cents / 100)},${String(cents % 100).padStart(2, '0')}`
+}
+
 /** Bjorn's note on a closed time. Returns null when the body is malformed. */
 function parseNote(value: Record<string, unknown>): { reason: string; color: string } | null {
   const reason = value.reason === undefined ? '' : value.reason
@@ -226,7 +235,7 @@ servePost(async (req) => {
       }
       // The agenda runs in quarter-hours, so every length must be a whole number of them.
       if (service.minutes % 15 !== 0) return json(req, 400, { ok: false, error: 'minutes' })
-      rows.push({ id: service.id, price: service.price.trim(), minutes: service.minutes })
+      rows.push({ id: service.id, price: euroPrice(service.price.trim()), minutes: service.minutes })
     }
     if (rows.length > 0) {
       const saved = await db.from('services').upsert(rows)

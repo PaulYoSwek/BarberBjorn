@@ -1115,3 +1115,5 @@ main { position: relative; overflow-x: clip; max-width: 100%; }
 .footer a.footer-instagram { display: inline-flex; align-items: center; gap: 8px; }
 .footer-instagram svg { width: 20px; height: 20px; flex: 0 0 auto; color: var(--yellow); }
 .footer-instagram:hover svg { color: #ffd21a; }
+
+.plates strong.is-loading { visibility: hidden; }
