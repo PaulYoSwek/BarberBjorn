@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react'
+import { useMemo, useRef, useState, type FormEvent } from 'react'
 import { copy, type ServiceId } from '../../content'
 import { bookingMoney, formatMoney, type OrderItem, type Product } from '../../finance'
 import { decideInbox, moveBooking, type InboxRow } from '../../planning-api'
@@ -40,26 +40,75 @@ type Group = { id: string; title: string; rows: InboxRow[] }
 
 const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const
 
-function wallNow(): string {
-  const now = new Date()
-  const pad = (part: number) => String(part).padStart(2, '0')
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:00`
+function pad(part: number): string {
+  return String(part).padStart(2, '0')
+}
+
+function wallOf(date: Date): string {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:00`
+}
+
+/** Where an appointment stands right now: over, in the chair, or still to come. */
+export type Moment = 'over' | 'now' | 'coming'
+
+export function momentOf(row: Pick<InboxRow, 'start' | 'minutes'>, now = new Date()): Moment {
+  const [date, time] = row.start.split('T')
+  const [year, month, day] = date.split('-').map(Number)
+  const [hours, minutes] = time.split(':').map(Number)
+  const start = new Date(year, month - 1, day, hours, minutes)
+  const end = new Date(start.getTime() + row.minutes * 60_000)
+  if (end.getTime() <= now.getTime()) return 'over'
+  if (start.getTime() <= now.getTime()) return 'now'
+  return 'coming'
+}
+
+export type When = 'coming' | 'today' | 'over' | 'all'
+export type InboxFilter = { when: When; status: '' | InboxRow['status']; service: string; query: string }
+export const DEFAULT_FILTER: InboxFilter = { when: 'coming', status: '', service: '', query: '' }
+
+const WHEN_LABEL: Record<When, string> = {
+  coming: 'Komend',
+  today: 'Vandaag',
+  over: 'Geweest',
+  all: 'Alles',
+}
+
+function matchesWhen(row: InboxRow, when: When, now: Date): boolean {
+  if (when === 'all') return true
+  if (when === 'today') return row.start.slice(0, 10) === wallOf(now).slice(0, 10)
+  const over = momentOf(row, now) === 'over'
+  return when === 'over' ? over : !over
+}
+
+/** Everything but the when-filter, so the when-buttons can show their counts. */
+function matchesRest(row: InboxRow, filter: InboxFilter): boolean {
+  if (filter.status && row.status !== filter.status) return false
+  if (filter.service && row.service !== filter.service) return false
+  const query = filter.query.trim().toLowerCase()
+  if (!query) return true
+  const digits = query.replace(/\D/g, '')
+  return (
+    row.name.toLowerCase().includes(query) ||
+    row.email.toLowerCase().includes(query) ||
+    (digits.length >= 3 && row.phone.replace(/\D/g, '').includes(digits))
+  )
+}
+
+export function filterInbox(rows: InboxRow[], filter: InboxFilter, now = new Date()): InboxRow[] {
+  return rows.filter((row) => matchesWhen(row, filter.when, now) && matchesRest(row, filter))
 }
 
 /** New requests first, then what is coming, then what happened, then declined. */
-function grouped(rows: InboxRow[]): Group[] {
-  const now = wallNow()
+function grouped(rows: InboxRow[], now: Date): Group[] {
   const byStart = (a: InboxRow, b: InboxRow) => a.start.localeCompare(b.start)
-  const confirmed = rows.filter((row) => row.status === 'confirmed')
+  const latestFirst = (a: InboxRow, b: InboxRow) => byStart(b, a)
+  const over = (row: InboxRow) => momentOf(row, now) === 'over'
+  const live = rows.filter((row) => row.status !== 'declined')
   const groups: Group[] = [
-    { id: 'pending', title: 'Te beoordelen', rows: rows.filter((row) => row.status === 'pending').sort(byStart) },
-    { id: 'upcoming', title: 'Komend', rows: confirmed.filter((row) => row.start >= now).sort(byStart) },
-    { id: 'past', title: 'Geweest', rows: confirmed.filter((row) => row.start < now).sort((a, b) => byStart(b, a)) },
-    {
-      id: 'declined',
-      title: 'Geweigerd',
-      rows: rows.filter((row) => row.status === 'declined').sort((a, b) => byStart(b, a)),
-    },
+    { id: 'pending', title: 'Te beoordelen', rows: live.filter((row) => row.status === 'pending' && !over(row)).sort(byStart) },
+    { id: 'upcoming', title: 'Komend', rows: live.filter((row) => row.status === 'confirmed' && !over(row)).sort(byStart) },
+    { id: 'past', title: 'Geweest', rows: live.filter(over).sort(latestFirst) },
+    { id: 'declined', title: 'Geweigerd', rows: rows.filter((row) => row.status === 'declined').sort(latestFirst) },
   ]
   return groups.filter((group) => group.rows.length > 0)
 }
@@ -119,6 +168,7 @@ export function AdminInbox({
   const [moving, setMoving] = useState<{ id: string; date: string; time: string } | null>(null)
   const [orderId, setOrderId] = useState<string | null>(null)
   const [movingBusy, setMovingBusy] = useState(false)
+  const [filter, setFilter] = useState<InboxFilter>(DEFAULT_FILTER)
 
   function startMove(row: InboxRow) {
     setNotice(null)
@@ -178,7 +228,16 @@ export function AdminInbox({
   }
 
   const pendingCount = rows.filter((row) => row.status === 'pending').length
-  const groups = grouped(rows)
+  const now = new Date()
+  const shown = filterInbox(rows, filter, now)
+  const groups = grouped(shown, now)
+  const whenCounts = (Object.keys(WHEN_LABEL) as When[]).map((when) => ({
+    when,
+    count: rows.filter((row) => matchesWhen(row, when, now) && matchesRest(row, filter)).length,
+  }))
+  const services = useMemo(() => [...new Set(rows.map((row) => row.service))].sort(), [rows])
+  const filtered =
+    filter.status !== DEFAULT_FILTER.status || filter.service !== '' || filter.query.trim() !== '' || filter.when !== DEFAULT_FILTER.when
 
   return (
     <div className="admin-inbox">
@@ -187,10 +246,75 @@ export function AdminInbox({
           <p className="admin-kicker">Overzicht</p>
           <h1>Afspraken</h1>
         </div>
-        <p className={`inbox-count${pendingCount > 0 ? ' is-new' : ''}`}>
-          {pendingCount === 0 ? 'Alles bij' : `${pendingCount} nieuw`}
-        </p>
+        {pendingCount === 0 ? (
+          <p className="inbox-count">Alles bij</p>
+        ) : (
+          <button
+            type="button"
+            className="inbox-count is-new"
+            title="Toon alleen wat je nog moet beoordelen"
+            onClick={() => setFilter({ ...DEFAULT_FILTER, when: 'all', status: 'pending' })}
+          >
+            {pendingCount} nieuw
+          </button>
+        )}
       </header>
+      {rows.length > 0 ? (
+        <div className="inbox-filters" role="search" aria-label="Filters">
+          <div className="inbox-when" role="radiogroup" aria-label="Wanneer">
+            {whenCounts.map(({ when, count }) => (
+              <button
+                key={when}
+                type="button"
+                role="radio"
+                aria-checked={filter.when === when}
+                onClick={() => setFilter({ ...filter, when })}
+              >
+                {WHEN_LABEL[when]} <span>{count}</span>
+              </button>
+            ))}
+          </div>
+          <div className="inbox-filter-row">
+            <label>
+              Status
+              <select
+                value={filter.status}
+                onChange={(event) => setFilter({ ...filter, status: event.target.value as InboxFilter['status'] })}
+              >
+                <option value="">Alle</option>
+                <option value="pending">Te beoordelen</option>
+                <option value="confirmed">Bevestigd</option>
+                <option value="declined">Geweigerd</option>
+              </select>
+            </label>
+            <label>
+              Dienst
+              <select value={filter.service} onChange={(event) => setFilter({ ...filter, service: event.target.value })}>
+                <option value="">Alle</option>
+                {services.map((id) => (
+                  <option key={id} value={id}>
+                    {serviceName(id)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="inbox-search">
+              Zoeken
+              <input
+                type="search"
+                value={filter.query}
+                placeholder="Naam, e-mail of telefoon"
+                onChange={(event) => setFilter({ ...filter, query: event.target.value })}
+              />
+            </label>
+            {filtered ? (
+              <button type="button" className="inbox-filter-clear" onClick={() => setFilter(DEFAULT_FILTER)}>
+                Filters wissen
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
       {error ? <p role="alert">{error}</p> : null}
       {notice ? <p role="alert">{notice}</p> : null}
       {done ? (
@@ -202,6 +326,14 @@ export function AdminInbox({
       {!loading && rows.length === 0 && !error ? (
         <p className="admin-hint">Nog geen afspraken. Nieuwe boekingen verschijnen hier vanzelf.</p>
       ) : null}
+      {rows.length > 0 && shown.length === 0 ? (
+        <p className="admin-hint">
+          Geen afspraken bij deze filters.{' '}
+          {filter.when === 'coming' && !filter.status && !filter.service && !filter.query.trim()
+            ? 'Er staat niets meer gepland.'
+            : null}
+        </p>
+      ) : null}
       {groups.map((group) => (
         <section key={group.id} className="inbox-group" aria-label={group.title}>
           <h2 className="inbox-group-title">
@@ -211,15 +343,28 @@ export function AdminInbox({
             {group.rows.map((row) => {
               // A pending request gets its mail when Bjorn decides, so it is not "unsent" yet.
               const unsent = row.status !== 'pending' && !row.mail_sent
-              const movable = group.id !== 'past'
+              const moment = momentOf(row, now)
+              const over = moment === 'over'
+              const movable = !over
+              const expired = over && row.status === 'pending'
               const isMoving = moving?.id === row.id
+              const today = row.start.slice(0, 10) === wallOf(now).slice(0, 10)
               return (
-                <li key={row.id} className={`inbox-card is-${row.status}`}>
+                <li key={row.id} className={`inbox-card is-${row.status}${over ? ' is-over' : ''}${moment === 'now' ? ' is-now' : ''}`}>
                   <DateTile start={row.start} />
                   <div className="inbox-body">
                     <div className="inbox-top">
                       <h3>{row.name}</h3>
-                      <span className="inbox-status">{STATUS_LABEL[row.status]}</span>
+                      <span className="inbox-badges">
+                        {over && row.status !== 'declined' ? (
+                          <span className="inbox-moment is-over">Geweest</span>
+                        ) : moment === 'now' && row.status === 'confirmed' ? (
+                          <span className="inbox-moment is-now">Nu bezig</span>
+                        ) : today && row.status !== 'declined' ? (
+                          <span className="inbox-moment is-today">Vandaag</span>
+                        ) : null}
+                        <span className="inbox-status">{expired ? 'Verlopen' : STATUS_LABEL[row.status]}</span>
+                      </span>
                     </div>
                     <p className="inbox-tags">
                       <span className="inbox-tag is-service">
@@ -322,16 +467,19 @@ export function AdminInbox({
                         {unsent ? <span className="inbox-warn">Mail niet gegaan</span> : null}
                         {row.status === 'pending' ? (
                           <>
-                            <button
-                              type="button"
-                              className="inbox-accept"
-                              disabled={decidingId === row.id}
-                              onClick={() => {
-                                void decide(row.id, 'accept')
-                              }}
-                            >
-                              Accepteer
-                            </button>
+                            {/* A request whose time has passed can only be declined. */}
+                            {expired ? null : (
+                              <button
+                                type="button"
+                                className="inbox-accept"
+                                disabled={decidingId === row.id}
+                                onClick={() => {
+                                  void decide(row.id, 'accept')
+                                }}
+                              >
+                                Accepteer
+                              </button>
+                            )}
                             <button
                               type="button"
                               className="inbox-decline"

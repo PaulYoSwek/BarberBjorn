@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { defaultSchedule } from '../../schedule'
 import { AdminShell } from './AdminShell'
 
@@ -39,7 +39,14 @@ const client = {
   items: [],
 }
 
+afterEach(() => {
+  vi.useRealTimers()
+})
+
 beforeEach(() => {
+  // The booking below is on Tuesday 6 October 2026; read it from the day before.
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-05T08:00:00'))
   loadInbox.mockReset()
   loadTemplates.mockReset()
   sendClientMail.mockReset()

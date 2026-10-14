@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { defaultSchedule } from '../../schedule'
 import { AdminShell } from './AdminShell'
 
@@ -28,6 +28,10 @@ vi.mock('../../planning-api', async (importOriginal) => {
     loadProducts,
     loadServices,
   }
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 const PRODUCTS = [
@@ -76,6 +80,9 @@ function row(name: string) {
 }
 
 beforeEach(() => {
+  // The rows below sit in early October 2026; the dashboard reads them from Monday 5 October.
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-05T08:00:00'))
   loadInbox.mockReset()
   decideInbox.mockReset()
   loadPublicSchedule.mockReset()
@@ -345,4 +352,96 @@ test('a product that is out of stock warns on the bon', async () => {
   const bon = screen.getByRole('form', { name: 'Bon Kim Confirmed' })
   await userEvent.selectOptions(within(bon).getByLabelText('Product toevoegen'), 'p2')
   expect(within(bon).getByText('niet genoeg op voorraad')).toBeInTheDocument()
+})
+
+const PAST = {
+  ...confirmed,
+  id: 'past-1',
+  name: 'Piet Geweest',
+  email: 'piet@mail.nl',
+  phone: '06 11122233',
+  start: '2026-10-02T11:00:00',
+  minutes: 45,
+}
+const OLD_REQUEST = { ...pending, id: 'pend-old', name: 'Olga Verlopen', email: 'olga@mail.nl', start: '2026-10-03T10:00:00' }
+const DECLINED = { ...confirmed, id: 'decl-1', name: 'Dirk Geweigerd', email: 'dirk@mail.nl', status: 'declined' as const, start: '2026-10-09T10:00:00' }
+
+test('the list opens on what is coming; past appointments are one tap away and clearly marked', async () => {
+  loadInbox.mockResolvedValue([confirmed, pending, PAST, DECLINED])
+  render(<AdminShell />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Afspraken 1' }))
+  expect(screen.getByRole('radio', { name: 'Komend 3' })).toHaveAttribute('aria-checked', 'true')
+  expect(screen.getByText('Kim Confirmed')).toBeInTheDocument()
+  expect(screen.getByText('Sam Pending')).toBeInTheDocument()
+  expect(screen.queryByText('Piet Geweest')).not.toBeInTheDocument()
+
+  await userEvent.click(screen.getByRole('radio', { name: 'Geweest 1' }))
+  const past = row('Piet Geweest')
+  expect(past).toHaveClass('is-over')
+  expect(within(past).getByText('Geweest')).toBeInTheDocument()
+  expect(within(past).queryByRole('button', { name: 'Ander tijdstip' })).not.toBeInTheDocument()
+  expect(screen.queryByText('Kim Confirmed')).not.toBeInTheDocument()
+
+  await userEvent.click(screen.getByRole('radio', { name: 'Alles 4' }))
+  expect(screen.getAllByRole('listitem')).toHaveLength(4)
+  expect(row('Kim Confirmed')).not.toHaveClass('is-over')
+})
+
+test('status, service and search narrow the list and Filters wissen brings it all back', async () => {
+  loadInbox.mockResolvedValue([confirmed, pending, DECLINED])
+  render(<AdminShell />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Afspraken 1' }))
+  await userEvent.selectOptions(screen.getByLabelText('Status'), 'confirmed')
+  expect(screen.getByText('Kim Confirmed')).toBeInTheDocument()
+  expect(screen.queryByText('Sam Pending')).not.toBeInTheDocument()
+  expect(screen.queryByText('Dirk Geweigerd')).not.toBeInTheDocument()
+
+  await userEvent.selectOptions(screen.getByLabelText('Status'), '')
+  await userEvent.selectOptions(screen.getByLabelText('Dienst'), 'cut')
+  expect(screen.getByText('Sam Pending')).toBeInTheDocument()
+  expect(screen.queryByText('Kim Confirmed')).not.toBeInTheDocument()
+
+  await userEvent.selectOptions(screen.getByLabelText('Dienst'), '')
+  await userEvent.type(screen.getByLabelText('Zoeken'), 'dirk')
+  expect(screen.getByText('Dirk Geweigerd')).toBeInTheDocument()
+  expect(screen.queryByText('Kim Confirmed')).not.toBeInTheDocument()
+
+  await userEvent.clear(screen.getByLabelText('Zoeken'))
+  await userEvent.type(screen.getByLabelText('Zoeken'), 'niemand')
+  expect(screen.getByText(/Geen afspraken bij deze filters/)).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'Filters wissen' }))
+  expect(screen.getByLabelText('Zoeken')).toHaveValue('')
+  expect(screen.getAllByRole('listitem')).toHaveLength(3)
+})
+
+test('the new-count button shows only what still needs a decision', async () => {
+  loadInbox.mockResolvedValue([confirmed, pending, PAST])
+  render(<AdminShell />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Afspraken 1' }))
+  await userEvent.click(screen.getByRole('button', { name: '1 nieuw' }))
+  expect(screen.getByLabelText('Status')).toHaveValue('pending')
+  expect(screen.getAllByRole('listitem')).toHaveLength(1)
+  expect(screen.getByText('Sam Pending')).toBeInTheDocument()
+})
+
+test('a request whose time has passed reads Verlopen and can only be declined', async () => {
+  loadInbox.mockResolvedValue([OLD_REQUEST])
+  render(<AdminShell />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Afspraken 1' }))
+  await userEvent.click(screen.getByRole('radio', { name: 'Geweest 1' }))
+  const old = row('Olga Verlopen')
+  expect(within(old).getByText('Verlopen')).toBeInTheDocument()
+  expect(within(old).queryByRole('button', { name: 'Accepteer' })).not.toBeInTheDocument()
+  expect(within(old).getByRole('button', { name: 'Weiger' })).toBeInTheDocument()
+})
+
+test('an appointment in the chair right now says so', async () => {
+  vi.setSystemTime(new Date('2026-10-06T10:10:00'))
+  loadInbox.mockResolvedValue([confirmed])
+  render(<AdminShell />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Afspraken' }))
+  const live = row('Kim Confirmed')
+  expect(live).toHaveClass('is-now')
+  expect(within(live).getByText('Nu bezig')).toBeInTheDocument()
+  expect(screen.getByRole('radio', { name: 'Vandaag 1' })).toBeInTheDocument()
 })
