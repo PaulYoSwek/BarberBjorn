@@ -141,7 +141,7 @@ test('a free slot books through submitBook', async () => {
       kind: 'slot',
       lang: 'nl',
     })
-    expect(await screen.findByText('Je tijd is van jou. Er gaat een mail naartoe.')).toBeInTheDocument()
+    expect(await screen.findByText('Je afspraak staat vast. Je krijgt een bevestiging per mail.')).toBeInTheDocument()
     expect(assign).not.toHaveBeenCalled()
     expect(screen.queryByText(/mailto:hallo@barberbjorn.nl/)).not.toBeInTheDocument()
   } finally {
@@ -340,7 +340,7 @@ test('a taken book error shows the Dutch taken line', async () => {
     await user.click(screen.getByRole('button', { name: 'Boeken' }))
     expect(await screen.findByText('Die tijd is al weg. Kies een vrije.')).toBeInTheDocument()
     expect(screen.queryByText('taken')).not.toBeInTheDocument()
-    expect(screen.queryByText('Je tijd is van jou. Er gaat een mail naartoe.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Je afspraak staat vast. Je krijgt een bevestiging per mail.')).not.toBeInTheDocument()
   } finally {
     vi.useRealTimers()
   }
@@ -363,11 +363,11 @@ test('a successful slot book takes that start and ignores another submit', async
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
     await user.type(screen.getByLabelText('Telefoon'), '06 12345678')
     await user.click(screen.getByRole('button', { name: 'Boeken' }))
-    expect(await screen.findByText('Je tijd is van jou. Er gaat een mail naartoe.')).toBeInTheDocument()
+    expect(await screen.findByText('Je afspraak staat vast. Je krijgt een bevestiging per mail.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'di 6 okt 09:00' })).toBeDisabled()
     await user.click(screen.getByRole('button', { name: 'Boeken' }))
     expect(submitBook).toHaveBeenCalledTimes(1)
-    expect(screen.getByText('Je tijd is van jou. Er gaat een mail naartoe.')).toBeInTheDocument()
+    expect(screen.getByText('Je afspraak staat vast. Je krijgt een bevestiging per mail.')).toBeInTheDocument()
     // The 75-minute booking at 09:00 holds 09:00 to 10:15, so 10:15 is the next free start.
     expect(screen.getByRole('button', { name: 'di 6 okt 10:00' })).toBeDisabled()
     await user.click(screen.getByRole('button', { name: 'di 6 okt 10:15' }))
@@ -407,7 +407,7 @@ test('a second click while book is in flight does not submit twice', async () =>
     expect(submitBook).toHaveBeenCalledTimes(1)
     expect(send).toBeDisabled()
     release({ ok: true })
-    expect(await screen.findByText('Je tijd is van jou. Er gaat een mail naartoe.')).toBeInTheDocument()
+    expect(await screen.findByText('Je afspraak staat vast. Je krijgt een bevestiging per mail.')).toBeInTheDocument()
   } finally {
     vi.useRealTimers()
   }
@@ -465,7 +465,7 @@ test('a late schedule load keeps a start booked in this session', async () => {
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
     await user.type(screen.getByLabelText('Telefoon'), '06 12345678')
     await user.click(screen.getByRole('button', { name: 'Boeken' }))
-    expect(await screen.findByText('Je tijd is van jou. Er gaat een mail naartoe.')).toBeInTheDocument()
+    expect(await screen.findByText('Je afspraak staat vast. Je krijgt een bevestiging per mail.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'di 6 okt 09:00' })).toBeDisabled()
     releaseSchedule({
       ...defaultSchedule,
@@ -475,7 +475,7 @@ test('a late schedule load keeps a start booked in this session', async () => {
       expect(screen.getByRole('button', { name: 'di 6 okt 10:00' })).toBeDisabled()
     })
     expect(screen.getByRole('button', { name: 'di 6 okt 09:00' })).toBeDisabled()
-    expect(screen.getByText('Je tijd is van jou. Er gaat een mail naartoe.')).toBeInTheDocument()
+    expect(screen.getByText('Je afspraak staat vast. Je krijgt een bevestiging per mail.')).toBeInTheDocument()
   } finally {
     vi.useRealTimers()
   }
