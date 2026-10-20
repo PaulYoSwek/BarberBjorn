@@ -1543,3 +1543,25 @@ button.inbox-count { border: 0; cursor: pointer; width: auto; }
 @media (max-width: 800px) {
   .admin-tg .tg-head-cell { padding: 6px 4px; }
 }
+
+/* The grid's quarter-hour cells are not form buttons: no box, no minimum height. */
+.booking .tg-cell, .booking .tg-cell:disabled {
+  min-height: 0; width: auto; padding: 0 6px; border: 0; background: transparent;
+  box-shadow: none; opacity: 1; font-size: 0.72rem; line-height: 1.2;
+}
+.booking .tg-cell:disabled { cursor: default; }
+.booking .tg-cell.is-past, .booking .tg-cell.is-past:disabled { background: rgba(22, 22, 22, 0.05); }
+.booking .tg-cell.is-nofit, .booking .tg-cell.is-nofit:disabled {
+  background: repeating-linear-gradient(135deg, rgba(22, 22, 22, 0.08) 0 4px, transparent 4px 8px);
+}
+.booking .tg-cell.is-taken, .booking .tg-cell.is-taken:disabled { background: var(--ink); }
+.booking .tg-cell.is-preview { background: rgba(245, 196, 0, 0.45); }
+.booking .tg-cell.is-span { background: var(--yellow); }
+.booking .tg-cell.is-on { background: var(--yellow); box-shadow: inset 3px 0 0 var(--ink); z-index: 2; }
+.booking .tg-cell:not(:disabled):hover { background: rgba(245, 196, 0, 0.28); }
+.booking .tg-cell.is-on:hover, .booking .tg-cell.is-span:hover { background: var(--yellow); }
+.booking .cal-nav button, .booking .agenda-week button { min-height: 40px; }
+/* The calendar fills the form's width; an older rule left it shrink-to-fit. */
+.booking .agenda-wrap { align-items: stretch; }
+.agenda-layout { grid-template-columns: 272px minmax(0, 1fr); gap: 22px; }
+.tg-axis span:first-child { transform: none; }
