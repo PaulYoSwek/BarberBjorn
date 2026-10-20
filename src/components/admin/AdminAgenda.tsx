@@ -183,6 +183,8 @@ export function AdminAgenda({ clients = [], onBooked }: Props) {
   const [picked, setPicked] = useState<string[]>([])
   /** The month on top; null follows the week in view. */
   const [viewMonth, setViewMonth] = useState<{ year: number; month: number } | null>(null)
+  /** Days shown on the right after a tap in the month; empty shows the whole week. */
+  const [focus, setFocus] = useState<string[]>([])
   const [ready, setReady] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [done, setDone] = useState<string | null>(null)
@@ -273,6 +275,7 @@ export function AdminAgenda({ clients = [], onBooked }: Props) {
     if (index < 0) return
     setWeek(Math.floor(index / WEEK))
     setPicked([date])
+    setFocus([date])
     setViewMonth(null)
   }
   function bookingsOn(date: string): number {
@@ -284,6 +287,9 @@ export function AdminAgenda({ clients = [], onBooked }: Props) {
   const selected = picked.filter((date) => visible.some((day) => day.date === date))
   const selectedDates = selected.length > 0 ? selected : fallback ? [fallback] : []
   const selectedDays = visible.filter((day) => selectedDates.includes(day.date))
+  // The columns on the right: the whole week until a day is tapped in the month.
+  const focused = visible.filter((day) => focus.includes(day.date))
+  const shownDays = focused.length > 0 ? focused : visible
   const hoursDay = selectedDays.find((day) => !('closed' in hoursFor(day))) ?? selectedDays[0]
 
   /** Every reason + colour in use this week, for the legend. */
@@ -533,6 +539,8 @@ export function AdminAgenda({ clients = [], onBooked }: Props) {
           ))}
         </ul>
       </header>
+      <div className="admin-agenda-body">
+      <div className="admin-agenda-side">
       <MonthCalendar
         className="admin-month"
         year={shownMonth.year}
@@ -588,11 +596,27 @@ export function AdminAgenda({ clients = [], onBooked }: Props) {
       />
       <div className="admin-toolbar">
         <div className="admin-week">
-          <button type="button" disabled={week === 0} onClick={() => setWeek((current) => current - 1)}>
+          <button
+            type="button"
+            disabled={week === 0}
+            onClick={() => {
+              setWeek((current) => current - 1)
+              setPicked([])
+              setFocus([])
+            }}
+          >
             Vorige week
           </button>
           <p className="admin-week-title">{weekTitle(visible)}</p>
-          <button type="button" disabled={week >= lastWeek} onClick={() => setWeek((current) => current + 1)}>
+          <button
+            type="button"
+            disabled={week >= lastWeek}
+            onClick={() => {
+              setWeek((current) => current + 1)
+              setPicked([])
+              setFocus([])
+            }}
+          >
             Volgende week
           </button>
         </div>
@@ -698,9 +722,17 @@ export function AdminAgenda({ clients = [], onBooked }: Props) {
         ) : null}
       </div>
       <p className="admin-hint">
-        Tik dagen aan om ze samen in te stellen. Uren gelden alleen voor die dag. Kopieer naar aankomende weken zet
-        de uren en dichte tijden van deze week vast voor het komende jaar. Geboekt opent de klant.
+        Tik een dag in de maand aan om die rechts te zien; tik dagen aan om ze samen in te stellen. Uren gelden
+        alleen voor die dag. Kopieer naar aankomende weken zet de uren en dichte tijden van deze week vast voor het
+        komende jaar. Geboekt opent de klant.
       </p>
+      </div>
+      <div className="admin-agenda-main">
+      {focused.length > 0 ? (
+        <button type="button" className="admin-whole-week" onClick={() => setFocus([])}>
+          Hele week tonen
+        </button>
+      ) : null}
       {!ready && !notice ? <p className="admin-hint">Agenda laden…</p> : null}
       {notice ? <p role="alert">{notice}</p> : null}
       {plan ? (
@@ -742,7 +774,7 @@ export function AdminAgenda({ clients = [], onBooked }: Props) {
         </div>
       ) : null}
       <div className="agenda admin-week-grid">
-        {visible.map((day) => {
+        {shownDays.map((day) => {
           const dayHours = hoursFor(day)
           const closed = 'closed' in dayHours
           const dayBlock = blockAt(day.date, undefined, view)
@@ -831,6 +863,8 @@ export function AdminAgenda({ clients = [], onBooked }: Props) {
             </div>
           )
         })}
+      </div>
+      </div>
       </div>
     </div>
   )

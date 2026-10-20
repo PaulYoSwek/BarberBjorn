@@ -1398,3 +1398,41 @@ button.inbox-count { border: 0; cursor: pointer; width: auto; }
   .admin-month .cal-day { min-height: 52px; padding: 4px; }
   .admin-month-hours { display: none; }
 }
+
+/* ---------- calendar beside the times (site) */
+.booking .agenda-wrap { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 20px; align-items: start; }
+.booking .agenda-wrap > [role="alert"] { grid-column: 1 / -1; }
+.booking .agenda-wrap > .booking-fields { grid-column: 1 / -1; }
+.cal-side { display: grid; gap: 10px; min-width: 0; }
+.day-side {
+  display: grid; gap: 12px; align-content: start; min-width: 0;
+  padding: 14px; background: #fff; border: 1px solid rgba(22, 22, 22, 0.14);
+  box-shadow: inset 4px 0 0 var(--yellow);
+}
+.day-side .agenda-week { justify-content: flex-start; }
+.day-side .agenda-week button { min-height: 40px; padding: 0 12px; }
+.day-times .agenda-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(68px, 1fr)); gap: 6px; }
+.day-times .agenda-slots button { min-width: 0; width: 100%; padding: 0 4px; }
+.cal-day { min-height: 44px; }
+@media (max-width: 800px) {
+  .booking .agenda-wrap { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .day-side { padding: 12px; }
+  .day-times .agenda-slots { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
+}
+
+/* ---------- month and controls beside the days (dashboard) */
+.admin-agenda-body { display: grid; grid-template-columns: minmax(300px, 400px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.admin-agenda-side { display: grid; gap: 12px; min-width: 0; }
+.admin-agenda-main { display: grid; gap: 10px; min-width: 0; }
+.admin-agenda-main .admin-week-grid.agenda { align-items: stretch; }
+.admin-whole-week {
+  justify-self: start; min-height: 36px; padding: 0 12px; width: auto;
+  border: 1px dashed #101010; background: #fbf3cc; font-weight: 700; font-size: 0.8rem;
+}
+.admin-month .cal-day { min-height: 54px; }
+.admin-month-hours { font-size: 0.6rem; }
+@media (max-width: 960px) {
+  .admin-agenda-body { grid-template-columns: minmax(0, 1fr); }
+}
+.admin-agenda-side .admin-week button { padding: 0 10px; font-size: 0.8rem; min-height: 40px; }
+.admin-agenda-side .admin-week-title { font-size: 0.9rem; }

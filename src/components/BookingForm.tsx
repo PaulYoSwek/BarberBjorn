@@ -346,6 +346,7 @@ export function BookingForm() {
             </div>
           ) : (
             <>
+              <div className="cal-side">
               <MonthCalendar
                 year={shownMonth.year}
                 month={shownMonth.month}
@@ -395,6 +396,8 @@ export function BookingForm() {
               <p className="cal-legend">
                 <i className="cal-dot" aria-hidden="true" /> {t.freeLegend} · {t.pickDayHint}
               </p>
+              </div>
+              <div className="day-side">
               {shownDay ? (
                 <div className="day-times">
                   <h4>{dayStamp(shownDay, t.days, t.monthShort)}</h4>
@@ -448,6 +451,7 @@ export function BookingForm() {
               )}
               <div className="agenda-week">
                 <button type="button" onClick={chooseCustom}>{t.customTimeCta}</button>
+              </div>
               </div>
             </>
           )}
