@@ -19,8 +19,12 @@ import {
 import { serviceName } from './admin-defaults'
 import { AdminPlan, type PlanCheck } from './AdminPlan'
 import { MonthCalendar } from '../MonthCalendar'
+import { axisOf, blockStyle, TimeGrid, type GridColumn } from '../TimeGrid'
 
 const MONDAY_FIRST: Weekday[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+/** Height of an hour in the planning: a quarter-hour stays easy to tap. */
+const PX_PER_HOUR = 112
+const NARROW = '(max-width: 800px)'
 
 const WEEK = 7
 const DEFAULT_OPEN: DayHours = { open: '09:00', close: '18:00' }
@@ -185,6 +189,15 @@ export function AdminAgenda({ clients = [], onBooked }: Props) {
   const [viewMonth, setViewMonth] = useState<{ year: number; month: number } | null>(null)
   /** Days shown on the right after a tap in the month; empty shows the whole week. */
   const [focus, setFocus] = useState<string[]>([])
+  // Phones show one day at a time; wider screens the whole week.
+  const [narrow, setNarrow] = useState(() => window.matchMedia(NARROW).matches)
+
+  useEffect(() => {
+    const query = window.matchMedia(NARROW)
+    const onChange = () => setNarrow(query.matches)
+    query.addEventListener?.('change', onChange)
+    return () => query.removeEventListener?.('change', onChange)
+  }, [])
   const [ready, setReady] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [done, setDone] = useState<string | null>(null)
@@ -289,7 +302,14 @@ export function AdminAgenda({ clients = [], onBooked }: Props) {
   const selectedDays = visible.filter((day) => selectedDates.includes(day.date))
   // The columns on the right: the whole week until a day is tapped in the month.
   const focused = visible.filter((day) => focus.includes(day.date))
-  const shownDays = focused.length > 0 ? focused : visible
+  const todayInView = visible.find((day) => day.date === dateIso(new Date())) ?? visible[0]
+  const shownDays = focused.length > 0 ? focused : narrow && todayInView ? [todayInView] : visible
+  const axis = axisOf(
+    shownDays.map((day) => {
+      const dayHours = hoursFor(day)
+      return { hours: 'closed' in dayHours ? undefined : dayHours }
+    }),
+  )
   const hoursDay = selectedDays.find((day) => !('closed' in hoursFor(day))) ?? selectedDays[0]
 
   /** Every reason + colour in use this week, for the legend. */
@@ -773,47 +793,73 @@ export function AdminAgenda({ clients = [], onBooked }: Props) {
           </button>
         </div>
       ) : null}
-      <div className="agenda admin-week-grid">
-        {shownDays.map((day) => {
-          const dayHours = hoursFor(day)
-          const closed = 'closed' in dayHours
-          const dayBlock = blockAt(day.date, undefined, view)
-          const stamp = dayStamp(day)
-          const times = daySlotTimes(dayHours)
-          return (
-            <div
+      {narrow && focused.length === 0 && visible.length > 1 ? (
+        <div className="admin-day-nav">
+          {visible.map((day) => (
+            <button
               key={day.date}
-              className={`agenda-day admin-col${closed ? ' is-closed' : ''}${selectedDates.includes(day.date) ? ' is-on' : ''}`}
+              type="button"
+              className={shownDays[0]?.date === day.date ? 'is-on' : undefined}
+              aria-pressed={shownDays[0]?.date === day.date}
+              onClick={() => setFocus([day.date])}
             >
-              <button
-                type="button"
-                className="agenda-when admin-col-head"
-                aria-pressed={selectedDates.includes(day.date)}
-                aria-label={dayChip(day, dayHours) + (dayBlock?.reason ? ` ${dayBlock.reason}` : '')}
-                onClick={() => togglePick(day.date)}
-              >
-                <strong>{stamp}</strong>
-                <span>{closed ? 'dicht' : `${dayHours.open}–${dayHours.close}`}</span>
-                {dayBlock?.reason ? (
-                  <span className="admin-day-reason" style={{ background: blockHex(dayBlock.color) }}>
-                    {dayBlock.reason}
-                  </span>
-                ) : null}
-              </button>
-              <button
-                type="button"
-                className={`admin-day-toggle${closed ? ' is-on' : ''}`}
-                aria-pressed={closed}
-                aria-label={`${stamp} hele dag dicht`}
-                disabled={!ready}
-                style={closed && dayBlock?.color ? { background: blockHex(dayBlock.color), borderColor: blockHex(dayBlock.color) } : undefined}
-                onClick={() => closeDay(day.date, day.weekday, !closed)}
-              >
-                Dag dicht
-              </button>
-              {!closed ? (
-                <div className="agenda-slots admin-col-slots">
-                  {times.map((time, index) => {
+              {dayName(day.weekday)} {Number(day.date.slice(8, 10))}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      <div className="tg-scroll admin-tg">
+        <TimeGrid
+          axisStart={axis.start}
+          axisEnd={axis.end}
+          pxPerHour={PX_PER_HOUR}
+          closedLabel="dicht"
+          columns={shownDays.map((day): GridColumn => {
+            const dayHours = hoursFor(day)
+            const closed = 'closed' in dayHours
+            const dayBlock = blockAt(day.date, undefined, view)
+            const stamp = dayStamp(day)
+            const times = daySlotTimes(dayHours)
+            return {
+              key: day.date,
+              className:
+                [selectedDates.includes(day.date) ? 'is-on' : '', day.date === todayDate ? 'is-today' : '']
+                  .filter(Boolean)
+                  .join(' ') || undefined,
+              hours: closed ? undefined : { open: dayHours.open, close: dayHours.close },
+              header: (
+                <>
+                  <button
+                    type="button"
+                    className="admin-col-head"
+                    aria-pressed={selectedDates.includes(day.date)}
+                    aria-label={dayChip(day, dayHours) + (dayBlock?.reason ? ` ${dayBlock.reason}` : '')}
+                    onClick={() => togglePick(day.date)}
+                  >
+                    <strong>{stamp}</strong>
+                    <span>{closed ? 'dicht' : `${dayHours.open}–${dayHours.close}`}</span>
+                    {dayBlock?.reason ? (
+                      <span className="admin-day-reason" style={{ background: blockHex(dayBlock.color) }}>
+                        {dayBlock.reason}
+                      </span>
+                    ) : null}
+                  </button>
+                  <button
+                    type="button"
+                    className={`admin-day-toggle${closed ? ' is-on' : ''}`}
+                    aria-pressed={closed}
+                    aria-label={`${stamp} hele dag dicht`}
+                    disabled={!ready}
+                    style={closed && dayBlock?.color ? { background: blockHex(dayBlock.color), borderColor: blockHex(dayBlock.color) } : undefined}
+                    onClick={() => closeDay(day.date, day.weekday, !closed)}
+                  >
+                    Dag dicht
+                  </button>
+                </>
+              ),
+              children: closed
+                ? null
+                : times.map((time, index) => {
                     const client = clientAt(day.date, time, people)
                     const isBooked = client !== undefined || booked(day.date, time, view)
                     const block = isBooked ? undefined : blockAt(day.date, time, view)
@@ -831,11 +877,14 @@ export function AdminAgenda({ clients = [], onBooked }: Props) {
                       <button
                         key={time}
                         type="button"
-                        className={`admin-cell is-${state}${continues ? ' is-cont' : ''}`}
+                        className={`tg-cell admin-cell is-${state}${continues ? ' is-cont' : ''}`}
                         aria-pressed={state === 'shut'}
                         aria-label={`${stamp} ${time} ${label}${who}${why}`}
                         title={block?.reason || client?.name || undefined}
-                        style={tint ? { background: tint, borderColor: tint } : undefined}
+                        style={{
+                          ...blockStyle(time, SLOT_MINUTES, axis.start, PX_PER_HOUR),
+                          ...(tint ? { background: tint, borderColor: tint } : {}),
+                        }}
                         onClick={() => {
                           if (state === 'booked') {
                             if (client) setDetail(client)
@@ -857,12 +906,10 @@ export function AdminAgenda({ clients = [], onBooked }: Props) {
                         ) : null}
                       </button>
                     )
-                  })}
-                </div>
-              ) : null}
-            </div>
-          )
-        })}
+                  }),
+            }
+          })}
+        />
       </div>
       </div>
       </div>

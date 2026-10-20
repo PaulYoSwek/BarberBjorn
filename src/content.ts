@@ -49,6 +49,8 @@ export type Copy = {
   weekNext: string
   monthPrev: string
   monthNext: string
+  dayPrev: string
+  dayNext: string
   pickDayHint: string
   dayFull: string
   freeLegend: string
@@ -162,6 +164,8 @@ export const copy: Record<Lang, Copy> = {
     weekNext: 'Volgende week',
     monthPrev: 'Vorige maand',
     monthNext: 'Volgende maand',
+    dayPrev: 'Vorige dag',
+    dayNext: 'Volgende dag',
     pickDayHint: 'Kies een dag met een stip, dan zie je de vrije tijden.',
     dayFull: 'Geen vrije tijd meer op deze dag.',
     freeLegend: 'vrije tijd',
@@ -273,6 +277,8 @@ export const copy: Record<Lang, Copy> = {
     weekNext: 'Next week',
     monthPrev: 'Previous month',
     monthNext: 'Next month',
+    dayPrev: 'Previous day',
+    dayNext: 'Next day',
     pickDayHint: 'Pick a day with a dot to see its free times.',
     dayFull: 'No free time left on this day.',
     freeLegend: 'free time',

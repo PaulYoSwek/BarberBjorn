@@ -26,12 +26,16 @@ import {
   type Schedule,
 } from '../schedule'
 import { MonthCalendar } from './MonthCalendar'
+import { axisOf, blockStyle, TimeGrid, type GridColumn } from './TimeGrid'
 
 const empty: BookingInput = { service: 'both', name: '', email: '', phone: '', slot: '', kind: 'slot' }
 const WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const
 const MONDAY_FIRST = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
 /** How often the agenda re-reads the live schedule while it is on screen. */
 const REFRESH_MS = 60_000
+/** Height of an hour in the agenda: a quarter-hour is a comfortable tap. */
+const PX_PER_HOUR = 96
+const NARROW = '(max-width: 800px)'
 
 function monthIndex(date: string) {
   return Number(date.slice(5, 7)) - 1
@@ -104,7 +108,16 @@ export function BookingForm() {
   /** The month on screen; null follows the picked day. */
   const [viewMonth, setViewMonth] = useState<{ year: number; month: number } | null>(null)
   const [hover, setHover] = useState('')
+  // Phones show one day at a time; wider screens the whole week.
+  const [narrow, setNarrow] = useState(() => window.matchMedia(NARROW).matches)
   const [latched, setLatched] = useState(false)
+
+  useEffect(() => {
+    const query = window.matchMedia(NARROW)
+    const onChange = () => setNarrow(query.matches)
+    query.addEventListener?.('change', onChange)
+    return () => query.removeEventListener?.('change', onChange)
+  }, [])
   const busy = useRef(false)
   const [sending, setSending] = useState(false)
   const sessionHolds = useRef<BookingHold[]>([])
@@ -184,9 +197,18 @@ export function BookingForm() {
   )
   const byDate = useMemo(() => new Map(days.map((day) => [day.date, day])), [days])
   // A picked day that lost its last free time (someone booked, hours changed) falls back to the first free one.
-  const pickedDay = byDate.get(pickedDate)
-  const picked = pickedDay && hasFreeStart(pickedDay) ? pickedDate : (firstBookableDate(days) ?? '')
-  const shownDay = picked ? byDate.get(picked) : undefined
+  // The day in focus: the one tapped in the month, else the first with a free time.
+  const picked = byDate.has(pickedDate) ? pickedDate : (firstBookableDate(days) ?? days[0].date)
+  const focusIndex = Math.max(0, days.findIndex((day) => day.date === picked))
+  const weekDays = days.slice(Math.floor(focusIndex / 7) * 7, Math.floor(focusIndex / 7) * 7 + 7)
+  const shownDays = narrow ? [days[focusIndex]] : weekDays
+  const canBack = narrow ? focusIndex > 0 : focusIndex >= 7
+  const canForward = narrow ? focusIndex < days.length - 1 : Math.floor(focusIndex / 7) < Math.floor((days.length - 1) / 7)
+  const shiftFocus = (step: number) => {
+    const next = days[Math.min(days.length - 1, Math.max(0, focusIndex + step * (narrow ? 1 : 7)))]
+    setPickedDate(next.date)
+    setViewMonth(null)
+  }
   const firstMonth = monthOf(days[0].date)
   const lastMonth = monthOf(days[days.length - 1].date)
   const shownMonth = viewMonth ?? monthOf(picked || days[0].date)
@@ -291,6 +313,74 @@ export function BookingForm() {
   const covered = new Set(input.kind === 'slot' && input.slot ? spanStarts(input.slot, duration) : [])
   const previewed = new Set(hover && hover !== input.slot ? spanStarts(hover, duration) : [])
 
+  const dayHours = (day: AgendaDay) =>
+    day.closed || day.slots.length === 0
+      ? undefined
+      : { open: day.slots[0].time, close: endClock(day.slots[day.slots.length - 1].time, 15) }
+  const axis = axisOf(shownDays.map((day) => ({ hours: dayHours(day) })))
+  const gridColumns: GridColumn[] = shownDays.map((day) => {
+    const label = dayStamp(day, t.days, t.monthShort)
+    const weekday = t.days.find((item) => item.key === day.weekday)?.label ?? day.weekday
+    return {
+      key: day.date,
+      className: day.date === todayDate ? 'is-today' : undefined,
+      hours: dayHours(day),
+      header: (
+        <>
+          <span className="tg-day">{weekday}</span>
+          <strong className="tg-num">{Number(day.date.slice(8, 10))}</strong>
+        </>
+      ),
+      children: day.slots.map((slot) => {
+        const blocked = !slot.fits || slot.taken || slot.past
+        const on = input.slot === slot.start
+        const inSpan = !on && covered.has(slot.start)
+        const inPreview = !on && !inSpan && previewed.has(slot.start)
+        // Black only where the dashboard shows closed or booked; a start that is open
+        // but too short for the chosen service is greyed out like a past time.
+        const kind = slot.past
+          ? 'is-past'
+          : slot.held
+            ? 'is-taken'
+            : slot.taken || !slot.fits
+              ? 'is-nofit'
+              : undefined
+        const text = on
+          ? `${slot.time}–${endClock(slot.time, duration)}`
+          : slot.start === hover && !blocked
+            ? `${slot.time}–${endClock(slot.time, duration)}`
+            : ''
+        return (
+          <button
+            key={slot.start}
+            type="button"
+            aria-label={`${label} ${slot.time}`}
+            title={kind === 'is-nofit' ? (slot.fits ? t.noFitHint : t.noFitError) : undefined}
+            aria-pressed={on}
+            disabled={blocked}
+            className={
+              ['tg-cell', on ? 'is-on' : undefined, inSpan ? 'is-span' : undefined, inPreview ? 'is-preview' : undefined, kind]
+                .filter(Boolean)
+                .join(' ')
+            }
+            style={blockStyle(slot.time, 15, axis.start, PX_PER_HOUR)}
+            onMouseEnter={() => {
+              if (!blocked) setHover(slot.start)
+            }}
+            onMouseLeave={() => setHover('')}
+            onFocus={() => {
+              if (!blocked) setHover(slot.start)
+            }}
+            onBlur={() => setHover('')}
+            onClick={() => edit({ ...input, slot: slot.start })}
+          >
+            {text}
+          </button>
+        )
+      }),
+    }
+  })
+
   return (
     <section id="afspraak" className="booking">
       <form onSubmit={onSubmit}>
@@ -346,112 +436,87 @@ export function BookingForm() {
             </div>
           ) : (
             <>
-              <div className="cal-side">
-              <MonthCalendar
-                year={shownMonth.year}
-                month={shownMonth.month}
-                title={`${t.months[shownMonth.month]} ${shownMonth.year}`}
-                weekdayLabels={weekdayLabels}
-                prevLabel={t.monthPrev}
-                nextLabel={t.monthNext}
-                canPrev={canPrev}
-                canNext={canNext}
-                onPrev={() => shiftMonth(-1)}
-                onNext={() => shiftMonth(1)}
-                renderDay={(cell: MonthCell) => {
-                  const day = byDate.get(cell.date)
-                  const free = day ? hasFreeStart(day) : false
-                  const label = day
-                    ? dayStamp(day, t.days, t.monthShort)
-                    : `${Number(cell.date.slice(8, 10))} ${t.monthShort[monthIndex(cell.date)]}`
-                  const past = cell.date < todayDate
-                  const classes = [
-                    'cal-day',
-                    cell.date === picked ? 'is-on' : undefined,
-                    cell.date === todayDate ? 'is-today' : undefined,
-                    day?.closed ? 'is-closed' : undefined,
-                    // Days before this week or past the horizon stay visible, just muted.
-                    past || !day ? 'is-past' : undefined,
-                  ]
-                    .filter(Boolean)
-                    .join(' ')
-                  return (
-                    <button
-                      type="button"
-                      className={classes}
-                      aria-label={label}
-                      aria-pressed={cell.date === picked}
-                      disabled={!free}
-                      onClick={() => {
-                        setPickedDate(cell.date)
-                        setViewMonth(null)
-                      }}
-                    >
-                      <span>{Number(cell.date.slice(8, 10))}</span>
-                      {free ? <i className="cal-dot" aria-hidden="true" /> : null}
-                    </button>
-                  )
-                }}
-              />
-              <p className="cal-legend">
-                <i className="cal-dot" aria-hidden="true" /> {t.freeLegend} · {t.pickDayHint}
-              </p>
-              </div>
-              <div className="day-side">
-              {shownDay ? (
-                <div className="day-times">
-                  <h4>{dayStamp(shownDay, t.days, t.monthShort)}</h4>
-                  <div className="agenda-slots">
-                    {shownDay.slots.map((slot) => {
-                      const label = dayStamp(shownDay, t.days, t.monthShort)
-                      const blocked = !slot.fits || slot.taken || slot.past
-                      const on = input.slot === slot.start
-                      const inSpan = !on && covered.has(slot.start)
-                      const inPreview = !on && !inSpan && previewed.has(slot.start)
-                      // Black only where the dashboard shows closed or booked; a start that is open
-                      // but too short for the chosen service is greyed out like a past time.
-                      const kind = slot.past
-                        ? 'is-past'
-                        : slot.held
-                          ? 'is-taken'
-                          : slot.taken || !slot.fits
-                            ? 'is-nofit'
-                            : undefined
+              <div className="agenda-layout">
+                <aside className="agenda-mini">
+                  <MonthCalendar
+                    className="cal-mini"
+                    year={shownMonth.year}
+                    month={shownMonth.month}
+                    title={`${t.months[shownMonth.month]} ${shownMonth.year}`}
+                    weekdayLabels={weekdayLabels}
+                    prevLabel={t.monthPrev}
+                    nextLabel={t.monthNext}
+                    canPrev={canPrev}
+                    canNext={canNext}
+                    onPrev={() => shiftMonth(-1)}
+                    onNext={() => shiftMonth(1)}
+                    renderDay={(cell: MonthCell) => {
+                      const day = byDate.get(cell.date)
+                      const free = day ? hasFreeStart(day) : false
+                      const label = day
+                        ? dayStamp(day, t.days, t.monthShort)
+                        : `${Number(cell.date.slice(8, 10))} ${t.monthShort[monthIndex(cell.date)]}`
+                      const past = cell.date < todayDate
+                      const classes = [
+                        'cal-day',
+                        cell.date === picked ? 'is-on' : undefined,
+                        cell.date === todayDate ? 'is-today' : undefined,
+                        day?.closed ? 'is-closed' : undefined,
+                        past || !day ? 'is-past' : undefined,
+                      ]
+                        .filter(Boolean)
+                        .join(' ')
                       return (
                         <button
-                          key={slot.start}
                           type="button"
-                          aria-label={`${label} ${slot.time}`}
-                          title={kind === 'is-nofit' ? (slot.fits ? t.noFitHint : t.noFitError) : undefined}
-                          aria-pressed={on}
-                          disabled={blocked}
-                          className={
-                            [on ? 'is-on' : undefined, inSpan ? 'is-span' : undefined, inPreview ? 'is-preview' : undefined, kind]
-                              .filter(Boolean)
-                              .join(' ') || undefined
-                          }
-                          onMouseEnter={() => {
-                            if (!blocked) setHover(slot.start)
+                          className={classes}
+                          aria-label={label}
+                          aria-pressed={cell.date === picked}
+                          disabled={!free}
+                          onClick={() => {
+                            setPickedDate(cell.date)
+                            setViewMonth(null)
                           }}
-                          onMouseLeave={() => setHover('')}
-                          onFocus={() => {
-                            if (!blocked) setHover(slot.start)
-                          }}
-                          onBlur={() => setHover('')}
-                          onClick={() => edit({ ...input, slot: slot.start })}
                         >
-                          {slot.time}
+                          <span>{Number(cell.date.slice(8, 10))}</span>
+                          {free ? <i className="cal-dot" aria-hidden="true" /> : null}
                         </button>
                       )
-                    })}
+                    }}
+                  />
+                  <p className="cal-legend">
+                    <i className="cal-dot" aria-hidden="true" /> {t.freeLegend} · {t.pickDayHint}
+                  </p>
+                </aside>
+                <div className="agenda-main">
+                  <div className="agenda-bar">
+                    <div className="agenda-week">
+                      <button type="button" aria-label={narrow ? t.dayPrev : t.weekPrev} disabled={!canBack} onClick={() => shiftFocus(-1)}>
+                        ←
+                      </button>
+                      <button type="button" aria-label={narrow ? t.dayNext : t.weekNext} disabled={!canForward} onClick={() => shiftFocus(1)}>
+                        →
+                      </button>
+                    </div>
+                    <h4 className="agenda-range">
+                      {shownDays.length === 1
+                        ? dayStamp(shownDays[0], t.days, t.monthShort)
+                        : `${dayStamp(shownDays[0], t.days, t.monthShort)} – ${dayStamp(shownDays[shownDays.length - 1], t.days, t.monthShort)}`}
+                    </h4>
+                    <button type="button" className="agenda-custom" onClick={chooseCustom}>
+                      {t.customTimeCta}
+                    </button>
+                  </div>
+                  <div className="tg-scroll">
+                    <TimeGrid
+                      columns={gridColumns}
+                      axisStart={axis.start}
+                      axisEnd={axis.end}
+                      pxPerHour={PX_PER_HOUR}
+                      closedLabel={t.closedLabel}
+                    />
                   </div>
                 </div>
-              ) : (
-                <p className="day-times-empty">{t.dayFull}</p>
-              )}
-              <div className="agenda-week">
-                <button type="button" onClick={chooseCustom}>{t.customTimeCta}</button>
-              </div>
               </div>
             </>
           )}

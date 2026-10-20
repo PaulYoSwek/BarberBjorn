@@ -1436,3 +1436,110 @@ button.inbox-count { border: 0; cursor: pointer; width: auto; }
 }
 .admin-agenda-side .admin-week button { padding: 0 10px; font-size: 0.8rem; min-height: 40px; }
 .admin-agenda-side .admin-week-title { font-size: 0.9rem; }
+
+/* ---------- the agenda as a calendar app: days across, hours down */
+.tg { --tg-axis: 52px; position: relative; min-width: 0; }
+.tg-head, .tg-body { display: grid; grid-template-columns: var(--tg-axis) repeat(var(--tg-cols), minmax(0, 1fr)); }
+.tg-head {
+  position: sticky; top: 0; z-index: 4; background: #fff;
+  border-bottom: 2px solid var(--ink);
+}
+.tg-head-cell { min-width: 0; padding: 8px 6px; border-left: 1px solid rgba(22, 22, 22, 0.12); display: grid; gap: 2px; }
+.tg-head-cell.is-today { background: #fbf3cc; }
+.tg-day { font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: #5c574e; }
+.tg-num { font-family: var(--font-display); font-size: 1.3rem; font-weight: 720; letter-spacing: -0.04em; line-height: 1; }
+.tg-head-cell.is-today .tg-num { color: var(--ink); }
+.tg-body {
+  position: relative;
+  background-image: repeating-linear-gradient(to bottom, rgba(22, 22, 22, 0.16) 0 1px, transparent 1px var(--tg-hour));
+}
+.tg-axis { position: relative; }
+.tg-axis span {
+  position: absolute; right: 6px; transform: translateY(-7px);
+  font-size: 0.66rem; font-weight: 600; color: #6b665c; background: #fff; padding: 0 2px;
+}
+.tg-col {
+  position: relative; min-width: 0; border-left: 1px solid rgba(22, 22, 22, 0.12);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 calc(var(--tg-hour) / 2 - 1px),
+    rgba(22, 22, 22, 0.07) calc(var(--tg-hour) / 2 - 1px) calc(var(--tg-hour) / 2),
+    transparent calc(var(--tg-hour) / 2) var(--tg-hour)
+  );
+}
+.tg-col.is-today { background-color: rgba(245, 196, 0, 0.06); }
+.tg-shade, .tg-col.is-closed {
+  background: repeating-linear-gradient(135deg, rgba(22, 22, 22, 0.05) 0 6px, rgba(22, 22, 22, 0.11) 6px 12px);
+}
+.tg-shade { position: absolute; left: 0; right: 0; pointer-events: none; }
+.tg-closed { position: sticky; top: 64px; display: grid; place-items: center; height: 100%; max-height: 240px; }
+.tg-closed span { font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: #5c574e; }
+.tg-cell {
+  position: absolute; left: 2px; right: 2px; box-sizing: border-box;
+  margin: 0; padding: 0 6px; border: 0; background: transparent; color: var(--ink);
+  font: inherit; font-size: 0.72rem; font-weight: 600; text-align: left; cursor: pointer; min-height: 0;
+}
+.tg-scroll {
+  max-height: 72vh; overflow: auto; background: #fff;
+  border: 1px solid rgba(22, 22, 22, 0.2); -webkit-overflow-scrolling: touch;
+}
+
+/* the client's cells: a free quarter is empty space, a choice is a yellow block */
+.booking .tg-cell:not(:disabled):hover { background: rgba(245, 196, 0, 0.28); }
+.booking .tg-cell.is-preview { background: rgba(245, 196, 0, 0.45); }
+.booking .tg-cell.is-on { background: var(--yellow); z-index: 2; box-shadow: inset 3px 0 0 var(--ink); }
+.booking .tg-cell.is-span { background: var(--yellow); }
+.booking .tg-cell.is-taken { background: var(--ink); cursor: default; }
+.booking .tg-cell.is-nofit { background: repeating-linear-gradient(135deg, rgba(22, 22, 22, 0.08) 0 4px, transparent 4px 8px); cursor: default; }
+.booking .tg-cell.is-past { background: rgba(22, 22, 22, 0.06); cursor: default; }
+.booking .tg-cell:disabled { opacity: 1; }
+
+.booking .agenda-wrap { display: flex; flex-direction: column; gap: 12px; }
+.agenda-layout { display: grid; grid-template-columns: 292px minmax(0, 1fr); gap: 18px; align-items: start; }
+.agenda-mini { display: grid; gap: 8px; min-width: 0; }
+.agenda-main { display: grid; gap: 8px; min-width: 0; }
+.agenda-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.agenda-range { margin: 0; font-family: var(--font-display); font-size: 1.05rem; letter-spacing: -0.03em; flex: 1 1 auto; }
+.agenda-custom { min-height: 40px; padding: 0 12px; width: auto; }
+.cal-mini .cal-title { font-size: 1.05rem; }
+.cal-mini .cal-nav button { min-width: 36px; min-height: 36px; }
+.cal-mini .cal-day { min-height: 34px; font-size: 0.82rem; gap: 2px; padding: 2px; }
+.cal-mini .cal-dot { width: 5px; height: 5px; }
+@media (max-width: 800px) {
+  .agenda-layout { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .tg { --tg-axis: 42px; }
+  .tg-scroll { max-height: 60vh; }
+  .agenda-custom { flex: 1 1 100%; }
+}
+
+/* the dashboard's cells: quarters you tap, bookings in yellow, closed in black */
+.admin-tg .tg-cell.admin-cell {
+  display: flex; align-items: center; gap: 6px; padding: 0 6px;
+  border: 1px solid rgba(22, 22, 22, 0.1); background: #fff; font-size: 0.66rem; font-weight: 500;
+  min-height: 0;
+}
+.admin-tg .tg-cell.admin-cell.is-vrij { background: transparent; }
+.admin-tg .tg-cell.admin-cell.is-vrij:hover { background: rgba(245, 196, 0, 0.25); }
+.admin-tg .tg-cell.admin-cell.is-shut { background: #101010; color: #f4f1ea; border-color: #101010; }
+.admin-tg .tg-cell.admin-cell.is-booked { background: #f5c400; color: #101010; border-color: #f5c400; font-weight: 600; }
+.admin-tg .tg-cell.admin-cell.is-cont { border-top: 0; }
+.admin-tg .tg-cell.admin-cell.is-cont .admin-cell-time { visibility: hidden; }
+.admin-tg .admin-cell-time { flex: 0 0 auto; opacity: 0.75; }
+.admin-tg .admin-cell-name { flex: 1 1 auto; font-size: 0.68rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.admin-tg .tg-head-cell { padding: 6px 4px; }
+.admin-tg .admin-col-head { min-height: 0; padding: 0 0 4px; }
+.admin-tg .admin-col-head strong { font-size: 0.9rem; }
+.admin-tg .admin-col-head span { font-size: 0.7rem; }
+.admin-tg .admin-day-toggle { width: 100%; margin: 0; min-height: 30px; font-size: 0.62rem; }
+.admin-tg .tg-head-cell.is-on { box-shadow: inset 0 3px 0 var(--yellow); }
+.admin-tg .tg-closed { top: 84px; }
+.admin-day-nav { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 2px; }
+.admin-day-nav button {
+  flex: 0 0 auto; min-height: 40px; padding: 0 10px; width: auto;
+  border: 1px solid #101010; background: #fff; font-weight: 600; font-size: 0.8rem;
+}
+.admin-day-nav button.is-on { background: #101010; color: #f4f1ea; }
+.admin-agenda-main .tg-scroll { max-height: 78vh; }
+@media (max-width: 800px) {
+  .admin-tg .tg-head-cell { padding: 6px 4px; }
+}
