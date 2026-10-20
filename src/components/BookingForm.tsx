@@ -46,6 +46,11 @@ function dayStamp(day: AgendaDay, labels: { key: string; label: string }[], shor
   return `${name} ${Number(day.date.slice(8, 10))} ${short[monthIndex(day.date)]}`
 }
 
+function minutesOfClock(time: string): number {
+  const [hours, minutes] = time.split(':').map(Number)
+  return hours * 60 + minutes
+}
+
 function customSlot(date: string, time: string) {
   if (!date || !time) return ''
   return `${date}T${time.slice(0, 5)}:00`
@@ -111,6 +116,8 @@ export function BookingForm() {
   // Phones show one day at a time; wider screens the whole week.
   const [narrow, setNarrow] = useState(() => window.matchMedia(NARROW).matches)
   const [latched, setLatched] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const axisStartRef = useRef(9 * 60)
 
   useEffect(() => {
     const query = window.matchMedia(NARROW)
@@ -313,11 +320,21 @@ export function BookingForm() {
   const covered = new Set(input.kind === 'slot' && input.slot ? spanStarts(input.slot, duration) : [])
   const previewed = new Set(hover && hover !== input.slot ? spanStarts(hover, duration) : [])
 
+  // Open the grid at the first free start of the day in focus, an hour of context above it.
+  const firstFree = days[focusIndex]?.slots.find((slot) => slot.fits && !slot.taken && !slot.past)?.time
+  useEffect(() => {
+    const box = scrollRef.current
+    if (!box || !firstFree) return
+    const top = ((minutesOfClock(firstFree) - axisStartRef.current) / 60) * PX_PER_HOUR
+    box.scrollTop = Math.max(0, top - PX_PER_HOUR * 0.75)
+  }, [firstFree, picked, narrow])
+
   const dayHours = (day: AgendaDay) =>
     day.closed || day.slots.length === 0
       ? undefined
       : { open: day.slots[0].time, close: endClock(day.slots[day.slots.length - 1].time, 15) }
   const axis = axisOf(shownDays.map((day) => ({ hours: dayHours(day) })))
+  axisStartRef.current = axis.start
   const gridColumns: GridColumn[] = shownDays.map((day) => {
     const label = dayStamp(day, t.days, t.monthShort)
     const weekday = t.days.find((item) => item.key === day.weekday)?.label ?? day.weekday
@@ -507,7 +524,7 @@ export function BookingForm() {
                       {t.customTimeCta}
                     </button>
                   </div>
-                  <div className="tg-scroll">
+                  <div className="tg-scroll" ref={scrollRef}>
                     <TimeGrid
                       columns={gridColumns}
                       axisStart={axis.start}

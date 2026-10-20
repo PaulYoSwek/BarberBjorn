@@ -1565,3 +1565,110 @@ button.inbox-count { border: 0; cursor: pointer; width: auto; }
 .booking .agenda-wrap { align-items: stretch; }
 .agenda-layout { grid-template-columns: 272px minmax(0, 1fr); gap: 22px; }
 .tg-axis span:first-child { transform: none; }
+
+/* ---------- agenda, polished: hairlines, calm month, one strong accent */
+:root { --hair: rgba(16, 16, 16, 0.1); --hair-strong: rgba(16, 16, 16, 0.16); --muted: #6b665c; }
+
+/* mini month: no boxes, just numbers */
+.cal-mini { gap: 6px; }
+.cal-mini .cal-head { padding: 0 2px; }
+.cal-mini .cal-title { font-size: 1rem; letter-spacing: -0.02em; }
+.cal-nav { display: inline-flex; }
+.cal-nav button { min-width: 34px; min-height: 34px; font-size: 0.95rem; border: 1px solid var(--hair-strong); background: #fff; }
+.cal-nav button + button { margin-left: -1px; }
+.cal-nav button:not(:disabled):hover { background: var(--yellow); border-color: var(--yellow); }
+.cal-weekdays span { font-size: 0.62rem; color: var(--muted); padding: 4px 0; }
+.cal-weekdays, .cal-grid { gap: 2px; }
+.cal-mini .cal-day {
+  min-height: 36px; padding: 3px 2px; gap: 2px;
+  border: 0; background: transparent; font-weight: 500; font-size: 0.86rem; color: var(--ink);
+}
+.cal-mini .cal-day:not(:disabled):hover { background: rgba(16, 16, 16, 0.06); }
+.cal-mini .cal-day:disabled { background: transparent; color: rgba(16, 16, 16, 0.3); }
+.cal-mini .cal-day.is-closed { text-decoration: none; color: rgba(16, 16, 16, 0.22); }
+.cal-mini .cal-day.is-today { box-shadow: inset 0 0 0 1.5px var(--ink); }
+.cal-mini .cal-day.is-on { background: var(--yellow); box-shadow: none; font-weight: 700; }
+.cal-mini .cal-dot { width: 4px; height: 4px; }
+.cal-legend { font-size: 0.74rem; color: var(--muted); padding: 0 2px; }
+
+/* toolbar above the grid */
+.agenda-bar { gap: 12px; padding-bottom: 2px; }
+.agenda-week { display: inline-flex; gap: 0; }
+.booking .agenda-week button { min-width: 36px; min-height: 36px; padding: 0; font-size: 0.95rem; border: 1px solid var(--hair-strong); background: #fff; }
+.booking .agenda-week button + button { margin-left: -1px; }
+.booking .agenda-week button:not(:disabled):hover { background: var(--yellow); border-color: var(--yellow); }
+.booking .agenda-week button:disabled { opacity: 0.3; }
+.agenda-range { font-size: 1.15rem; font-weight: 720; }
+.booking .agenda-custom {
+  margin-left: auto; min-height: 36px; padding: 0 12px; width: auto;
+  border: 1px solid var(--ink); background: transparent; font-size: 0.82rem; font-weight: 500; cursor: pointer;
+}
+.booking .agenda-custom:hover { background: var(--ink); color: #f4f1ea; }
+
+/* the grid itself */
+.tg-scroll {
+  max-height: 600px; border: 1px solid var(--hair-strong); background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  scrollbar-width: thin; scrollbar-color: rgba(16, 16, 16, 0.3) transparent;
+}
+.tg-head { border-bottom: 1px solid var(--hair-strong); }
+.tg-head-cell { padding: 10px 8px 8px; border-left: 1px solid var(--hair); gap: 0; }
+.tg-day { font-size: 0.62rem; letter-spacing: 0.1em; color: var(--muted); }
+.tg-num { font-size: 1.25rem; }
+.tg-head-cell.is-today { background: transparent; }
+.tg-head-cell.is-today .tg-num { display: inline-block; padding: 0 6px; margin-left: -6px; background: var(--yellow); }
+.tg-body { background-image: repeating-linear-gradient(to bottom, var(--hair-strong) 0 1px, transparent 1px var(--tg-hour)); }
+.tg-col {
+  border-left: 1px solid var(--hair);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 calc(var(--tg-hour) / 2 - 1px),
+    rgba(16, 16, 16, 0.05) calc(var(--tg-hour) / 2 - 1px) calc(var(--tg-hour) / 2),
+    transparent calc(var(--tg-hour) / 2) var(--tg-hour)
+  );
+}
+.tg-col.is-today { background-color: rgba(245, 196, 0, 0.05); }
+.tg-axis span {
+  right: 8px; transform: translateY(-50%); font-size: 0.64rem; font-weight: 500; color: var(--muted); background: #fff;
+}
+.tg-axis span:first-child { transform: translateY(2px); }
+.tg-shade, .tg-col.is-closed {
+  background: repeating-linear-gradient(135deg, rgba(16, 16, 16, 0.035) 0 5px, rgba(16, 16, 16, 0.075) 5px 10px);
+}
+.tg-closed span { font-size: 0.62rem; letter-spacing: 0.14em; color: rgba(16, 16, 16, 0.5); }
+
+/* the client's blocks */
+.booking .tg-cell { left: 3px; right: 3px; }
+.booking .tg-cell:not(:disabled):hover { background: rgba(245, 196, 0, 0.2); box-shadow: inset 0 0 0 1px rgba(245, 196, 0, 0.9); }
+.booking .tg-cell.is-preview, .booking .tg-cell.is-preview:hover { background: rgba(245, 196, 0, 0.35); box-shadow: none; }
+.booking .tg-cell.is-span, .booking .tg-cell.is-span:hover { background: var(--yellow); box-shadow: inset 3px 0 0 var(--ink); }
+.booking .tg-cell.is-on, .booking .tg-cell.is-on:hover {
+  background: var(--yellow); box-shadow: inset 3px 0 0 var(--ink), 0 2px 6px rgba(0, 0, 0, 0.14);
+  font-weight: 700; z-index: 2;
+}
+.booking .tg-cell.is-taken, .booking .tg-cell.is-taken:disabled { background: #1d1d1d; left: 3px; right: 3px; }
+.booking .tg-cell.is-past, .booking .tg-cell.is-past:disabled { background: rgba(16, 16, 16, 0.035); left: 0; right: 0; }
+.booking .tg-cell.is-nofit, .booking .tg-cell.is-nofit:disabled {
+  background: repeating-linear-gradient(135deg, rgba(16, 16, 16, 0.06) 0 4px, transparent 4px 8px); left: 0; right: 0;
+}
+
+/* the dashboard's blocks */
+.admin-tg .tg-cell.admin-cell { left: 3px; right: 3px; border: 0; border-top: 1px solid rgba(16, 16, 16, 0.05); padding: 0 8px; }
+.admin-tg .tg-cell.admin-cell.is-vrij:hover { background: rgba(245, 196, 0, 0.2); box-shadow: inset 0 0 0 1px rgba(245, 196, 0, 0.9); }
+.admin-tg .tg-cell.admin-cell.is-booked { background: var(--yellow); border-top-color: rgba(16, 16, 16, 0.08); box-shadow: inset 3px 0 0 var(--ink); }
+.admin-tg .tg-cell.admin-cell.is-booked:not(.is-cont) { box-shadow: inset 3px 0 0 var(--ink), 0 2px 6px rgba(0, 0, 0, 0.12); z-index: 1; }
+.admin-tg .tg-cell.admin-cell.is-shut { background: #1d1d1d; color: #f4f1ea; border-top-color: rgba(255, 255, 255, 0.08); }
+.admin-tg .tg-cell.admin-cell .admin-cell-time { font-size: 0.62rem; opacity: 0.7; }
+.admin-tg .tg-cell.admin-cell .admin-cell-name { font-size: 0.7rem; font-weight: 700; }
+.admin-tg .admin-col-head strong { font-size: 0.86rem; }
+.admin-tg .admin-day-toggle { border-color: var(--hair-strong); font-size: 0.6rem; min-height: 28px; }
+.admin-tg .tg-head-cell.is-on { box-shadow: inset 0 3px 0 var(--yellow); }
+.admin-month { border-color: var(--hair-strong); }
+.admin-month .cal-day { border-color: var(--hair); }
+@media (max-width: 800px) {
+  .tg-scroll { max-height: 62vh; }
+  .booking .agenda-custom { margin-left: 0; }
+}
+/* free quarters only print their time on the hour; the axis says the rest */
+.admin-tg .tg-cell.admin-cell.is-vrij:not(.is-hour) .admin-cell-time { visibility: hidden; }
+.admin-tg .tg-cell.admin-cell.is-vrij:hover .admin-cell-time { visibility: visible; }

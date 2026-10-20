@@ -877,7 +877,7 @@ export function AdminAgenda({ clients = [], onBooked }: Props) {
                       <button
                         key={time}
                         type="button"
-                        className={`tg-cell admin-cell is-${state}${continues ? ' is-cont' : ''}`}
+                        className={`tg-cell admin-cell is-${state}${continues ? ' is-cont' : ''}${time.endsWith(':00') ? ' is-hour' : ''}`}
                         aria-pressed={state === 'shut'}
                         aria-label={`${stamp} ${time} ${label}${who}${why}`}
                         title={block?.reason || client?.name || undefined}
