@@ -26,7 +26,7 @@ export type Billable = {
   name: string
   email: string
   start: string
-  status: 'confirmed' | 'pending' | 'declined'
+  status: 'confirmed' | 'pending' | 'declined' | 'noshow'
   price: string | null
   charged: number | null
   items: OrderItem[]

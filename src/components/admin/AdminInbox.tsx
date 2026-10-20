@@ -1,7 +1,7 @@
-import { useMemo, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { copy, type ServiceId } from '../../content'
 import { bookingMoney, formatMoney, type OrderItem, type Product } from '../../finance'
-import { decideInbox, moveBooking, type InboxRow } from '../../planning-api'
+import { decideInbox, moveBooking, type InboxAction, type InboxRow } from '../../planning-api'
 import { serviceName } from './admin-defaults'
 import { OrderEditor } from './OrderEditor'
 
@@ -9,13 +9,14 @@ const STATUS_LABEL: Record<InboxRow['status'], string> = {
   pending: 'Nieuw',
   confirmed: 'Bevestigd',
   declined: 'Geweigerd',
+  noshow: 'Niet gekomen',
 }
 
 type Props = {
   rows: InboxRow[]
   loading?: boolean
   error?: string | null
-  onChanged: (id: string, status: 'confirmed' | 'declined') => void
+  onChanged: (id: string, status: InboxRow['status']) => void
   onResend: (id: string) => void
   onMoved?: (id: string, start: string, sent: boolean) => void
   products?: Product[]
@@ -170,6 +171,15 @@ export function AdminInbox({
   const [movingBusy, setMovingBusy] = useState(false)
   const [filter, setFilter] = useState<InboxFilter>(DEFAULT_FILTER)
 
+  useEffect(() => {
+    if (!orderId) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOrderId(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [orderId])
+
   function startMove(row: InboxRow) {
     setNotice(null)
     setDone(null)
@@ -204,23 +214,31 @@ export function AdminInbox({
     }
   }
 
-  async function decide(id: string, action: 'accept' | 'decline') {
+  const DECIDED: Record<InboxAction, { status: InboxRow['status']; done: string; failed: string }> = {
+    accept: { status: 'confirmed', done: 'Geaccepteerd. De klant krijgt een mail.', failed: 'Beslissen mislukt.' },
+    decline: { status: 'declined', done: 'Geweigerd. De klant krijgt een mail.', failed: 'Beslissen mislukt.' },
+    noshow: { status: 'noshow', done: 'Gemarkeerd als niet gekomen. Telt niet mee in de omzet.', failed: 'Markeren mislukt.' },
+    showed: { status: 'confirmed', done: 'Weer gemarkeerd als gekomen. Telt weer mee in de omzet.', failed: 'Markeren mislukt.' },
+  }
+
+  async function decide(id: string, action: InboxAction) {
     if (decidingRef.current) return
     decidingRef.current = id
     setDecidingId(id)
+    const outcome = DECIDED[action]
     try {
       const result = await decideInbox(id, action)
       if (!result.ok) {
         setNotice(
-          result.error === 'overlap' ? 'Die tijd is al bezet. Kies een andere tijd of weiger.' : 'Beslissen mislukt.',
+          result.error === 'overlap' ? 'Die tijd is al bezet. Kies een andere tijd of weiger.' : outcome.failed,
         )
         return
       }
       setNotice(null)
-      setDone(action === 'accept' ? 'Geaccepteerd. De klant krijgt een mail.' : 'Geweigerd. De klant krijgt een mail.')
-      onChanged(id, action === 'accept' ? 'confirmed' : 'declined')
+      setDone(outcome.done)
+      onChanged(id, outcome.status)
     } catch {
-      setNotice('Beslissen mislukt.')
+      setNotice(outcome.failed)
     } finally {
       decidingRef.current = null
       setDecidingId(null)
@@ -228,6 +246,7 @@ export function AdminInbox({
   }
 
   const pendingCount = rows.filter((row) => row.status === 'pending').length
+  const orderRow = orderId ? (rows.find((row) => row.id === orderId) ?? null) : null
   const now = new Date()
   const shown = filterInbox(rows, filter, now)
   const groups = grouped(shown, now)
@@ -284,6 +303,7 @@ export function AdminInbox({
                 <option value="">Alle</option>
                 <option value="pending">Te beoordelen</option>
                 <option value="confirmed">Bevestigd</option>
+                <option value="noshow">Niet gekomen</option>
                 <option value="declined">Geweigerd</option>
               </select>
             </label>
@@ -334,6 +354,23 @@ export function AdminInbox({
             : null}
         </p>
       ) : null}
+      {orderRow ? (
+        <div className="admin-modal" onClick={(event) => event.target === event.currentTarget && setOrderId(null)}>
+          <div className="admin-bon-modal" role="dialog" aria-modal="true" aria-label={`Bon ${orderRow.name}`}>
+            <OrderEditor
+              row={orderRow}
+              products={products}
+              prices={prices}
+              onClose={() => setOrderId(null)}
+              onSaved={(id, charged, items) => {
+                setOrderId(null)
+                setDone(`Bon van ${orderRow.name} opgeslagen: ${formatMoney(bookingMoney({ ...orderRow, charged, items }, prices).total)}.`)
+                onOrderSaved?.(id, charged, items)
+              }}
+            />
+          </div>
+        </div>
+      ) : null}
       {groups.map((group) => (
         <section key={group.id} className="inbox-group" aria-label={group.title}>
           <h2 className="inbox-group-title">
@@ -370,7 +407,9 @@ export function AdminInbox({
                       <span className="inbox-tag is-service">
                         {serviceName(row.service)} · {row.minutes} min
                       </span>
-                      {(() => {
+                      {row.status === 'noshow' ? (
+                        <span className="inbox-tag is-unpaid">niet betaald</span>
+                      ) : (() => {
                         const money = bookingMoney(row, prices)
                         const changed = row.charged !== null || (row.items ?? []).length > 0
                         return (
@@ -399,19 +438,6 @@ export function AdminInbox({
                         </a>
                       ) : null}
                     </p>
-                    {orderId === row.id ? (
-                      <OrderEditor
-                        row={row}
-                        products={products}
-                        prices={prices}
-                        onClose={() => setOrderId(null)}
-                        onSaved={(id, charged, items) => {
-                          setOrderId(null)
-                          setDone(`Bon van ${row.name} opgeslagen: ${formatMoney(bookingMoney({ ...row, charged, items }, prices).total)}.`)
-                          onOrderSaved?.(id, charged, items)
-                        }}
-                      />
-                    ) : null}
                     {isMoving && moving ? (
                       <form
                         className="inbox-move"
@@ -447,8 +473,34 @@ export function AdminInbox({
                         </div>
                       </form>
                     ) : null}
-                    {!isMoving && orderId !== row.id && (row.status === 'pending' || unsent || movable || row.status === 'confirmed') ? (
+                    {!isMoving && (row.status === 'pending' || unsent || movable || row.status === 'confirmed' || row.status === 'noshow') ? (
                       <div className="inbox-actions">
+                        {row.status === 'confirmed' && over ? (
+                          <button
+                            type="button"
+                            className="inbox-noshow"
+                            aria-label={`${row.name} niet gekomen`}
+                            disabled={decidingId === row.id}
+                            onClick={() => {
+                              void decide(row.id, 'noshow')
+                            }}
+                          >
+                            Niet gekomen
+                          </button>
+                        ) : null}
+                        {row.status === 'noshow' ? (
+                          <button
+                            type="button"
+                            className="inbox-showed"
+                            aria-label={`${row.name} toch gekomen`}
+                            disabled={decidingId === row.id}
+                            onClick={() => {
+                              void decide(row.id, 'showed')
+                            }}
+                          >
+                            Toch gekomen
+                          </button>
+                        ) : null}
                         {row.status === 'confirmed' ? (
                           <button
                             type="button"

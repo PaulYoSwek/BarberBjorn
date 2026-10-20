@@ -19,7 +19,7 @@ export type ClientBooking = {
   email: string
   phone: string
   start: string
-  status: 'confirmed' | 'pending' | 'declined'
+  status: 'confirmed' | 'pending' | 'declined' | 'noshow'
   price: string | null
   /** Service price after discount, when it was changed. */
   charged?: number | null
@@ -42,6 +42,8 @@ export type ClientSummary = {
   visits: number
   /** Confirmed appointments still to come. */
   upcoming: number
+  /** Appointments the client did not turn up for. */
+  noShows: number
   /** Euros paid over all visits. */
   paid: number
   lastVisit: string | null
@@ -157,6 +159,7 @@ export function summarizeClients(
         since: null,
         visits: 0,
         upcoming: 0,
+        noShows: 0,
         paid: 0,
         lastVisit: null,
         nextVisit: null,
@@ -185,6 +188,10 @@ export function summarizeClients(
     summary.bookings.push(booking)
     if (!summary.phone && booking.phone.trim()) summary.phone = booking.phone.trim()
     if (!summary.since || booking.start.slice(0, 10) < summary.since) summary.since = booking.start.slice(0, 10)
+    if (booking.status === 'noshow') {
+      summary.noShows += 1
+      continue
+    }
     if (booking.status !== 'confirmed') continue
     if (booking.start <= today) {
       summary.visits += 1

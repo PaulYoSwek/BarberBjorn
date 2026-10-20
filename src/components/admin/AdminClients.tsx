@@ -417,6 +417,9 @@ export function AdminClients({ rows, onDeleted }: Props) {
               <p className="admin-client-score">
                 <strong>{summary.visits}×</strong>
                 <span>{formatEuro(summary.paid)}</span>
+                {summary.noShows > 0 ? (
+                  <em className="admin-client-noshow">{summary.noShows}× niet gekomen</em>
+                ) : null}
               </p>
             </div>
             <p className="admin-client-contact">

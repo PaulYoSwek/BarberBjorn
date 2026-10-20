@@ -196,3 +196,19 @@ test('a client opens an overview with every appointment, what they spent and the
   await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Bewerken' }))
   expect(screen.getByRole('form', { name: 'Klant bewerken' })).toBeInTheDocument()
 })
+
+test('no-shows are counted per client and kept out of what they paid', async () => {
+  loadInbox.mockResolvedValue([
+    row('1', 'Ada Vos', 'ada@x.nl', '2026-10-05T09:00:00'),
+    row('2', 'Ada Vos', 'ada@x.nl', '2026-10-12T09:30:00', { status: 'noshow' }),
+  ])
+  render(<AdminShell />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Klanten' }))
+  const card = (await screen.findByText('Ada Vos')).closest('li') as HTMLElement
+  expect(within(card).getByText('1× niet gekomen')).toBeInTheDocument()
+  expect(within(card).getByText('1×')).toBeInTheDocument()
+  await userEvent.click(within(card).getByRole('button', { name: 'Ada Vos overzicht' }))
+  const dialog = screen.getByRole('dialog', { name: 'Overzicht Ada Vos' })
+  expect(within(dialog).getByText('Niet gekomen', { selector: 'dt' }).nextElementSibling).toHaveTextContent('1')
+  expect(within(dialog).getAllByRole('listitem')[0]).toHaveTextContent('Niet gekomen')
+})

@@ -26,10 +26,15 @@ const TABS: { id: Tab; label: string }[] = [
 
 type Props = { pending?: number; onLogout?: () => void }
 
-function applyInbox(incoming: InboxRow[], decided: ReadonlyMap<string, 'confirmed' | 'declined'>): InboxRow[] {
+function applyInbox(incoming: InboxRow[], decided: ReadonlyMap<string, InboxRow['status']>): InboxRow[] {
   return incoming.map((row) => {
     const status = decided.get(row.id)
-    if (status && row.status === 'pending') return { ...row, status }
+    if (!status) return row
+    // A stale load must not undo a decision: a request that was decided, or an
+    // appointment flipped between came and did not come.
+    if (row.status === 'pending') return { ...row, status }
+    if (row.status === 'confirmed' && status === 'noshow') return { ...row, status }
+    if (row.status === 'noshow' && status === 'confirmed') return { ...row, status }
     return row
   })
 }
@@ -64,7 +69,7 @@ export function AdminShell({ pending, onLogout }: Props) {
     void pullProducts()
   }
   const inboxGeneration = useRef(0)
-  const decidedStatus = useRef(new Map<string, 'confirmed' | 'declined'>())
+  const decidedStatus = useRef(new Map<string, InboxRow['status']>())
   const logout = useRef(onLogout)
   useEffect(() => {
     logout.current = onLogout
@@ -93,7 +98,7 @@ export function AdminShell({ pending, onLogout }: Props) {
       })
   }
 
-  function onDecided(id: string, status: 'confirmed' | 'declined') {
+  function onDecided(id: string, status: InboxRow['status']) {
     decidedStatus.current.set(id, status)
     setRows((current) => current.map((row) => (row.id === id ? { ...row, status } : row)))
     pullInbox(false)

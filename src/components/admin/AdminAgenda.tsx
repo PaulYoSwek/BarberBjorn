@@ -164,6 +164,7 @@ function windowDays(now: Date, schedule: Schedule): AgendaDay[] {
 const STATUS_LABEL: Record<InboxRow['status'], string> = {
   pending: 'In afwachting',
   confirmed: 'Bevestigd',
+  noshow: 'Niet gekomen',
   declined: 'Geweigerd',
 }
 

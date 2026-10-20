@@ -142,3 +142,14 @@ test('the CSV has one line per appointment with Dutch decimals and escaped text'
     '2026-10-02;14:30;"Kim ""KJ"" Jansen";sam@mail.nl;Knippen;30,00;27,50;"1× Wax; groot €12";12,00;2,50;39,50;2,27;2,08',
   )
 })
+
+test('a client who did not turn up is never revenue', async () => {
+  const { settled } = await import('./finance')
+  const now = new Date('2026-10-20T12:00:00')
+  const base = { service: 'cut', price: '€30', charged: null, items: [], name: 'X', email: 'x@mail.nl' }
+  const rows = [
+    { ...base, id: 'came', start: '2026-10-05T10:00:00', status: 'confirmed' as const },
+    { ...base, id: 'noshow', start: '2026-10-06T10:00:00', status: 'noshow' as const },
+  ]
+  expect(settled(rows as never, now).map((row) => row.id)).toEqual(['came'])
+})

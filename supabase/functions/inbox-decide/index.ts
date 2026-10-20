@@ -24,7 +24,10 @@ servePost(async (req) => {
   if (!body || typeof body !== 'object') return json(req, 400, { ok: false, error: 'invalid' })
   const record = body as { id?: unknown; action?: unknown }
   const id = typeof record.id === 'string' ? record.id : ''
-  const action = record.action === 'accept' || record.action === 'decline' ? record.action : null
+  const action =
+    record.action === 'accept' || record.action === 'decline' || record.action === 'noshow' || record.action === 'showed'
+      ? record.action
+      : null
   if (!id || !action) return json(req, 400, { ok: false, error: 'invalid' })
 
   const db = serviceClient()
@@ -37,6 +40,23 @@ servePost(async (req) => {
   if (!found.data) return json(req, 404, { ok: false, error: 'missing' })
   const row = found.data as BookingRecord
   const wall = utcToSalonWall(String(row.start))
+
+  // Not shown up (or shown up after all): only for an appointment that was confirmed and has started.
+  if (action === 'noshow' || action === 'showed') {
+    const from = action === 'noshow' ? 'confirmed' : 'noshow'
+    if (row.status !== from) return json(req, 409, { ok: false, error: 'status' })
+    if (action === 'noshow' && wall > utcToSalonWall(salonNow().toISOString())) {
+      return json(req, 409, { ok: false, error: 'future' })
+    }
+    const marked = await db
+      .from('bookings')
+      .update({ status: action === 'noshow' ? 'noshow' : 'confirmed' })
+      .eq('id', id)
+      .eq('status', from)
+    if (marked.error) throw new Error(marked.error.message)
+    return json(req, 200, { ok: true, sent: false })
+  }
+
   const schedule = await loadSchedule(db, row.id)
   const decision = applyDecision(
     { start: wall, minutes: row.minutes, status: row.status },

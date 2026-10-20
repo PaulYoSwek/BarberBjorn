@@ -2021,3 +2021,49 @@ button.inbox-count { border: 0; cursor: pointer; width: auto; }
 @media print {
   .finance-chart-bar { fill: #101010 !important; }
 }
+
+/* ---------- afspraken, tidied; no-shows; the bon as a popup */
+.inbox-card { border-color: var(--hair-strong); }
+.inbox-card:hover { border-color: rgba(16, 16, 16, 0.3); }
+.inbox-card.is-pending { border-color: var(--yellow); }
+.inbox-card.is-noshow .inbox-date { background: #8c1d18; }
+.inbox-card.is-noshow .inbox-date em { color: #f9dedc; text-decoration: line-through; }
+.inbox-card.is-noshow .inbox-status { background: #f9dedc; color: #8c1d18; }
+.inbox-card.is-noshow h3 { text-decoration: line-through; text-decoration-color: rgba(140, 29, 24, 0.6); }
+.inbox-tag.is-unpaid { background: #f9dedc; border-color: #f3c1bd; color: #8c1d18; font-weight: 600; }
+.inbox-status { font-size: 0.64rem; letter-spacing: 0.08em; }
+.inbox-card.is-confirmed .inbox-status { background: #e3f0e6; color: #1d6b3a; }
+.inbox-actions button { border-color: var(--hair-strong); font-size: 0.8rem; font-weight: 600; min-height: 34px; padding: 0 12px; }
+.inbox-actions button:hover { border-color: var(--ink); }
+.inbox-actions .inbox-accept { border-color: var(--yellow); }
+.inbox-actions .inbox-noshow:hover, .inbox-actions .inbox-decline:hover { border-color: #8c1d18; color: #8c1d18; }
+.inbox-actions .inbox-showed { background: #e3f0e6; border-color: #b9dcc4; color: #1d6b3a; }
+.inbox-actions .inbox-order-open { background: var(--ink); color: #f4f1ea; border-color: var(--ink); }
+.inbox-actions .inbox-order-open:hover { background: #2a2a2a; }
+.inbox-filters { border-color: var(--hair-strong); }
+.inbox-when button { border-color: var(--hair-strong); font-size: 0.8rem; min-height: 36px; }
+.inbox-when button[aria-checked="true"] { border-color: var(--ink); }
+.inbox-filter-row select, .inbox-filter-row input { border-color: var(--hair-strong); min-height: 38px; }
+.inbox-filter-row label { font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.inbox-group-title { font-size: 0.66rem; letter-spacing: 0.1em; }
+.admin-bon-modal {
+  width: min(640px, 100%); max-height: calc(100vh - 32px); overflow: auto;
+  background: #fff; border: 1px solid var(--hair-strong);
+  box-shadow: inset 4px 0 0 var(--yellow), 0 18px 48px rgba(0, 0, 0, 0.25);
+  padding: 18px 20px 18px 24px;
+}
+.admin-client-noshow { display: block; font-style: normal; font-size: 0.72rem; font-weight: 700; color: #8c1d18; }
+.admin-detail-stats { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.admin-detail-stats div:nth-child(5) { box-shadow: inset 0 3px 0 var(--hair-strong); }
+.admin-detail-stats div:nth-child(5).is-warn { box-shadow: inset 0 3px 0 #b3261e; }
+.admin-detail-stats div:nth-child(5).is-warn dd { color: #8c1d18; }
+.admin-detail-row.is-noshow { opacity: 0.85; box-shadow: inset 3px 0 0 #b3261e; }
+.admin-detail-standing.is-noshow { background: #f9dedc; color: #8c1d18; }
+@media (max-width: 720px) {
+  .admin-detail-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-bon-modal { padding: 14px 12px 14px 16px; }
+}
+/* The name keeps its width on a phone; the badges wrap under it instead of squeezing it. */
+.inbox-top { flex-wrap: wrap; }
+.inbox-top h3 { flex: 1 1 150px; min-width: 0; overflow-wrap: anywhere; }
+.inbox-badges { flex: 0 1 auto; }

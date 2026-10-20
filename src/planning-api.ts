@@ -300,7 +300,8 @@ export type InboxRow = {
   start: string
   minutes: number
   kind: BookingKind
-  status: 'confirmed' | 'pending' | 'declined'
+  /** `noshow`: the client did not turn up; kept on record, never counted as revenue. */
+  status: 'confirmed' | 'pending' | 'declined' | 'noshow'
   lang: Lang
   mail_sent: boolean
   /** Price stored when the booking was made; null for older bookings. */
@@ -363,7 +364,7 @@ function isKind(value: string): value is BookingKind {
 }
 
 function isStatus(value: string): value is InboxRow['status'] {
-  return value === 'confirmed' || value === 'pending' || value === 'declined'
+  return value === 'confirmed' || value === 'pending' || value === 'declined' || value === 'noshow'
 }
 
 function isTemplateKey(value: string): value is TemplateKey {
@@ -441,7 +442,10 @@ export async function loadTemplates(): Promise<TemplateSave[]> {
   }
 }
 
-export function decideInbox(id: string, action: 'accept' | 'decline') {
+export type InboxAction = 'accept' | 'decline' | 'noshow' | 'showed'
+
+/** Bjorn decides on a request, or marks a past appointment as not shown up (or shown up after all). */
+export function decideInbox(id: string, action: InboxAction) {
   return invokeOk('inbox-decide', { id, action })
 }
 

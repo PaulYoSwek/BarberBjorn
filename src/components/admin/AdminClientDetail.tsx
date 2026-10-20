@@ -33,10 +33,11 @@ function usually(summary: ClientSummary): string {
   return parts.filter(Boolean).join(' · ')
 }
 
-type Standing = { key: 'over' | 'coming' | 'pending' | 'expired' | 'declined'; label: string }
+type Standing = { key: 'over' | 'coming' | 'pending' | 'expired' | 'declined' | 'noshow'; label: string }
 
 function standingOf(row: InboxRow, now: Date): Standing {
   if (row.status === 'declined') return { key: 'declined', label: 'Geweigerd' }
+  if (row.status === 'noshow') return { key: 'noshow', label: 'Niet gekomen' }
   const over = momentOf(row, now) === 'over'
   if (row.status === 'pending') return over ? { key: 'expired', label: 'Verlopen' } : { key: 'pending', label: 'Te beoordelen' }
   return over ? { key: 'over', label: 'Geweest' } : { key: 'coming', label: 'Komend' }
@@ -105,6 +106,10 @@ export function AdminClientDetail({ summary, rows, prices, onClose, onEdit }: Pr
           <div>
             <dt>Komend</dt>
             <dd>{summary.upcoming}</dd>
+          </div>
+          <div className={summary.noShows > 0 ? 'is-warn' : undefined}>
+            <dt>Niet gekomen</dt>
+            <dd>{summary.noShows}</dd>
           </div>
         </dl>
 
