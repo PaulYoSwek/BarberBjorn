@@ -1672,3 +1672,7 @@ button.inbox-count { border: 0; cursor: pointer; width: auto; }
 /* free quarters only print their time on the hour; the axis says the rest */
 .admin-tg .tg-cell.admin-cell.is-vrij:not(.is-hour) .admin-cell-time { visibility: hidden; }
 .admin-tg .tg-cell.admin-cell.is-vrij:hover .admin-cell-time { visibility: visible; }
+
+/* the site's agenda is the grid alone, full width */
+.agenda-main { width: 100%; }
+.booking .agenda-week + .agenda-week { margin-left: 4px; }

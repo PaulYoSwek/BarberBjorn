@@ -15,22 +15,17 @@ import {
   agendaDays,
   defaultSchedule,
   firstBookableDate,
-  hasFreeStart,
-  monthOf,
   DEFAULT_MINUTES,
   SERVICE_MINUTES,
   spanStarts,
   type AgendaDay,
   type BookingHold,
-  type MonthCell,
   type Schedule,
 } from '../schedule'
-import { MonthCalendar } from './MonthCalendar'
 import { axisOf, blockStyle, TimeGrid, type GridColumn } from './TimeGrid'
 
 const empty: BookingInput = { service: 'both', name: '', email: '', phone: '', slot: '', kind: 'slot' }
 const WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const
-const MONDAY_FIRST = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
 /** How often the agenda re-reads the live schedule while it is on screen. */
 const REFRESH_MS = 60_000
 /** Height of an hour in the agenda: a quarter-hour is a comfortable tap. */
@@ -108,10 +103,8 @@ export function BookingForm() {
   const [customTime, setCustomTime] = useState('')
   const inputRef = useRef(input)
   inputRef.current = input
-  /** The day whose times are shown; empty means "the first day with a free time". */
+  /** The day in focus; empty means "the first day with a free time". */
   const [pickedDate, setPickedDate] = useState('')
-  /** The month on screen; null follows the picked day. */
-  const [viewMonth, setViewMonth] = useState<{ year: number; month: number } | null>(null)
   const [hover, setHover] = useState('')
   // Phones show one day at a time; wider screens the whole week.
   const [narrow, setNarrow] = useState(() => window.matchMedia(NARROW).matches)
@@ -209,25 +202,18 @@ export function BookingForm() {
   const focusIndex = Math.max(0, days.findIndex((day) => day.date === picked))
   const weekDays = days.slice(Math.floor(focusIndex / 7) * 7, Math.floor(focusIndex / 7) * 7 + 7)
   const shownDays = narrow ? [days[focusIndex]] : weekDays
-  const canBack = narrow ? focusIndex > 0 : focusIndex >= 7
-  const canForward = narrow ? focusIndex < days.length - 1 : Math.floor(focusIndex / 7) < Math.floor((days.length - 1) / 7)
-  const shiftFocus = (step: number) => {
-    const next = days[Math.min(days.length - 1, Math.max(0, focusIndex + step * (narrow ? 1 : 7)))]
+  const weekIndex = Math.floor(focusIndex / 7)
+  const lastWeekIndex = Math.floor((days.length - 1) / 7)
+  const dayBack = focusIndex > 0
+  const dayForward = focusIndex < days.length - 1
+  const weekBack = weekIndex > 0
+  const weekForward = weekIndex < lastWeekIndex
+  /** Moves the day in focus by a number of days, staying inside the horizon. */
+  const shiftFocus = (delta: number) => {
+    const next = days[Math.min(days.length - 1, Math.max(0, focusIndex + delta))]
     setPickedDate(next.date)
-    setViewMonth(null)
-  }
-  const firstMonth = monthOf(days[0].date)
-  const lastMonth = monthOf(days[days.length - 1].date)
-  const shownMonth = viewMonth ?? monthOf(picked || days[0].date)
-  const monthNumber = (value: { year: number; month: number }) => value.year * 12 + value.month
-  const canPrev = monthNumber(shownMonth) > monthNumber(firstMonth)
-  const canNext = monthNumber(shownMonth) < monthNumber(lastMonth)
-  const shiftMonth = (step: number) => {
-    const total = monthNumber(shownMonth) + step
-    setViewMonth({ year: Math.floor(total / 12), month: total % 12 })
   }
   const todayDate = todayIso()
-  const weekdayLabels = MONDAY_FIRST.map((key) => t.days.find((item) => item.key === key)?.label ?? key)
 
   // A chosen start that no longer fits (someone else booked, hours changed) is let go.
   useEffect(() => {
@@ -453,66 +439,24 @@ export function BookingForm() {
             </div>
           ) : (
             <>
-              <div className="agenda-layout">
-                <aside className="agenda-mini">
-                  <MonthCalendar
-                    className="cal-mini"
-                    year={shownMonth.year}
-                    month={shownMonth.month}
-                    title={`${t.months[shownMonth.month]} ${shownMonth.year}`}
-                    weekdayLabels={weekdayLabels}
-                    prevLabel={t.monthPrev}
-                    nextLabel={t.monthNext}
-                    canPrev={canPrev}
-                    canNext={canNext}
-                    onPrev={() => shiftMonth(-1)}
-                    onNext={() => shiftMonth(1)}
-                    renderDay={(cell: MonthCell) => {
-                      const day = byDate.get(cell.date)
-                      const free = day ? hasFreeStart(day) : false
-                      const label = day
-                        ? dayStamp(day, t.days, t.monthShort)
-                        : `${Number(cell.date.slice(8, 10))} ${t.monthShort[monthIndex(cell.date)]}`
-                      const past = cell.date < todayDate
-                      const classes = [
-                        'cal-day',
-                        cell.date === picked ? 'is-on' : undefined,
-                        cell.date === todayDate ? 'is-today' : undefined,
-                        day?.closed ? 'is-closed' : undefined,
-                        past || !day ? 'is-past' : undefined,
-                      ]
-                        .filter(Boolean)
-                        .join(' ')
-                      return (
-                        <button
-                          type="button"
-                          className={classes}
-                          aria-label={label}
-                          aria-pressed={cell.date === picked}
-                          disabled={!free}
-                          onClick={() => {
-                            setPickedDate(cell.date)
-                            setViewMonth(null)
-                          }}
-                        >
-                          <span>{Number(cell.date.slice(8, 10))}</span>
-                          {free ? <i className="cal-dot" aria-hidden="true" /> : null}
-                        </button>
-                      )
-                    }}
-                  />
-                  <p className="cal-legend">
-                    <i className="cal-dot" aria-hidden="true" /> {t.freeLegend} · {t.pickDayHint}
-                  </p>
-                </aside>
                 <div className="agenda-main">
                   <div className="agenda-bar">
+                    {narrow ? (
+                      <div className="agenda-week">
+                        <button type="button" aria-label={t.dayPrev} disabled={!dayBack} onClick={() => shiftFocus(-1)}>
+                          ←
+                        </button>
+                        <button type="button" aria-label={t.dayNext} disabled={!dayForward} onClick={() => shiftFocus(1)}>
+                          →
+                        </button>
+                      </div>
+                    ) : null}
                     <div className="agenda-week">
-                      <button type="button" aria-label={narrow ? t.dayPrev : t.weekPrev} disabled={!canBack} onClick={() => shiftFocus(-1)}>
-                        ←
+                      <button type="button" aria-label={t.weekPrev} disabled={!weekBack} onClick={() => shiftFocus(-7)}>
+                        {narrow ? '«' : '←'}
                       </button>
-                      <button type="button" aria-label={narrow ? t.dayNext : t.weekNext} disabled={!canForward} onClick={() => shiftFocus(1)}>
-                        →
+                      <button type="button" aria-label={t.weekNext} disabled={!weekForward} onClick={() => shiftFocus(7)}>
+                        {narrow ? '»' : '→'}
                       </button>
                     </div>
                     <h4 className="agenda-range">
@@ -534,7 +478,6 @@ export function BookingForm() {
                     />
                   </div>
                 </div>
-              </div>
             </>
           )}
           {errors.slot && <span role="alert">{errors.slot}</span>}
