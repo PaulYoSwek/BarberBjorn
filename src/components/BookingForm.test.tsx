@@ -76,29 +76,6 @@ test('shows the chosen service and time above send', async () => {
   }
 })
 
-test('another time can return to the agenda', async () => {
-  window.history.replaceState(null, '', '/?lang=nl')
-  localStorage.clear()
-  vi.useFakeTimers({ toFake: ['Date'] })
-  vi.setSystemTime(new Date('2026-10-05T12:00:00'))
-  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-  try {
-    render(
-      <LanguageProvider>
-        <BookingForm />
-      </LanguageProvider>,
-    )
-    await user.click(screen.getByRole('button', { name: 'Ander tijdstip vragen' }))
-    expect(screen.getByLabelText('Dag')).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'ma 5 okt – zo 11 okt' })).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Terug naar het overzicht' }))
-    expect(screen.getByRole('heading', { name: 'ma 5 okt – zo 11 okt' })).toBeInTheDocument()
-    expect(screen.queryByLabelText('Dag')).not.toBeInTheDocument()
-  } finally {
-    vi.useRealTimers()
-  }
-})
-
 test('an empty submit shows the Dutch hint and does not navigate', async () => {
   const assign = vi.spyOn(window.location, 'assign').mockImplementation(() => {})
   render(
@@ -110,7 +87,6 @@ test('an empty submit shows the Dutch hint and does not navigate', async () => {
   expect(screen.getAllByText('Vul dit nog even in.').length).toBeGreaterThan(0)
   expect(assign).not.toHaveBeenCalled()
   expect(submitBook).not.toHaveBeenCalled()
-  expect(submitCustom).not.toHaveBeenCalled()
 })
 
 test('a free slot books through submitBook', async () => {
@@ -144,41 +120,6 @@ test('a free slot books through submitBook', async () => {
     expect(await screen.findByText('Je afspraak staat vast. Je krijgt een bevestiging per mail.')).toBeInTheDocument()
     expect(assign).not.toHaveBeenCalled()
     expect(screen.queryByText(/mailto:bjorn899@hotmail.com/)).not.toBeInTheDocument()
-  } finally {
-    vi.useRealTimers()
-  }
-})
-
-test('a custom time asks through submitCustom', async () => {
-  window.history.replaceState(null, '', '/?lang=nl')
-  localStorage.clear()
-  vi.useFakeTimers({ toFake: ['Date'] })
-  vi.setSystemTime(new Date('2026-10-05T12:00:00'))
-  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-  try {
-    render(
-      <LanguageProvider>
-        <BookingForm />
-      </LanguageProvider>,
-    )
-    await user.click(screen.getByRole('button', { name: 'Ander tijdstip vragen' }))
-    fireEvent.change(screen.getByLabelText('Dag'), { target: { value: '2026-10-15' } })
-    fireEvent.change(screen.getByLabelText('Tijd'), { target: { value: '19:30' } })
-    await user.type(screen.getByLabelText('Naam'), 'Sam')
-    await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
-    await user.type(screen.getByLabelText('Telefoon'), '06 12345678')
-    await user.click(screen.getByRole('button', { name: 'Boeken' }))
-    expect(submitCustom).toHaveBeenCalledWith({
-      service: 'both',
-      name: 'Sam',
-      email: 'sam@mail.nl',
-      phone: '06 12345678',
-      slot: '2026-10-15T19:30:00',
-      kind: 'custom',
-      lang: 'nl',
-    })
-    expect(await screen.findByText('Nog geen bevestiging. Je krijgt mail als Bjorn ja of nee zegt.')).toBeInTheDocument()
-    expect(submitBook).not.toHaveBeenCalled()
   } finally {
     vi.useRealTimers()
   }
@@ -411,34 +352,6 @@ test('a second click while book is in flight does not submit twice', async () =>
     expect(send).toBeDisabled()
     release({ ok: true })
     expect(await screen.findByText('Je afspraak staat vast. Je krijgt een bevestiging per mail.')).toBeInTheDocument()
-  } finally {
-    vi.useRealTimers()
-  }
-})
-
-test('a successful custom request does not send twice', async () => {
-  window.history.replaceState(null, '', '/?lang=nl')
-  localStorage.clear()
-  vi.useFakeTimers({ toFake: ['Date'] })
-  vi.setSystemTime(new Date('2026-10-05T12:00:00'))
-  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-  try {
-    render(
-      <LanguageProvider>
-        <BookingForm />
-      </LanguageProvider>,
-    )
-    await user.click(screen.getByRole('button', { name: 'Ander tijdstip vragen' }))
-    fireEvent.change(screen.getByLabelText('Dag'), { target: { value: '2026-10-15' } })
-    fireEvent.change(screen.getByLabelText('Tijd'), { target: { value: '19:30' } })
-    await user.type(screen.getByLabelText('Naam'), 'Sam')
-    await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
-    await user.type(screen.getByLabelText('Telefoon'), '06 12345678')
-    await user.click(screen.getByRole('button', { name: 'Boeken' }))
-    expect(await screen.findByText('Nog geen bevestiging. Je krijgt mail als Bjorn ja of nee zegt.')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Boeken' }))
-    expect(submitCustom).toHaveBeenCalledTimes(1)
-    expect(screen.getByText('Nog geen bevestiging. Je krijgt mail als Bjorn ja of nee zegt.')).toBeInTheDocument()
   } finally {
     vi.useRealTimers()
   }

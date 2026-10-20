@@ -9,7 +9,6 @@ import {
   loadServices,
   subscribeLiveSchedule,
   submitBook,
-  submitCustom,
 } from '../planning-api'
 import {
   agendaDays,
@@ -44,11 +43,6 @@ function dayStamp(day: AgendaDay, labels: { key: string; label: string }[], shor
 function minutesOfClock(time: string): number {
   const [hours, minutes] = time.split(':').map(Number)
   return hours * 60 + minutes
-}
-
-function customSlot(date: string, time: string) {
-  if (!date || !time) return ''
-  return `${date}T${time.slice(0, 5)}:00`
 }
 
 function endClock(time: string, minutes: number): string {
@@ -94,13 +88,11 @@ export function BookingForm() {
   const { t, lang } = useLang()
   const [input, setInput] = useState<BookingInput>(empty)
   const [errors, setErrors] = useState<Partial<Record<keyof BookingInput, string>>>({})
-  const [status, setStatus] = useState<'book' | 'request' | ''>('')
+  const [status, setStatus] = useState<'book' | ''>('')
   const [submitError, setSubmitError] = useState('')
   const [schedule, setSchedule] = useState<Schedule>(defaultSchedule)
   const [minutes, setMinutes] = useState<Record<ServiceId, number> | null>(null)
   const [services, setServices] = useState<ServiceInfo[]>(SEED_SERVICES)
-  const [customDate, setCustomDate] = useState('')
-  const [customTime, setCustomTime] = useState('')
   const inputRef = useRef(input)
   inputRef.current = input
   /** The day in focus; empty means "the first day with a free time". */
@@ -234,26 +226,8 @@ export function BookingForm() {
     })
   }, [t, agendaExtra])
 
-  const chooseCustom = () => {
-    setCustomDate('')
-    setCustomTime('')
-    edit({ ...input, kind: 'custom', slot: '' })
-  }
-
-  const setCustom = (date: string, time: string) => {
-    setCustomDate(date)
-    setCustomTime(time)
-    edit({ ...input, kind: 'custom', slot: customSlot(date, time) })
-  }
-
   const setService = (next: ServiceId) => {
-    edit({ ...input, service: next, slot: input.kind === 'slot' ? '' : input.slot })
-  }
-
-  const backToAgenda = () => {
-    setCustomDate('')
-    setCustomTime('')
-    edit({ ...input, kind: 'slot', slot: '' })
+    edit({ ...input, service: next, slot: '' })
   }
 
   const onSubmit = async (event: FormEvent) => {
@@ -271,7 +245,7 @@ export function BookingForm() {
     setErrors({})
     const payload = { ...input, lang }
     try {
-      const sent = input.kind === 'custom' ? await submitCustom(payload) : await submitBook(payload)
+      const sent = await submitBook(payload)
       if (!sent.ok) {
         setStatus('')
         setSubmitError(sent.error)
@@ -280,7 +254,7 @@ export function BookingForm() {
         return
       }
       setSubmitError('')
-      setStatus(input.kind === 'custom' ? 'request' : 'book')
+      setStatus('book')
       setLatched(true)
       if (input.kind === 'slot' && input.service) {
         const holdMinutes = minutes?.[input.service] ?? SERVICE_MINUTES[input.service] ?? DEFAULT_MINUTES
@@ -416,29 +390,6 @@ export function BookingForm() {
           </div>
         </div>
         <div className="agenda-wrap">
-          {input.kind === 'custom' ? (
-            <div className="booking-fields">
-              <button type="button" onClick={backToAgenda}>{t.backToAgenda}</button>
-              <h3>{t.customTimeTitle}</h3>
-              <label>
-                {t.dayLabel}
-                <input
-                  type="date"
-                  value={customDate}
-                  onChange={(event) => setCustom(event.target.value, customTime)}
-                />
-              </label>
-              <label>
-                {t.slotLabel}
-                <input
-                  type="time"
-                  value={customTime}
-                  onChange={(event) => setCustom(customDate, event.target.value)}
-                />
-              </label>
-            </div>
-          ) : (
-            <>
                 <div className="agenda-main">
                   <div className="agenda-bar">
                     {narrow ? (
@@ -464,9 +415,6 @@ export function BookingForm() {
                         ? dayStamp(shownDays[0], t.days, t.monthShort)
                         : `${dayStamp(shownDays[0], t.days, t.monthShort)} – ${dayStamp(shownDays[shownDays.length - 1], t.days, t.monthShort)}`}
                     </h4>
-                    <button type="button" className="agenda-custom" onClick={chooseCustom}>
-                      {t.customTimeCta}
-                    </button>
                   </div>
                   <div className="tg-scroll" ref={scrollRef}>
                     <TimeGrid
@@ -478,8 +426,6 @@ export function BookingForm() {
                     />
                   </div>
                 </div>
-            </>
-          )}
           {errors.slot && <span role="alert">{errors.slot}</span>}
         </div>
         <div className="booking-fields">
@@ -513,7 +459,6 @@ export function BookingForm() {
           <a href={lang === 'en' ? '/privacy?lang=en' : '/privacy'}>{t.privacyLink}</a>
         </p>
         {status === 'book' && <p>{t.bookSuccess}</p>}
-        {status === 'request' && <p>{t.requestSuccess}</p>}
         {submitError && <p role="alert">{shownSubmitError(submitError, t.takenError)}</p>}
       </form>
     </section>
