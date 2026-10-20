@@ -63,6 +63,22 @@ function usually(summary: ClientSummary): string {
   return parts.filter(Boolean).join(' · ')
 }
 
+/** Two letters for the chip: first letters of the first and last word. */
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  const first = parts[0][0] ?? ''
+  const last = parts.length > 1 ? (parts[parts.length - 1][0] ?? '') : ''
+  return (first + last).toUpperCase()
+}
+
+/** A steady colour per name, so the same client always gets the same chip. */
+function hueOf(name: string): number {
+  let hash = 0
+  for (const char of name.toLowerCase()) hash = (hash * 31 + char.charCodeAt(0)) % 997
+  return hash % 6
+}
+
 export function AdminClients({ rows, onDeleted }: Props) {
   const [stored, setStored] = useState<ClientRecord[]>([])
   const [ready, setReady] = useState(true)
@@ -401,6 +417,9 @@ export function AdminClients({ rows, onDeleted }: Props) {
         {shown.map((summary) => (
           <li key={summary.key} className="admin-client">
             <div className="admin-client-head">
+              <span className={`admin-client-chip is-hue-${hueOf(summary.name)}`} aria-hidden="true">
+                {initials(summary.name)}
+              </span>
               <h2>{summary.name || 'Zonder naam'}</h2>
               <p className="admin-client-score">
                 <strong>{summary.visits}×</strong>
