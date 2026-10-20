@@ -449,14 +449,15 @@ export function decideInbox(id: string, action: InboxAction) {
   return invokeOk('inbox-decide', { id, action })
 }
 
+/** A mail to one client; without a template `draft` is the whole mail. */
 export function sendClientMail(
   id: string,
-  key: TemplateKey,
+  key: TemplateKey | null,
   draft?: { subject: string; body: string },
 ) {
   return invokeOk('send-mail', {
     id,
-    key,
+    key: key ?? null,
     ...(draft ? { subject: draft.subject, body: draft.body } : {}),
   })
 }

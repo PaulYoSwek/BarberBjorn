@@ -123,3 +123,21 @@ test('the mail about to go out can be previewed as the client will see it', asyn
   await user.keyboard('{Escape}')
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })
+
+test('a mail can be written and sent without a template', async () => {
+  const user = userEvent.setup()
+  render(<AdminShell />)
+  await user.click(screen.getByRole('button', { name: 'Mail' }))
+  await user.selectOptions(await screen.findByLabelText('Klant'), 'mail-1')
+  expect(screen.getByRole('button', { name: 'Verstuur' })).toBeDisabled()
+  await user.type(screen.getByLabelText('Onderwerp'), 'Even iets anders')
+  await user.type(screen.getByLabelText('Bericht'), 'Hoi Sam, de zaak is vrijdag dicht.')
+  await user.click(screen.getByRole('button', { name: 'Voorbeeld' }))
+  const frame = screen.getByTitle('Mail Eigen bericht nl') as HTMLIFrameElement
+  expect(frame.getAttribute('srcdoc')).toContain('de zaak is vrijdag dicht.')
+  expect(frame.getAttribute('srcdoc')).toContain('Afspraak verzetten')
+  await user.keyboard('{Escape}')
+  await user.click(screen.getByRole('button', { name: 'Verstuur' }))
+  expect(sendClientMail).toHaveBeenCalledWith('mail-1', null, { subject: 'Even iets anders', body: 'Hoi Sam, de zaak is vrijdag dicht.' })
+  expect(await screen.findByRole('status')).toHaveTextContent('Mail verstuurd naar sam@mail.nl.')
+})

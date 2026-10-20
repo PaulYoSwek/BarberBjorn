@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { humanDate, type MailKey } from '../../mail-templates'
+import { humanDate, templateFor } from '../../mail-templates'
 import { fillTemplate } from '../../planning'
 import { loadTemplates, sendClientMail, type InboxRow, type TemplateKey, type TemplateSave } from '../../planning-api'
 import { serviceName, TEMPLATE_KEYS, TEMPLATE_LABEL } from './admin-defaults'
@@ -76,12 +76,17 @@ export function AdminMail({ rows, clientId, templateKey, onSent }: Props) {
     setBody(vars ? fillTemplate(template.body, vars) : template.body)
   }, [key, selected, templates, rows])
 
+  const clients = rows.filter((row) => row.email.trim())
+  const client = rows.find((item) => item.id === selected)
+  // A template is optional: with a client, a subject and a text the mail can go.
+  const ready = Boolean(selected && subject.trim() && body.trim())
+
   async function send() {
-    if (!selected || !key || busy) return
+    if (!ready || busy) return
     setBusy(true)
     setDone(null)
     try {
-      const result = await sendClientMail(selected, key, { subject, body })
+      const result = await sendClientMail(selected, key || null, { subject, body })
       if (!result.ok) {
         setNotice('Mail versturen mislukt.')
         return
@@ -97,9 +102,6 @@ export function AdminMail({ rows, clientId, templateKey, onSent }: Props) {
     }
   }
 
-  const clients = rows.filter((row) => row.email.trim())
-  const client = rows.find((item) => item.id === selected)
-  const ready = Boolean(selected && key)
 
   return (
     <div className="admin-settings admin-mail-tab">
@@ -132,7 +134,7 @@ export function AdminMail({ rows, clientId, templateKey, onSent }: Props) {
           <label>
             <span>Sjabloon</span>
             <select aria-label="Sjabloon" value={key} onChange={(event) => setKey(event.target.value as TemplateKey | '')}>
-              <option value="">Kies een sjabloon</option>
+              <option value="">Geen sjabloon, eigen bericht</option>
               {TEMPLATE_KEYS.map((item) => (
                 <option key={item} value={item}>
                   {TEMPLATE_LABEL[item]}
@@ -183,10 +185,10 @@ export function AdminMail({ rows, clientId, templateKey, onSent }: Props) {
           </button>
         </div>
       </div>
-      {previewing && key ? (
+      {previewing && client ? (
         <MailPreview
-          mailKey={key as MailKey}
-          label={TEMPLATE_LABEL[key]}
+          mailKey={key || templateFor(client)}
+          label={key ? TEMPLATE_LABEL[key] : 'Eigen bericht'}
           lang={client?.lang ?? 'nl'}
           subject={subject}
           body={body}
