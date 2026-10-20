@@ -1796,3 +1796,10 @@ button.inbox-count { border: 0; cursor: pointer; width: auto; }
   .admin-tabs button.is-on::after { top: 0; bottom: auto; }
   .admin-tabs { gap: 0; }
 }
+
+/* the dashboard uses the screen: wide, no outline */
+.admin-card {
+  width: min(1680px, calc(100% - 48px)); margin: 20px auto; padding: 22px 26px;
+  border: 0; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.admin-agenda-body { grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); gap: 20px; }
