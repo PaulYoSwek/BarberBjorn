@@ -1683,3 +1683,6 @@ button.inbox-count { border: 0; cursor: pointer; width: auto; }
 .section-page .booking::before { clip-path: none; }
 .section-page + .footer::before { clip-path: none; }
 .section-page + .footer { padding-top: 56px; }
+
+/* dashboard planning without the month: controls left, the week right */
+.admin-agenda-body { grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); }
