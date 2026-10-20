@@ -12,6 +12,17 @@ export function readInitialLang(search: string, stored: string | null): Lang {
 
 type LanguageValue = { lang: Lang; setLang: (lang: Lang) => void; t: Copy }
 
+/**
+ * Browsers offer to translate the English version into Dutch themselves, and
+ * once a visitor accepts, that machine translation keeps rewriting the page
+ * even after the site switches back to Dutch, so the text no longer matches
+ * what Bjorn wrote. A fresh load of the page in the chosen language resets
+ * that, and the browser leaves a Dutch page for a Dutch visitor alone.
+ */
+export const navigation = {
+  reload: () => window.location.reload(),
+}
+
 const LanguageContext = createContext<LanguageValue | null>(null)
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
@@ -26,6 +37,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     url.searchParams.set('lang', next)
     window.history.replaceState(null, '', url)
     document.documentElement.lang = next
+    navigation.reload()
   }
 
   useEffect(() => {

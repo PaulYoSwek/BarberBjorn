@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { expect, test } from 'vitest'
-import { LanguageProvider, readInitialLang, useLang } from './language'
+import { expect, test, vi } from 'vitest'
+import { LanguageProvider, navigation, readInitialLang, useLang } from './language'
 
 test('query wins over storage, storage wins over Dutch', () => {
   expect(readInitialLang('?lang=en', 'nl')).toBe('en')
@@ -22,9 +22,11 @@ function Probe() {
   )
 }
 
-test('switching to English updates the sentence, the url, and the document', async () => {
+test('switching to English updates the sentence, the url, and the document, then loads the page fresh', async () => {
   window.history.replaceState(null, '', '/')
   localStorage.clear()
+  const reload = vi.mocked(navigation.reload)
+  reload.mockClear()
   render(
     <LanguageProvider>
       <Probe />
@@ -36,4 +38,6 @@ test('switching to English updates the sentence, the url, and the document', asy
   expect(document.documentElement.lang).toBe('en')
   expect(localStorage.getItem('barber-lang')).toBe('en')
   expect(window.location.search).toBe('?lang=en')
+  // The reload comes last, after the url and storage already say English.
+  expect(reload).toHaveBeenCalledTimes(1)
 })

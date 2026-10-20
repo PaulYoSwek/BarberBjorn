@@ -1,6 +1,10 @@
 import '@testing-library/jest-dom/vitest'
 import { afterEach, beforeEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
+import { navigation } from './language'
+
+// A language switch reloads the page in the browser; jsdom cannot, so tests only see the call.
+vi.spyOn(navigation, 'reload').mockImplementation(() => {})
 
 // jsdom marks Location.assign as non-configurable, so vi.spyOn cannot replace it.
 // While a test is running, send that redefine attempt to the internal implementation.
