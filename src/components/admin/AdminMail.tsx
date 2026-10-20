@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { humanDate } from '../../mail-templates'
+import { humanDate, type MailKey } from '../../mail-templates'
 import { fillTemplate } from '../../planning'
 import { loadTemplates, sendClientMail, type InboxRow, type TemplateKey, type TemplateSave } from '../../planning-api'
 import { serviceName, TEMPLATE_KEYS, TEMPLATE_LABEL } from './admin-defaults'
+import { MailPreview } from './MailPreview'
 
 type Props = {
   rows: InboxRow[]
@@ -30,6 +31,7 @@ export function AdminMail({ rows, clientId, templateKey, onSent }: Props) {
   const [notice, setNotice] = useState<string | null>(null)
   const [done, setDone] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [previewing, setPreviewing] = useState(false)
   const applied = useRef('')
 
   useEffect(() => {
@@ -96,55 +98,102 @@ export function AdminMail({ rows, clientId, templateKey, onSent }: Props) {
   }
 
   const clients = rows.filter((row) => row.email.trim())
+  const client = rows.find((item) => item.id === selected)
+  const ready = Boolean(selected && key)
 
   return (
-    <div className="admin-form">
+    <div className="admin-settings admin-mail-tab">
       <header className="admin-agenda-head">
         <div>
           <p className="admin-kicker">Klanten</p>
           <h1>Mail</h1>
         </div>
+        <p className="admin-settings-lead">
+          Kies een klant en een sjabloon; de tekst wordt ingevuld met zijn afspraak en je kunt hem nog aanpassen voor je
+          verstuurt.
+        </p>
       </header>
-      {notice ? <p role="alert">{notice}</p> : null}
+      {notice ? <p className="admin-settings-alert" role="alert">{notice}</p> : null}
       {done ? <p className="admin-done" role="status">{done}</p> : null}
       {clients.length === 0 ? <p className="admin-hint">Nog geen klanten met een mailadres.</p> : null}
-      <label>
-        Klant
-        <select aria-label="Klant" value={selected} onChange={(event) => setSelected(event.target.value)}>
-          <option value="">Kies een klant</option>
-          {clients.map((row) => (
-            <option key={row.id} value={row.id}>
-              {row.name} · {row.start.slice(0, 10)} {row.start.slice(11, 16)}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Sjabloon
-        <select
-          aria-label="Sjabloon"
-          value={key}
-          onChange={(event) => setKey(event.target.value as TemplateKey | '')}
-        >
-          <option value="">Kies een sjabloon</option>
-          {TEMPLATE_KEYS.map((item) => (
-            <option key={item} value={item}>
-              {TEMPLATE_LABEL[item]}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Onderwerp
-        <input aria-label="Onderwerp" value={subject} onChange={(event) => setSubject(event.target.value)} />
-      </label>
-      <label>
-        Bericht
-        <textarea aria-label="Bericht" rows={6} value={body} onChange={(event) => setBody(event.target.value)} />
-      </label>
-      <button type="button" className="admin-primary" disabled={!selected || !key || busy} onClick={() => { void send() }}>
-        {busy ? 'Versturen…' : 'Verstuur'}
-      </button>
+      <div className="admin-mail-compose">
+        <div className="admin-mail-compose-grid">
+          <label>
+            <span>Klant</span>
+            <select aria-label="Klant" value={selected} onChange={(event) => setSelected(event.target.value)}>
+              <option value="">Kies een klant</option>
+              {clients.map((row) => (
+                <option key={row.id} value={row.id}>
+                  {row.name} · {row.start.slice(0, 10)} {row.start.slice(11, 16)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>Sjabloon</span>
+            <select aria-label="Sjabloon" value={key} onChange={(event) => setKey(event.target.value as TemplateKey | '')}>
+              <option value="">Kies een sjabloon</option>
+              {TEMPLATE_KEYS.map((item) => (
+                <option key={item} value={item}>
+                  {TEMPLATE_LABEL[item]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        {client ? (
+          <dl className="admin-mail-to">
+            <div>
+              <dt>Aan</dt>
+              <dd>
+                {client.name} <span>&lt;{client.email}&gt;</span>
+              </dd>
+            </div>
+            <div>
+              <dt>Taal</dt>
+              <dd>{client.lang === 'en' ? 'Engels' : 'Nederlands'}</dd>
+            </div>
+          </dl>
+        ) : null}
+        <label>
+          <span>Onderwerp</span>
+          <input aria-label="Onderwerp" value={subject} onChange={(event) => setSubject(event.target.value)} />
+        </label>
+        <label>
+          <span>Bericht</span>
+          <textarea aria-label="Bericht" rows={10} value={body} onChange={(event) => setBody(event.target.value)} />
+        </label>
+        <div className="admin-mail-compose-actions">
+          <button type="button" className="admin-text-button admin-preview-button" disabled={!ready} onClick={() => setPreviewing(true)}>
+            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+              <path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8Z" fill="none" stroke="currentColor" strokeWidth="1.5" />
+              <circle cx="8" cy="8" r="2" fill="none" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
+            Voorbeeld
+          </button>
+          <button
+            type="button"
+            className="admin-primary admin-save-button"
+            disabled={!ready || busy}
+            onClick={() => {
+              void send()
+            }}
+          >
+            {busy ? 'Versturen…' : 'Verstuur'}
+          </button>
+        </div>
+      </div>
+      {previewing && key ? (
+        <MailPreview
+          mailKey={key as MailKey}
+          label={TEMPLATE_LABEL[key]}
+          lang={client?.lang ?? 'nl'}
+          subject={subject}
+          body={body}
+          to={client?.email}
+          onClose={() => setPreviewing(false)}
+        />
+      ) : null}
     </div>
   )
 }

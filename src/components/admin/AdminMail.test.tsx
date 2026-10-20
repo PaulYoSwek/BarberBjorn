@@ -105,3 +105,21 @@ test('a successful send clears Mail niet gegaan for that client', async () => {
   await waitFor(() => expect(within(sent).queryByText('Mail niet gegaan')).not.toBeInTheDocument())
   expect(within(sent).queryByRole('button', { name: 'Opnieuw' })).not.toBeInTheDocument()
 })
+
+test('the mail about to go out can be previewed as the client will see it', async () => {
+  const user = userEvent.setup()
+  render(<AdminShell />)
+  await user.click(screen.getByRole('button', { name: 'Mail' }))
+  const preview = await screen.findByRole('button', { name: 'Voorbeeld' })
+  expect(preview).toBeDisabled()
+  await user.selectOptions(await screen.findByLabelText('Klant'), 'mail-1')
+  await user.selectOptions(screen.getByLabelText('Sjabloon'), 'thanks')
+  await user.click(preview)
+  const dialog = screen.getByRole('dialog', { name: 'Voorbeeld Bedankt voor je boeking nl' })
+  expect(dialog).toHaveTextContent('sam@mail.nl')
+  const frame = screen.getByTitle('Mail Bedankt voor je boeking nl') as HTMLIFrameElement
+  expect(frame.getAttribute('srcdoc')).toContain('Hoi Sam, Knippen op dinsdag 6 oktober om 09:00.')
+  expect(frame.getAttribute('srcdoc')).toContain('Afspraak verzetten')
+  await user.keyboard('{Escape}')
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+})

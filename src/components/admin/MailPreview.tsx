@@ -11,7 +11,9 @@ type Props = {
   subject: string
   body: string
   /** The service name shown in the sample, in the mail's language. */
-  service: string
+  service?: string
+  /** The real recipient; without one the mail goes to a sample address with sample data filled in. */
+  to?: string
   onClose: () => void
 }
 
@@ -38,10 +40,10 @@ function preheaderOf(text: string): string {
 }
 
 /** A client's inbox with this mail in it, then the mail itself as it is really sent. */
-export function MailPreview({ mailKey, label, lang, subject, body, service, onClose }: Props) {
+export function MailPreview({ mailKey, label, lang, subject, body, service, to, onClose }: Props) {
   const [height, setHeight] = useState(560)
   const [device, setDevice] = useState<'desktop' | 'phone'>('desktop')
-  const filled = sampleMail(subject, body, lang, service)
+  const filled = to ? { subject, text: body } : sampleMail(subject, body, lang, service ?? '')
   const html = mailHtml(filled.text, lang, filled.subject, mailButton(mailKey, lang))
 
   useEffect(() => {
@@ -59,7 +61,9 @@ export function MailPreview({ mailKey, label, lang, subject, body, service, onCl
           <div>
             <p className="admin-kicker">Voorbeeld · {lang === 'nl' ? 'Nederlands' : 'Engels'}</p>
             <h2>{label}</h2>
-            <p className="admin-hint">Zo komt deze mail binnen bij de klant, met voorbeeldgegevens ingevuld.</p>
+            <p className="admin-hint">
+              {to ? `Zo komt deze mail binnen bij ${to}.` : 'Zo komt deze mail binnen bij de klant, met voorbeeldgegevens ingevuld.'}
+            </p>
           </div>
           <div className="admin-segment admin-mail-preview-device" role="radiogroup" aria-label="Weergave">
             <button type="button" role="radio" aria-checked={device === 'desktop'} onClick={() => setDevice('desktop')}>
@@ -119,7 +123,7 @@ export function MailPreview({ mailKey, label, lang, subject, body, service, onCl
               </div>
               <div>
                 <dt>Aan</dt>
-                <dd>{SAMPLE_TO}</dd>
+                <dd>{to ?? SAMPLE_TO}</dd>
               </div>
               <div>
                 <dt>Antwoord gaat naar</dt>
