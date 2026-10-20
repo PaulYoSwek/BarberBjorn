@@ -1,4 +1,5 @@
 import { CONTACT, SITE_URL, type Lang } from './content.ts'
+import type { MailKey } from './mail-templates.ts'
 
 const INK = '#101010'
 const PAPER = '#f4f1ea'
@@ -27,17 +28,41 @@ function paragraphs(text: string): string {
     .join('')
 }
 
-const LABELS: Record<Lang, { button: string; tagline: string }> = {
-  nl: { button: 'Afspraak plannen', tagline: 'Kapper en barbier in Axel' },
-  en: { button: 'Book a visit', tagline: 'Barber in Axel' },
+const LABELS: Record<Lang, { tagline: string }> = {
+  nl: { tagline: 'Kapper en barbier in Axel' },
+  en: { tagline: 'Barber in Axel' },
 }
+
+export type MailButton = { label: string; href: string }
+
+const RESCHEDULE: Record<Lang, string> = { nl: 'Afspraak verzetten', en: 'Reschedule' }
+const CHOOSE: Record<Lang, string> = { nl: 'Ander moment kiezen', en: 'Pick another time' }
+
+/**
+ * The button under a client mail. A client who already has an appointment
+ * gets a reply to Bjorn to move it; one whose request was declined is sent
+ * back to the agenda; a pending request needs no button at all.
+ */
+export function mailButton(key: MailKey, lang: Lang): MailButton | null {
+  if (key === 'received') return null
+  if (key === 'declined') return { label: CHOOSE[lang], href: `${SITE_URL}/#afspraak` }
+  return { label: RESCHEDULE[lang], href: `mailto:${CONTACT.email}?subject=${encodeURIComponent(RESCHEDULE[lang])}` }
+}
+
+/** The button under the mails Bjorn gets himself. */
+export const DASHBOARD_BUTTON: MailButton = { label: 'Open het dashboard', href: `${SITE_URL}/admin` }
 
 /**
  * The branded HTML version of a mail whose text Bjorn writes in Settings.
  * Tables and inline styles only, so it renders the same in Gmail, Outlook and Apple Mail.
  */
-export function mailHtml(text: string, lang: Lang, subject = ''): string {
+export function mailHtml(text: string, lang: Lang, subject = '', button: MailButton | null = null): string {
   const labels = LABELS[lang]
+  const action = button
+    ? `<tr><td style="padding:0 28px 28px;font-family:${FONT};">
+<a href="${escapeHtml(button.href)}" style="display:inline-block;background:${YELLOW};color:${INK};font-weight:700;font-size:15px;text-decoration:none;padding:12px 20px;">${escapeHtml(button.label)}</a>
+</td></tr>`
+    : ''
   const preheader = text.trim().split('\n').find((line) => line.trim() && !/^(hoi|hi)\b/i.test(line.trim())) ?? ''
   return `<!doctype html>
 <html lang="${lang}">
@@ -55,12 +80,10 @@ export function mailHtml(text: string, lang: Lang, subject = ''): string {
 <tr><td style="background:${INK};padding:22px 28px;border-bottom:4px solid ${YELLOW};">
 <a href="${SITE_URL}" style="text-decoration:none;"><img src="${SITE_URL}/logo-lockup-white.png?v=3" width="150" alt="Bjorn’s Barber" style="display:block;border:0;width:150px;height:auto;color:#ffffff;font-family:${FONT};font-size:20px;font-weight:700;"></a>
 </td></tr>
-<tr><td style="padding:28px 28px 12px;font-family:${FONT};">
+<tr><td style="padding:28px 28px ${button ? '12px' : '28px'};font-family:${FONT};">
 ${paragraphs(text)}
 </td></tr>
-<tr><td style="padding:0 28px 28px;font-family:${FONT};">
-<a href="${SITE_URL}/#afspraak" style="display:inline-block;background:${YELLOW};color:${INK};font-weight:700;font-size:15px;text-decoration:none;padding:12px 20px;">${labels.button}</a>
-</td></tr>
+${action}
 <tr><td style="padding:18px 28px;background:${PAPER};border-top:1px solid #e4dfd4;font-family:${FONT};font-size:13px;line-height:1.6;color:${MUTED};">
 <strong style="color:${INK};">Bjorn’s Barber</strong> · ${labels.tagline}<br>
 ${escapeHtml(CONTACT.addressFull)}<br>

@@ -1,5 +1,5 @@
 import { copy, SITE_URL, type Lang } from '../../../src/content.ts'
-import { mailHtml } from '../../../src/mail-html.ts'
+import { DASHBOARD_BUTTON, mailButton, mailHtml } from '../../../src/mail-html.ts'
 import { humanDate, MAIL_TEMPLATES, type MailKey } from '../../../src/mail-templates.ts'
 import { fillTemplate } from '../../../src/planning.ts'
 import type { Db } from './db.ts'
@@ -64,7 +64,7 @@ export async function sendBookingMail(
     if (!subject) subject = fillTemplate(stored?.subject || fallback.subject, vars)
     if (!text) text = fillTemplate(stored?.body || fallback.body, vars)
   }
-  const result = await sendResend({ to: booking.email, subject, text, html: mailHtml(text, lang, subject) })
+  const result = await sendResend({ to: booking.email, subject, text, html: mailHtml(text, lang, subject, mailButton(key, lang)) })
   const updated = await db.from('bookings').update({ mail_sent: result.sent }).eq('id', booking.id)
   if (updated.error) console.error(updated.error.message)
   return result
@@ -104,7 +104,7 @@ export async function notifyBjorn(db: Db, booking: NewBooking, kind: 'booked' | 
       'Antwoord op deze mail om de klant direct te mailen.',
     ]
     const text = lines.join('\n')
-    await sendResend({ to, subject, text, html: mailHtml(text, 'nl', subject), replyTo: booking.email })
+    await sendResend({ to, subject, text, html: mailHtml(text, 'nl', subject, DASHBOARD_BUTTON), replyTo: booking.email })
   } catch (err) {
     console.error(err instanceof Error ? err.message : 'notify failed')
   }

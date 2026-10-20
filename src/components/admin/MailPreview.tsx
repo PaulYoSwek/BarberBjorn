@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { CONTACT, type Lang } from '../../content'
-import { mailHtml } from '../../mail-html'
+import { mailButton, mailHtml } from '../../mail-html'
 import { fillTemplate } from '../../planning'
-import { humanDate } from '../../mail-templates'
+import { humanDate, type MailKey } from '../../mail-templates'
 
 type Props = {
+  mailKey: MailKey
   label: string
   lang: Lang
   subject: string
@@ -37,11 +38,11 @@ function preheaderOf(text: string): string {
 }
 
 /** A client's inbox with this mail in it, then the mail itself as it is really sent. */
-export function MailPreview({ label, lang, subject, body, service, onClose }: Props) {
+export function MailPreview({ mailKey, label, lang, subject, body, service, onClose }: Props) {
   const [height, setHeight] = useState(560)
   const [device, setDevice] = useState<'desktop' | 'phone'>('desktop')
   const filled = sampleMail(subject, body, lang, service)
-  const html = mailHtml(filled.text, lang, filled.subject)
+  const html = mailHtml(filled.text, lang, filled.subject, mailButton(mailKey, lang))
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {

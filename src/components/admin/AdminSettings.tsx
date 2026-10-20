@@ -527,6 +527,7 @@ export function AdminSettings({ onServicesSaved }: Props = {}) {
 
       {preview && previewRow ? (
         <MailPreview
+          mailKey={preview.key}
           label={TEMPLATE_LABEL[preview.key]}
           lang={preview.lang}
           subject={previewRow.subject}
