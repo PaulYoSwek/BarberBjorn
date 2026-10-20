@@ -535,6 +535,7 @@ export function AdminAgenda({ clients = [], onBooked }: Props) {
         <div className="admin-week">
           <button
             type="button"
+            aria-label="Vorige week"
             disabled={week === 0}
             onClick={() => {
               setWeek((current) => current - 1)
@@ -542,11 +543,12 @@ export function AdminAgenda({ clients = [], onBooked }: Props) {
               setFocus([])
             }}
           >
-            Vorige week
+            ←
           </button>
           <p className="admin-week-title">{weekTitle(visible)}</p>
           <button
             type="button"
+            aria-label="Volgende week"
             disabled={week >= lastWeek}
             onClick={() => {
               setWeek((current) => current + 1)
@@ -554,7 +556,7 @@ export function AdminAgenda({ clients = [], onBooked }: Props) {
               setFocus([])
             }}
           >
-            Volgende week
+            →
           </button>
         </div>
         {hoursDay && hours ? (
@@ -591,13 +593,15 @@ export function AdminAgenda({ clients = [], onBooked }: Props) {
           </section>
         ) : null}
         <div className="admin-mode" role="radiogroup" aria-label="Tik op een kwartier om">
-          <span>Tik op een kwartier om</span>
-          <button type="button" role="radio" aria-checked={mode === 'shut'} onClick={() => setMode('shut')}>
-            Dicht te zetten
-          </button>
-          <button type="button" role="radio" aria-checked={mode === 'plan'} onClick={() => setMode('plan')}>
-            Afspraak te plannen
-          </button>
+          <span className="admin-hours-title">Tik op een kwartier om</span>
+          <div className="admin-segment">
+            <button type="button" role="radio" aria-checked={mode === 'shut'} onClick={() => setMode('shut')}>
+              Dicht te zetten
+            </button>
+            <button type="button" role="radio" aria-checked={mode === 'plan'} onClick={() => setMode('plan')}>
+              Afspraak te plannen
+            </button>
+          </div>
         </div>
         {mode === 'plan' ? (
           <p className="admin-hint">

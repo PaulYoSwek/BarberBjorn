@@ -1686,3 +1686,64 @@ button.inbox-count { border: 0; cursor: pointer; width: auto; }
 
 /* dashboard planning without the month: controls left, the week right */
 .admin-agenda-body { grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); }
+
+/* ---------- the planning panel, tidied: one button language, labelled groups */
+.admin-agenda-side .admin-toolbar {
+  display: grid; gap: 0; padding: 0;
+  background: #fff; border: 1px solid var(--hair-strong); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+.admin-agenda-side .admin-toolbar > * { padding: 14px 16px; border-top: 1px solid var(--hair); margin: 0; }
+.admin-agenda-side .admin-toolbar > :first-child { border-top: 0; }
+.admin-agenda-side .admin-week { grid-template-columns: 36px 1fr 36px; gap: 10px; align-items: center; }
+.admin-agenda-side .admin-week button {
+  min-height: 36px; min-width: 36px; padding: 0; width: 36px; justify-self: center;
+  border: 1px solid var(--hair-strong); background: #fff; font-size: 1rem; font-weight: 500;
+}
+.admin-agenda-side .admin-week button::before, .admin-agenda-side .admin-week button::after { content: none; }
+.admin-agenda-side .admin-week button:not(:disabled):hover { background: var(--yellow); border-color: var(--yellow); }
+.admin-agenda-side .admin-week button:disabled { opacity: 0.3; }
+.admin-agenda-side .admin-week-title { font-family: var(--font-display); font-size: 1.05rem; font-weight: 720; letter-spacing: -0.03em; }
+.admin-agenda-side .admin-hours-title {
+  margin: 0 0 8px; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+}
+.admin-agenda-side .admin-hours { gap: 0; }
+.admin-agenda-side .admin-hours-row { gap: 10px; }
+.admin-agenda-side .admin-hours-row label { font-size: 0.74rem; font-weight: 600; color: #3d3a33; }
+.admin-agenda-side .admin-hours input[type="time"],
+.admin-agenda-side .admin-note-row input {
+  min-height: 40px; border: 1px solid var(--hair-strong); padding: 0 10px; font-size: 0.92rem; font-weight: 500;
+}
+.admin-agenda-side .admin-hours input[type="time"]:focus, .admin-agenda-side .admin-note-row input:focus { border-color: var(--ink); outline: 0; }
+.admin-agenda-side .admin-mode { display: block; }
+.admin-agenda-side .admin-mode > .admin-hours-title { display: block; }
+.admin-segment { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--ink); }
+.admin-segment button {
+  min-height: 38px; padding: 0 8px; width: auto; border: 0; background: #fff; color: var(--ink);
+  font-size: 0.8rem; font-weight: 600; cursor: pointer;
+}
+.admin-segment button + button { border-left: 1px solid var(--ink); }
+.admin-segment button[aria-checked="true"] { background: var(--ink); color: #f4f1ea; }
+.admin-agenda-side .admin-note { gap: 0; }
+.admin-agenda-side .admin-note-row { gap: 10px; }
+.admin-agenda-side .admin-note-row label { font-size: 0.74rem; font-weight: 600; color: #3d3a33; flex: 1 1 100%; }
+.admin-agenda-side .admin-swatches { gap: 8px; }
+.admin-agenda-side .admin-swatches button {
+  width: 26px; height: 26px; border: 1px solid rgba(16, 16, 16, 0.2); padding: 0; cursor: pointer;
+}
+.admin-agenda-side .admin-swatches button.is-on { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--ink); border-color: transparent; }
+.admin-agenda-side .admin-note-clear { min-height: 30px; padding: 0 10px; border: 1px solid var(--hair-strong); font-size: 0.74rem; font-weight: 600; margin-left: auto; }
+.admin-agenda-side .admin-toolbar .admin-hint { padding-top: 8px; border-top: 0; font-size: 0.76rem; line-height: 1.45; color: var(--muted); }
+.admin-agenda-side .admin-note .admin-hint { padding: 10px 0 0; }
+.admin-agenda-side .admin-copy-week {
+  justify-self: stretch; width: 100%; min-height: 42px; padding: 0 14px; margin: 0;
+  border: 0; border-top: 1px solid var(--hair); background: var(--yellow); color: var(--ink); font-size: 0.86rem; font-weight: 700;
+}
+.admin-agenda-side .admin-copy-week:not(:disabled):hover { background: #ffd21a; }
+.admin-agenda-side .admin-copy-week:disabled { opacity: 0.5; }
+.admin-agenda-side .admin-done { padding: 12px 16px; font-size: 0.84rem; }
+.admin-agenda-side > .admin-hint { font-size: 0.76rem; line-height: 1.45; color: var(--muted); padding: 0 2px; }
+.admin-agenda-side .admin-whole-week { font-size: 0.78rem; }
+@media (max-width: 720px) {
+  .admin-agenda-side .admin-week { grid-template-columns: 36px 1fr 36px; }
+  .admin-agenda-side .admin-week-title { grid-column: auto; order: 0; }
+}
