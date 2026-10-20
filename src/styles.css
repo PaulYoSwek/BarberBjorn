@@ -1676,3 +1676,10 @@ button.inbox-count { border: 0; cursor: pointer; width: auto; }
 /* the site's agenda is the grid alone, full width */
 .agenda-main { width: 100%; }
 .booking .agenda-week + .agenda-week { margin-left: 4px; }
+
+/* On a section's own page there is no rope divider before the footer, so the
+   section ends straight and the footer starts straight: one clean edge. */
+.section-page .booking { padding-bottom: 64px; }
+.section-page .booking::before { clip-path: none; }
+.section-page + .footer::before { clip-path: none; }
+.section-page + .footer { padding-top: 56px; }
