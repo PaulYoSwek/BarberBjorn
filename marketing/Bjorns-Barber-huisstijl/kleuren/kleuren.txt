@@ -1,0 +1,22 @@
+Bjorn’s Barber – kleuren
+
+Hoofdkleuren (website, logo, mail)
+
+Zwart (ink)      #101010   RGB  16  16  16   CMYK   0   0   0  94   Achtergrond van de donkere delen, logo, koppen, knoppen
+Geel             #F5C400   RGB 245 196   0   CMYK   0  20 100   4   Het accent: knoppen, de streep onder het logo, markeringen
+Papier           #EFECE4   RGB 239 236 228   CMYK   0   1   5   6   Lichte achtergrond van de website
+Papier warm      #E4DFD4   RGB 228 223 212   CMYK   0   2   7  11   Tweede lichte tint, voor vlakken op papier
+Papier licht     #F7F4EC   RGB 247 244 236   CMYK   0   1   4   3   Achtergrond van het boekingsgedeelte
+Papier mail      #F4F1EA   RGB 244 241 234   CMYK   0   1   4   4   Achtergrond van de e-mails en tekst op zwart
+Tekst            #161616   RGB  22  22  22   CMYK   0   0   0  91   Lopende tekst op licht
+Tekst gedempt    #6B665C   RGB 107 102  92   CMYK   0   5  14  58   Bijschriften en kleine tekst
+Antraciet        #2A2A2A   RGB  42  42  42   CMYK   0   0   0  84   Donkergrijs vlak (Over Bjorn)
+Diep zwart       #070707   RGB   7   7   7   CMYK   0   0   0  97   Donkerste tint, randen op zwart
+
+Alleen in het dashboard
+
+Groen            #1D6B3A   RGB  29 107  58   CMYK  73   0  46  58   Dashboard: bevestigd, betaald
+Rood             #8C1D18   RGB 140  29  24   CMYK   0  79  83  45   Dashboard: niet gekomen, verwijderen
+Blauw            #2F6FB6   RGB  47 111 182   CMYK  74  39   0  29   Dashboard: cijfers in het financiële overzicht
+
+CMYK is een omrekening voor drukwerk; laat de drukker het zwart als rich black en het geel als Pantone 116 C of 7406 C beoordelen.

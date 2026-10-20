@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bjorn’s Barber – huisstijl</title>
+<style>
+  @font-face { font-family: "Bricolage Grotesque"; src: url("lettertypen/BricolageGrotesque-Variable.woff2") format("woff2"); font-weight: 200 800; }
+  @font-face { font-family: Outfit; src: url("lettertypen/Outfit-Light.woff2") format("woff2"); font-weight: 300; }
+  @font-face { font-family: Outfit; src: url("lettertypen/Outfit-Regular.woff2") format("woff2"); font-weight: 400; }
+  @font-face { font-family: Outfit; src: url("lettertypen/Outfit-Medium.woff2") format("woff2"); font-weight: 500; }
+  :root { --ink: #101010; --yellow: #f5c400; --paper: #efece4; --paper-warm: #e4dfd4; --text: #161616; --muted: #6b665c; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--text); font-family: Outfit, sans-serif; font-weight: 400; line-height: 1.5; }
+  header { background: var(--ink); color: #f4f1ea; padding: 48px 24px; border-bottom: 6px solid var(--yellow); }
+  header img { width: 180px; display: block; margin-bottom: 20px; }
+  h1, h2, h3 { font-family: "Bricolage Grotesque", sans-serif; font-weight: 720; letter-spacing: -0.03em; margin: 0; }
+  h1 { font-size: 2.4rem; }
+  header p { margin: 8px 0 0; color: #c9c3b6; max-width: 60ch; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px; display: grid; gap: 48px; }
+  section { display: grid; gap: 16px; }
+  h2 { font-size: 1.6rem; padding-bottom: 8px; border-bottom: 2px solid var(--ink); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+  figure { margin: 0; background: #fff; border: 1px solid var(--paper-warm); display: grid; }
+  figure .tile { aspect-ratio: 1; display: grid; place-items: center; padding: 20px; }
+  figure .tile img { max-width: 100%; max-height: 100%; }
+  .on-ink { background: var(--ink); } .on-yellow { background: var(--yellow); } .on-paper { background: var(--paper); }
+  figcaption { padding: 10px 12px; font-size: 0.82rem; color: var(--muted); border-top: 1px solid var(--paper-warm); }
+  figcaption code { color: var(--text); font-size: 0.78rem; }
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+  .swatch { display: grid; border: 1px solid var(--paper-warm); background: #fff; }
+  .swatch span { height: 96px; }
+  .swatch div { padding: 8px 10px; font-size: 0.84rem; }
+  .swatch strong { display: block; }
+  .swatch code { color: var(--muted); }
+  .type { display: grid; gap: 8px; background: #fff; border: 1px solid var(--paper-warm); padding: 20px; }
+  .type .display { font-family: "Bricolage Grotesque", sans-serif; font-weight: 720; font-size: 2.2rem; letter-spacing: -0.04em; line-height: 1.05; }
+  .type .body { font-size: 1.05rem; max-width: 60ch; }
+  .type small { color: var(--muted); }
+  .rules { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+  .button { display: inline-block; background: var(--yellow); color: var(--ink); font-weight: 500; padding: 12px 20px; text-decoration: none; }
+  footer { padding: 32px 24px; text-align: center; color: var(--muted); font-size: 0.84rem; }
+  footer a { color: inherit; }
+</style>
+</head>
+<body>
+<header>
+  <img src="logos/bjorns-barber-logo-wit.png" alt="Bjorn’s Barber">
+  <h1>Huisstijl</h1>
+  <p>De logo’s, kleuren en lettertypen van Bjorn’s Barber, zoals ze op de website en in de mails gebruikt worden. Alle bestanden staan in de mappen naast dit document.</p>
+</header>
+<main>
+  <section>
+    <h2>Logo’s</h2>
+    <div class="grid">
+      <figure><div class="tile on-paper"><img src="logos/bjorns-barber-logo-zwart.png" alt=""></div><figcaption>Hoofdlogo, zwart<br><code>logos/bjorns-barber-logo-zwart.png</code></figcaption></figure>
+      <figure><div class="tile on-ink"><img src="logos/bjorns-barber-logo-wit.png" alt=""></div><figcaption>Hoofdlogo, wit op zwart<br><code>logos/bjorns-barber-logo-wit.png</code></figcaption></figure>
+      <figure><div class="tile on-ink"><img src="logos/bjorns-barber-logo-geel.png" alt=""></div><figcaption>Hoofdlogo, geel op zwart<br><code>logos/bjorns-barber-logo-geel.png</code></figcaption></figure>
+      <figure><div class="tile on-yellow"><img src="logos/bjorns-barber-logo-zwart.png" alt=""></div><figcaption>Hoofdlogo, zwart op geel<br><code>logos/bjorns-barber-logo-zwart.png</code></figcaption></figure>
+      <figure><div class="tile on-paper"><img src="logos/bjorns-barber-beeldmerk-zwart.png" alt=""></div><figcaption>Beeldmerk, zwart<br><code>logos/bjorns-barber-beeldmerk-zwart.png</code></figcaption></figure>
+      <figure><div class="tile on-ink"><img src="logos/bjorns-barber-beeldmerk-wit.png" alt=""></div><figcaption>Beeldmerk, wit<br><code>logos/bjorns-barber-beeldmerk-wit.png</code></figcaption></figure>
+      <figure><div class="tile on-ink"><img src="logos/bjorns-barber-beeldmerk-geel.png" alt=""></div><figcaption>Beeldmerk, geel<br><code>logos/bjorns-barber-beeldmerk-geel.png</code></figcaption></figure>
+      <figure><div class="tile on-paper"><img src="logos/bjorns-barber-naam-zwart.png" alt=""></div><figcaption>Naam, zwart<br><code>logos/bjorns-barber-naam-zwart.png</code></figcaption></figure>
+      <figure><div class="tile on-ink"><img src="logos/bjorns-barber-naam-wit.png" alt=""></div><figcaption>Naam, wit<br><code>logos/bjorns-barber-naam-wit.png</code></figcaption></figure>
+      <figure><div class="tile on-paper"><img src="logos/bjorns-barber-woordmerk-zwart.png" alt=""></div><figcaption>Woordmerk, zwart<br><code>logos/bjorns-barber-woordmerk-zwart.png</code></figcaption></figure>
+      <figure><div class="tile on-ink"><img src="logos/bjorns-barber-woordmerk-wit.png" alt=""></div><figcaption>Woordmerk, wit<br><code>logos/bjorns-barber-woordmerk-wit.png</code></figcaption></figure>
+    </div>
+    <ul class="rules">
+      <li>Zwart logo op papier, wit of geel. Wit logo op zwart of op een donkere foto. Geel logo alleen op zwart.</li>
+      <li>Nooit in een andere kleur, nooit uitrekken, nooit een schaduw of outline.</li>
+      <li>Houd rondom het logo minstens de hoogte van de letter B vrij.</li>
+      <li>De PNG’s zijn 900 px breed. Voor een gevel of spandoek is een vectorbestand nodig.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Kleuren</h2>
+    <div class="swatches">
+      <div class="swatch"><span style="background:#101010"></span><div><strong>Zwart</strong><code>#101010</code></div></div>
+      <div class="swatch"><span style="background:#f5c400"></span><div><strong>Geel</strong><code>#F5C400</code></div></div>
+      <div class="swatch"><span style="background:#efece4"></span><div><strong>Papier</strong><code>#EFECE4</code></div></div>
+      <div class="swatch"><span style="background:#e4dfd4"></span><div><strong>Papier warm</strong><code>#E4DFD4</code></div></div>
+      <div class="swatch"><span style="background:#f7f4ec"></span><div><strong>Papier licht</strong><code>#F7F4EC</code></div></div>
+      <div class="swatch"><span style="background:#f4f1ea"></span><div><strong>Papier mail</strong><code>#F4F1EA</code></div></div>
+      <div class="swatch"><span style="background:#161616"></span><div><strong>Tekst</strong><code>#161616</code></div></div>
+      <div class="swatch"><span style="background:#6b665c"></span><div><strong>Tekst gedempt</strong><code>#6B665C</code></div></div>
+      <div class="swatch"><span style="background:#2a2a2a"></span><div><strong>Antraciet</strong><code>#2A2A2A</code></div></div>
+      <div class="swatch"><span style="background:#070707"></span><div><strong>Diep zwart</strong><code>#070707</code></div></div>
+    </div>
+    <p>Veel zwart en papier, geel spaarzaam: één gele knop of streep per vlak. RGB- en CMYK-waarden staan in <code>kleuren/kleuren.txt</code>, een palet voor Photoshop, GIMP of Affinity in <code>kleuren/bjorns-barber.gpl</code>.</p>
+    <p><a class="button" href="#">Zo ziet een knop eruit</a></p>
+  </section>
+
+  <section>
+    <h2>Lettertypen</h2>
+    <div class="type">
+      <div class="display">Knippen. Baard.<br>Lijn en vorm.</div>
+      <small>Bricolage Grotesque, gewicht 720, voor koppen</small>
+    </div>
+    <div class="type">
+      <p class="body" style="margin:0">Haar, op jouw tempo. Je boekt een tijd op de website en krijgt meteen een bevestiging per mail. Lukt het toch niet? Stuur even een mail terug, dan zoeken we een ander moment.</p>
+      <small>Outfit, gewicht 400, voor lopende tekst. Licht (300) voor grote citaten, medium (500) voor knoppen en labels.</small>
+    </div>
+    <p>Beide lettertypen zijn gratis (SIL Open Font License). Voor Word, Canva of de drukker: <a href="https://fonts.google.com/specimen/Bricolage+Grotesque">Bricolage Grotesque</a> en <a href="https://fonts.google.com/specimen/Outfit">Outfit</a> op Google Fonts.</p>
+  </section>
+
+  <section>
+    <h2>Social</h2>
+    <div class="grid">
+      <figure><div class="tile on-paper"><img src="social/profielfoto-zwart.jpg" alt=""></div><figcaption>Profielfoto, 1080 × 1080<br><code>social/profielfoto-zwart.jpg</code></figcaption></figure>
+      <figure><div class="tile on-paper"><img src="social/profielfoto-geel.jpg" alt=""></div><figcaption>Profielfoto, geel<br><code>social/profielfoto-geel.jpg</code></figcaption></figure>
+      <figure><div class="tile on-paper"><img src="social/profielfoto-logo-zwart.jpg" alt=""></div><figcaption>Profielfoto met naam<br><code>social/profielfoto-logo-zwart.jpg</code></figcaption></figure>
+      <figure><div class="tile on-paper"><img src="social/deel-afbeelding-1200x630.jpg" alt=""></div><figcaption>Deel-afbeelding voor links, 1200 × 630<br><code>social/deel-afbeelding-1200x630.jpg</code></figcaption></figure>
+    </div>
+  </section>
+</main>
+<footer>
+  Bjorn’s Barber · Ferdinandstraat 21, 4571 AN Axel · +31 6 48163783 · <a href="https://www.bjornsbarber.nl">bjornsbarber.nl</a><br>
+  Website en huisstijl-map door <a href="https://turboturtle.nl">TurboTurtle</a>
+</footer>
+</body>
+</html>

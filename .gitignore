@@ -9,3 +9,6 @@ dist-ssr
 supabase/.temp
 .claude
 **/supabase/.temp
+
+# Brand kit archives are built from marketing/Bjorns-Barber-huisstijl
+marketing/*.zip
