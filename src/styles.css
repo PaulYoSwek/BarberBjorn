@@ -1747,3 +1747,52 @@ button.inbox-count { border: 0; cursor: pointer; width: auto; }
   .admin-agenda-side .admin-week { grid-template-columns: 36px 1fr 36px; }
   .admin-agenda-side .admin-week-title { grid-column: auto; order: 0; }
 }
+
+/* ---------- dashboard: a crisp UI face and an app-style top bar */
+.admin {
+  font-family: 'Inter Variable', Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 0.92rem; font-weight: 450; line-height: 1.45; color: #1a1916;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv11', 'ss01', 'tnum';
+}
+.admin h1, .admin h2, .admin h3, .admin strong, .admin b { font-weight: 600; letter-spacing: -0.01em; }
+.admin h1 { font-family: var(--font-display); font-weight: 720; letter-spacing: -0.03em; }
+.admin button, .admin input, .admin select, .admin textarea { font-family: inherit; font-weight: 500; }
+.admin .admin-kicker, .admin .inbox-count, .admin .inbox-status, .admin .inbox-moment, .admin .inbox-group-title,
+.admin .admin-hours-title, .admin .admin-legend, .admin .tg-day {
+  font-weight: 600; letter-spacing: 0.08em;
+}
+.admin p, .admin li, .admin label, .admin td, .admin th, .admin dd, .admin dt { font-weight: 450; }
+.admin .admin-hint, .admin .admin-field-hint { font-weight: 450; }
+
+/* the bar: brand left, tabs as text with a yellow underline, actions right */
+.admin-bar { padding: 0 24px; min-height: 60px; gap: 24px; border-bottom: 0; box-shadow: inset 0 -3px 0 #f5c400; }
+.admin-brand-name { font-family: var(--font-display); font-weight: 700; font-size: 1rem; letter-spacing: -0.02em; }
+.admin-tabs { gap: 2px; align-self: stretch; }
+.admin-tabs button {
+  position: relative; min-height: 60px; padding: 0 14px; border: 0; background: transparent;
+  color: rgba(244, 241, 234, 0.78); font-size: 0.9rem; font-weight: 500; letter-spacing: 0.01em;
+}
+.admin-tabs button:hover { color: #f4f1ea; background: rgba(255, 255, 255, 0.05); }
+.admin-tabs button.is-on { background: transparent; color: #fff; font-weight: 600; }
+.admin-tabs button.is-on::after {
+  content: ''; position: absolute; left: 10px; right: 10px; bottom: 0; height: 3px; background: #f5c400; z-index: 1;
+}
+.admin-badge { min-width: 18px; height: 18px; font-size: 0.68rem; font-weight: 700; margin-left: 6px; vertical-align: 1px; }
+.admin-tabs button.is-on .admin-badge { background: #f5c400; color: #101010; }
+.admin-bar-end { gap: 6px; }
+.admin-site, .admin-logout {
+  min-height: 34px; padding: 0 12px; font-size: 0.82rem; font-weight: 500;
+  border: 1px solid rgba(244, 241, 234, 0.25); color: rgba(244, 241, 234, 0.85); background: transparent;
+}
+.admin-site:hover, .admin-logout:hover { border-color: #f5c400; color: #f5c400; }
+@media (max-width: 720px) {
+  .admin-bar { min-height: 56px; padding: 0 12px; }
+  .admin-tabs button { min-height: 56px; padding: 0 6px; font-size: 0.8rem; }
+  .admin-tabs button.is-on::after { left: 6px; right: 6px; }
+}
+@media (max-width: 720px) {
+  /* the phone's tab bar sits at the bottom: the marker goes on top */
+  .admin-tabs button.is-on::after { top: 0; bottom: auto; }
+  .admin-tabs { gap: 0; }
+}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import '@fontsource-variable/inter'
 import { clearAdminSession, hasAdminSession } from '../admin-session'
 import { AdminGate } from '../components/admin/AdminGate'
 import { AdminShell } from '../components/admin/AdminShell'
