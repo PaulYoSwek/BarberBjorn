@@ -74,10 +74,6 @@ export function Hero() {
         />
       )}
       <div className="hero-scrim" />
-      <picture>
-        <source srcSet="/logo-mark-small.webp?v=4" type="image/webp" />
-        <img className="hero-stamp" src="/logo-mark-small.png?v=4" alt="" width="68" height="68" decoding="async" />
-      </picture>
       <div className="hero-copy">
         <h1 className="hero-title">
           <picture>

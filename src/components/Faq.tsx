@@ -3,7 +3,7 @@ import { useLang } from '../language'
 export function Faq() {
   const { t } = useLang()
   return (
-    <section className="faq">
+    <section id="vragen" className="faq">
       <header className="faq-intro">
         <p className="kicker">{t.faqKicker}</p>
         <h2>{t.faqTitle}</h2>

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { LanguageSwitch } from '../components/LanguageSwitch'
+import { SiteHeader } from '../components/SiteHeader'
 import { useLang } from '../language'
 import { useHeadTags } from '../seo'
 
@@ -8,7 +8,7 @@ export function NotFoundPage() {
   useHeadTags({ title: `404 · Bjorn’s Barber`, robots: 'noindex, follow', lang })
   return (
     <>
-      <LanguageSwitch />
+      <SiteHeader />
       <main className="not-found">
         <p className="kicker">404</p>
         <h1>{t.notFoundTitle}</h1>

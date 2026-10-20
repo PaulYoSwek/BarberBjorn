@@ -36,7 +36,7 @@ export function Services() {
   const more = list.slice(PLATES)
 
   return (
-    <section className="services">
+    <section id="diensten" className="services">
       <h2 className="kicker">{t.servicesKicker}</h2>
       <div className={`plates${loaded ? '' : ' is-loading'}`}>
         {plates.map((item, index) => (

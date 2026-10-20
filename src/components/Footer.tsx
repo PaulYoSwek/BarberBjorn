@@ -7,7 +7,7 @@ export function Footer() {
   const { t, lang } = useLang()
   const year = YEAR
   return (
-    <footer className="footer">
+    <footer id="contact" className="footer">
       <div className="footer-main">
         <picture>
           <source srcSet="/logo-wordmark-small.webp?v=5" type="image/webp" />

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Footer } from '../components/Footer'
-import { LanguageSwitch } from '../components/LanguageSwitch'
+import { SiteHeader } from '../components/SiteHeader'
 import { useLang } from '../language'
 import { PRIVACY } from '../privacy'
 import { useHeadTags } from '../seo'
@@ -16,7 +16,7 @@ export function PrivacyPage() {
   })
   return (
     <>
-      <LanguageSwitch />
+      <SiteHeader />
       <main className="privacy">
         <article className="privacy-body">
           <Link className="privacy-back" to={lang === 'en' ? '/?lang=en' : '/'}>

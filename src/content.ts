@@ -63,6 +63,9 @@ export type Copy = {
   notFoundTitle: string
   notFoundBody: string
   backHome: string
+  nav: { home: string; services: string; about: string; faq: string; contact: string; book: string; menu: string; close: string }
+  pages: Record<'book' | 'services' | 'about' | 'faq' | 'contact', { title: string; description: string }>
+  contact: { kicker: string; title: string; addressLabel: string; phoneLabel: string; mailLabel: string; note: string }
 }
 
 /** Public origin of the site, used for canonical and social tags. */
@@ -178,6 +181,31 @@ export const copy: Record<Lang, Copy> = {
     notFoundTitle: 'Die pagina is er niet.',
     notFoundBody: 'Het adres klopt niet, of de pagina is weg.',
     backHome: 'Naar de voorpagina',
+    nav: {
+      home: 'Naar de voorpagina',
+      services: 'Diensten',
+      about: 'Over Bjorn',
+      faq: 'Vragen',
+      contact: 'Contact',
+      book: 'Afspraak maken',
+      menu: 'Menu',
+      close: 'Menu sluiten',
+    },
+    pages: {
+      book: { title: 'Afspraak maken', description: 'Kies een dienst en een vrije tijd. Je krijgt meteen een bevestiging per mail.' },
+      services: { title: 'Diensten en prijzen', description: 'Knippen, baard of allebei, in alle rust. Prijzen zijn inclusief btw.' },
+      about: { title: 'Over Bjorn', description: 'Acht jaar barber, één stoel en alle aandacht voor wie erin zit.' },
+      faq: { title: 'Veelgestelde vragen', description: 'Wat je wilt weten voordat je langskomt bij Bjorn’s Barber in Axel.' },
+      contact: { title: 'Contact', description: 'Ferdinandstraat 21 in Axel. Bel, mail of kom langs.' },
+    },
+    contact: {
+      kicker: 'HIER ZIT HIJ',
+      title: 'Kom langs in Axel',
+      addressLabel: 'Adres',
+      phoneLabel: 'Telefoon',
+      mailLabel: 'E-mail',
+      note: 'Een afspraak maak je online in een minuut. Voor een vraag kun je altijd bellen of mailen.',
+    },
   },
   en: {
     seoTitle: 'Bjorn’s Barber · Barber in Axel',
@@ -259,5 +287,30 @@ export const copy: Record<Lang, Copy> = {
     notFoundTitle: 'That page is not here.',
     notFoundBody: 'The address is wrong, or the page is gone.',
     backHome: 'Back to the front page',
+    nav: {
+      home: 'Back to the front page',
+      services: 'Services',
+      about: 'About Bjorn',
+      faq: 'Questions',
+      contact: 'Contact',
+      book: 'Book a visit',
+      menu: 'Menu',
+      close: 'Close menu',
+    },
+    pages: {
+      book: { title: 'Book a visit', description: 'Pick a service and a free time. You get a confirmation by mail right away.' },
+      services: { title: 'Services and prices', description: 'Cut, beard or both, at your pace. Prices include VAT.' },
+      about: { title: 'About Bjorn', description: 'Eight years a barber, one chair and full attention for whoever sits in it.' },
+      faq: { title: 'Frequently asked questions', description: 'What you want to know before you come to Bjorn’s Barber in Axel.' },
+      contact: { title: 'Contact', description: 'Ferdinandstraat 21 in Axel. Call, mail or drop by.' },
+    },
+    contact: {
+      kicker: 'WHERE HE IS',
+      title: 'Come by in Axel',
+      addressLabel: 'Address',
+      phoneLabel: 'Phone',
+      mailLabel: 'E-mail',
+      note: 'Booking takes a minute online. For a question you can always call or mail.',
+    },
   },
 }

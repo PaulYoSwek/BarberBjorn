@@ -4,7 +4,7 @@ import { BookingForm } from '../components/BookingForm'
 import { Faq } from '../components/Faq'
 import { Footer } from '../components/Footer'
 import { Hero } from '../components/Hero'
-import { LanguageSwitch } from '../components/LanguageSwitch'
+import { SiteHeader } from '../components/SiteHeader'
 import { Services } from '../components/Services'
 import { RopeDivider, type RopeEdge } from '../components/RopeDivider'
 import { Splash } from '../components/Splash'
@@ -64,7 +64,7 @@ export function HomePage() {
           }}
         />
       )}
-      <LanguageSwitch hidden={!ready} />
+      <SiteHeader />
       <main>
         <Hero />
         <BookingForm />

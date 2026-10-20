@@ -3,7 +3,7 @@ import { useLang } from '../language'
 export function About() {
   const { t } = useLang()
   return (
-    <section className="about">
+    <section id="over-bjorn" className="about">
       <picture>
         <source srcSet="/portrait.webp" type="image/webp" />
         <img src="/portrait.png" alt={t.portraitAlt} width="861" height="1024" loading="lazy" decoding="async" />
