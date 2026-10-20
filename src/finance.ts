@@ -88,7 +88,9 @@ export function bookingMoney(booking: Pick<Billable, 'price' | 'service' | 'char
   let productsTotal = 0
   let pieces = 0
   for (const item of booking.items ?? []) {
-    productsList += item.listPrice * item.quantity
+    // An item without a list price (older data) counts at its sale price: no discount, never NaN.
+    const list = Number.isFinite(item.listPrice) ? item.listPrice : item.price
+    productsList += list * item.quantity
     productsTotal += item.price * item.quantity
     pieces += item.quantity
   }

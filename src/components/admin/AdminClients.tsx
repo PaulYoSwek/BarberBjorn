@@ -18,6 +18,8 @@ import {
 import { copy, type ServiceId } from '../../content'
 import { deleteClient, loadClients, loadServices, saveClient, type InboxRow } from '../../planning-api'
 import type { Weekday } from '../../schedule'
+import { AdminClientDetail } from './AdminClientDetail'
+import { hueOf, initials } from './client-chip'
 
 type Props = { rows: InboxRow[]; onDeleted?: () => void }
 
@@ -63,22 +65,6 @@ function usually(summary: ClientSummary): string {
   return parts.filter(Boolean).join(' · ')
 }
 
-/** Two letters for the chip: first letters of the first and last word. */
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return '?'
-  const first = parts[0][0] ?? ''
-  const last = parts.length > 1 ? (parts[parts.length - 1][0] ?? '') : ''
-  return (first + last).toUpperCase()
-}
-
-/** A steady colour per name, so the same client always gets the same chip. */
-function hueOf(name: string): number {
-  let hash = 0
-  for (const char of name.toLowerCase()) hash = (hash * 31 + char.charCodeAt(0)) % 997
-  return hash % 6
-}
-
 export function AdminClients({ rows, onDeleted }: Props) {
   const [stored, setStored] = useState<ClientRecord[]>([])
   const [ready, setReady] = useState(true)
@@ -90,6 +76,8 @@ export function AdminClients({ rows, onDeleted }: Props) {
   const [notice, setNotice] = useState<string | null>(null)
   const [done, setDone] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
+  /** The client whose overview is open. */
+  const [openKey, setOpenKey] = useState<string | null>(null)
 
   function refresh() {
     return loadClients()
@@ -126,6 +114,7 @@ export function AdminClients({ rows, onDeleted }: Props) {
 
   const all = useMemo(() => summarizeClients(stored, rows, fallbackPrices), [stored, rows, fallbackPrices])
   const shown = useMemo(() => filterClients(all, filter), [all, filter])
+  const open = openKey ? (all.find((item) => item.key === openKey) ?? null) : null
   const totals = useMemo(
     () => ({
       visits: shown.reduce((sum, item) => sum + item.visits, 0),
@@ -420,7 +409,11 @@ export function AdminClients({ rows, onDeleted }: Props) {
               <span className={`admin-client-chip is-hue-${hueOf(summary.name)}`} aria-hidden="true">
                 {initials(summary.name)}
               </span>
-              <h2>{summary.name || 'Zonder naam'}</h2>
+              <h2>
+                <button type="button" className="admin-client-name" onClick={() => setOpenKey(summary.key)}>
+                  {summary.name || 'Zonder naam'}
+                </button>
+              </h2>
               <p className="admin-client-score">
                 <strong>{summary.visits}×</strong>
                 <span>{formatEuro(summary.paid)}</span>
@@ -450,6 +443,14 @@ export function AdminClients({ rows, onDeleted }: Props) {
             </dl>
             {summary.note ? <p className="admin-client-note">{summary.note}</p> : null}
             <div className="admin-actions">
+              <button
+                type="button"
+                className="admin-client-view"
+                aria-label={`${summary.name} overzicht`}
+                onClick={() => setOpenKey(summary.key)}
+              >
+                Overzicht
+              </button>
               <button type="button" aria-label={`${summary.name} bewerken`} onClick={() => edit(summary)}>
                 Bewerken
               </button>
@@ -457,6 +458,18 @@ export function AdminClients({ rows, onDeleted }: Props) {
           </li>
         ))}
       </ul>
+      {open ? (
+        <AdminClientDetail
+          summary={open}
+          rows={rows}
+          prices={fallbackPrices}
+          onClose={() => setOpenKey(null)}
+          onEdit={() => {
+            setOpenKey(null)
+            edit(open)
+          }}
+        />
+      ) : null}
     </div>
   )
 }

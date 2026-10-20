@@ -172,3 +172,27 @@ test('a client and their bookings can be deleted after a clear confirmation', as
   expect(await screen.findByRole('status')).toHaveTextContent('Ada Vos en alle afspraken zijn verwijderd.')
   await waitFor(() => expect(loadInbox).toHaveBeenCalledTimes(2))
 })
+
+test('a client opens an overview with every appointment, what they spent and their note', async () => {
+  render(<AdminShell />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Klanten' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'Ada Vos overzicht' }))
+  const dialog = screen.getByRole('dialog', { name: 'Overzicht Ada Vos' })
+  expect(within(dialog).getByRole('heading', { name: 'Ada Vos' })).toBeInTheDocument()
+  expect(within(dialog).getByText('Kort opzij')).toBeInTheDocument()
+  const rows = within(dialog).getAllByRole('listitem')
+  expect(rows).toHaveLength(2)
+  // Newest first; both are in the past, so both count as visits.
+  expect(rows[0]).toHaveTextContent('ma 12 okt 2026')
+  expect(rows[0]).toHaveTextContent('Knippen + baard')
+  expect(rows[0]).toHaveTextContent('Geweest')
+  expect(rows[0]).toHaveTextContent('€45')
+  expect(rows[1]).toHaveTextContent('Knippen')
+  expect(within(dialog).getByText('Bezoeken').nextElementSibling).toHaveTextContent('2')
+  await userEvent.keyboard('{Escape}')
+  expect(screen.queryByRole('dialog', { name: 'Overzicht Ada Vos' })).not.toBeInTheDocument()
+  // The name itself opens it too, and Bewerken hands over to the form.
+  await userEvent.click(screen.getByRole('button', { name: 'Ada Vos' }))
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Bewerken' }))
+  expect(screen.getByRole('form', { name: 'Klant bewerken' })).toBeInTheDocument()
+})
