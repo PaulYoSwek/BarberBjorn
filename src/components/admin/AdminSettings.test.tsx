@@ -175,3 +175,33 @@ test('services can be reordered and a used one is hidden instead of deleted', as
     ['beard', 3],
   ])
 })
+
+test('a mail can be previewed as it lands in the inbox, with sample data filled in', async () => {
+  const user = userEvent.setup()
+  render(<AdminShell />)
+  await user.click(screen.getByRole('button', { name: 'Settings' }))
+  await user.click(await screen.findByRole('button', { name: 'Bedankt voor je boeking nl voorbeeld' }))
+  const dialog = screen.getByRole('dialog', { name: 'Voorbeeld Bedankt voor je boeking nl' })
+  expect(dialog).toHaveTextContent('Afspraak Bjorn’s Barber')
+  expect(dialog).toHaveTextContent('info@bjornsbarber.nl')
+  const frame = screen.getByTitle('Mail Bedankt voor je boeking nl') as HTMLIFrameElement
+  expect(frame.getAttribute('srcdoc')).toContain('Hoi Jan')
+  expect(frame.getAttribute('srcdoc')).not.toContain('{{name}}')
+  await user.keyboard('{Escape}')
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+})
+
+test('the preview follows the text being edited, before saving', async () => {
+  const user = userEvent.setup()
+  render(<AdminShell />)
+  await user.click(screen.getByRole('button', { name: 'Settings' }))
+  const body = await screen.findByLabelText('Bedankt voor je boeking en bericht')
+  await user.clear(body)
+  await user.click(body)
+  await user.paste('Hi {{name}}, see you {{date}} at {{time}} for {{service}}.')
+  await user.click(screen.getByRole('button', { name: 'Bedankt voor je boeking en voorbeeld' }))
+  const frame = screen.getByTitle('Mail Bedankt voor je boeking en') as HTMLIFrameElement
+  expect(frame.getAttribute('srcdoc')).toContain('Hi James, see you Friday')
+  expect(frame.getAttribute('srcdoc')).toContain('at 14:00 for Cut.')
+  expect(saveTemplates).not.toHaveBeenCalled()
+})

@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
+import type { Lang } from '../../content'
+import { serviceLabel } from '../../service-catalog'
+import { MailPreview } from './MailPreview'
 import {
   deleteService,
   loadServices,
@@ -28,6 +31,15 @@ function templatesToSave(loaded: TemplateSave[], current: TemplateSave[]): Templ
   })
 }
 
+/** When each mail goes out, in Bjorn's words. */
+const MAIL_WHEN: Partial<Record<TemplateSave['key'], string>> = {
+  thanks: 'Meteen nadat een klant op de website boekt.',
+  received: 'Als een klant om een ander tijdstip vraagt en jij nog moet beslissen.',
+  accepted: 'Als jij zo’n aanvraag accepteert.',
+  declined: 'Als jij zo’n aanvraag weigert.',
+  moved: 'Als jij een afspraak naar een ander moment verplaatst.',
+}
+
 function snap(minutes: number): number {
   return Math.max(15, Math.round(minutes / 15) * 15)
 }
@@ -44,6 +56,7 @@ export function AdminSettings({ onServicesSaved }: Props = {}) {
   const [busy, setBusy] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [confirming, setConfirming] = useState<string | null>(null)
+  const [preview, setPreview] = useState<{ key: TemplateSave['key']; lang: Lang } | null>(null)
   const loadedTemplates = useRef<TemplateSave[]>([])
   /** Services added on this screen and not saved yet; they get a real id from their name on save. */
   const fresh = useRef(new Set<string>())
@@ -120,6 +133,7 @@ export function AdminSettings({ onServicesSaved }: Props = {}) {
       },
     ])
     setDone(null)
+    requestAnimationFrame(() => document.getElementById(`service-${id}`)?.scrollIntoView?.({ block: 'center', behavior: 'smooth' }))
   }
 
   async function removeService(service: ServiceSave) {
@@ -217,175 +231,310 @@ export function AdminSettings({ onServicesSaved }: Props = {}) {
     return notice ? <p role="alert">{notice}</p> : null
   }
 
+  const previewRow = preview ? templates.find((row) => row.key === preview.key && row.lang === preview.lang) : null
+  const sampleService = (lang: Lang) => {
+    const first = services.find((item) => item.active) ?? services[0]
+    return first ? first.name[lang].trim() || first.name.nl.trim() || serviceLabel('cut', lang) : serviceLabel('cut', lang)
+  }
+
   return (
-    <div className="admin-form">
+    <div className="admin-settings">
       <header className="admin-agenda-head">
         <div>
           <p className="admin-kicker">Diensten, prijzen en mail</p>
-          <h1>Settings</h1>
+          <h1>Instellingen</h1>
         </div>
+        <p className="admin-settings-lead">
+          Wat je hier verandert staat na opslaan meteen op de website en in de mails naar klanten.
+        </p>
       </header>
-      {notice ? <p role="alert">{notice}</p> : null}
+      {notice ? <p className="admin-settings-alert" role="alert">{notice}</p> : null}
       {done ? <p className="admin-done" role="status">{done}</p> : null}
+
       {servicesReady ? (
-        <section className="admin-services" aria-label="Diensten">
-          <h2 className="admin-section-title">Diensten</h2>
-          <p className="admin-hint">
-            Wat hier zichtbaar staat, staat op de website en is te boeken. De eerste drie zijn de grote prijsborden;
-            de rest komt eronder.
-          </p>
-          {services.map((service, index) => {
-            const name = service.name.nl.trim() || 'Nieuwe dienst'
-            return (
-              <fieldset key={service.id} className={`admin-field admin-service${service.active ? '' : ' is-hidden'}`}>
-                <legend>
-                  {name}
-                  {service.active ? null : <span className="admin-service-tag">verborgen</span>}
-                </legend>
-                <div className="admin-service-grid">
-                  <label>
-                    Naam
-                    <input
-                      aria-label={`${name} naam`}
-                      value={service.name.nl}
-                      maxLength={60}
-                      placeholder="Bijv. Kinderen knippen"
-                      onChange={(event) => patchText(service.id, 'name', 'nl', event.target.value)}
-                    />
-                  </label>
-                  <label>
-                    Naam Engels (mag leeg)
-                    <input
-                      aria-label={`${name} naam Engels`}
-                      value={service.name.en}
-                      maxLength={60}
-                      onChange={(event) => patchText(service.id, 'name', 'en', event.target.value)}
-                    />
-                  </label>
-                  <label>
-                    Omschrijving (mag leeg)
-                    <input
-                      aria-label={`${name} omschrijving`}
-                      value={service.detail.nl}
-                      maxLength={120}
-                      onChange={(event) => patchText(service.id, 'detail', 'nl', event.target.value)}
-                    />
-                  </label>
-                  <label>
-                    Omschrijving Engels (mag leeg)
-                    <input
-                      aria-label={`${name} omschrijving Engels`}
-                      value={service.detail.en}
-                      maxLength={120}
-                      onChange={(event) => patchText(service.id, 'detail', 'en', event.target.value)}
-                    />
-                  </label>
-                  <label>
-                    Prijs
-                    <input
-                      aria-label={`${name} prijs`}
-                      value={service.price}
-                      inputMode="decimal"
-                      placeholder="€25"
-                      onChange={(event) => patchService(service.id, { price: event.target.value })}
-                      onBlur={() => patchService(service.id, { price: euroLabel(service.price.trim()) })}
-                    />
-                  </label>
-                  <label>
-                    Minuten
-                    <input
-                      aria-label={`${name} minuten`}
-                      inputMode="numeric"
-                      value={service.minutes}
-                      onChange={(event) => {
-                        const next = Number(event.target.value)
-                        if (Number.isFinite(next)) patchService(service.id, { minutes: next })
-                      }}
-                      onBlur={() => snapMinutes(service.id)}
-                    />
-                    <span className="admin-field-hint">Per kwartier: 15, 30, 45, 60, 75 …</span>
-                  </label>
-                </div>
-                <div className="admin-service-actions">
-                  <label className="admin-check">
-                    <input
-                      type="checkbox"
-                      aria-label={`${name} zichtbaar op de website`}
-                      checked={service.active}
-                      onChange={(event) => patchService(service.id, { active: event.target.checked })}
-                    />
-                    Zichtbaar op de website
-                  </label>
-                  <button type="button" aria-label={`${name} omhoog`} disabled={index === 0} onClick={() => move(service.id, -1)}>
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    aria-label={`${name} omlaag`}
-                    disabled={index === services.length - 1}
-                    onClick={() => move(service.id, 1)}
-                  >
-                    ↓
-                  </button>
-                  {confirming === service.id ? (
-                    <>
-                      <button type="button" className="is-danger" disabled={busy} onClick={() => void removeService(service)}>
-                        Echt verwijderen
+        <section className="admin-settings-section" aria-label="Diensten">
+          <div className="admin-settings-title">
+            <div>
+              <h2>Diensten</h2>
+              <p className="admin-hint">
+                Wat hier aan staat, staat op de website en is te boeken. De eerste drie zijn de grote prijsborden; de rest
+                komt eronder.
+              </p>
+            </div>
+            <button type="button" className="admin-add-service" onClick={addService}>
+              + Dienst toevoegen
+            </button>
+          </div>
+          <ol className="admin-service-list">
+            {services.map((service, index) => {
+              const name = service.name.nl.trim() || 'Nieuwe dienst'
+              const facts = [service.price.trim() || 'nog geen prijs', `${service.minutes} min`]
+              return (
+                <li
+                  key={service.id}
+                  id={`service-${service.id}`}
+                  className={`admin-service-card${service.active ? '' : ' is-hidden'}${index < 3 ? ' is-board' : ''}`}
+                >
+                  <header className="admin-service-head">
+                    <span className="admin-service-no" aria-hidden="true">
+                      {index + 1}
+                    </span>
+                    <div className="admin-service-who">
+                      <h3>{name}</h3>
+                      <p>
+                        {facts.join(' · ')}
+                        {index < 3 ? <span className="admin-service-tag is-board">Prijsbord</span> : null}
+                        {service.active ? null : <span className="admin-service-tag">Verborgen</span>}
+                      </p>
+                    </div>
+                    <div className="admin-service-tools">
+                      <button
+                        type="button"
+                        className="admin-icon-button"
+                        aria-label={`${name} omhoog`}
+                        disabled={index === 0}
+                        onClick={() => move(service.id, -1)}
+                      >
+                        <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+                          <path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
                       </button>
-                      <button type="button" onClick={() => setConfirming(null)}>
-                        Annuleren
+                      <button
+                        type="button"
+                        className="admin-icon-button"
+                        aria-label={`${name} omlaag`}
+                        disabled={index === services.length - 1}
+                        onClick={() => move(service.id, 1)}
+                      >
+                        <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+                          <path d="M8 3v10M3.5 8.5 8 13l4.5-4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
                       </button>
-                    </>
-                  ) : (
-                    <button type="button" aria-label={`${name} verwijderen`} onClick={() => setConfirming(service.id)}>
-                      Verwijderen
-                    </button>
-                  )}
-                </div>
-              </fieldset>
-            )
-          })}
-          <button type="button" className="admin-add-service" onClick={addService}>
-            + Dienst toevoegen
-          </button>
+                      {confirming === service.id ? (
+                        <>
+                          <button type="button" className="admin-text-button is-danger" disabled={busy} onClick={() => void removeService(service)}>
+                            Echt verwijderen
+                          </button>
+                          <button type="button" className="admin-text-button" onClick={() => setConfirming(null)}>
+                            Annuleren
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          className="admin-text-button"
+                          aria-label={`${name} verwijderen`}
+                          onClick={() => setConfirming(service.id)}
+                        >
+                          Verwijderen
+                        </button>
+                      )}
+                    </div>
+                  </header>
+                  <div className="admin-service-grid">
+                    <label>
+                      <span>Naam</span>
+                      <input
+                        aria-label={`${name} naam`}
+                        value={service.name.nl}
+                        maxLength={60}
+                        placeholder="Bijv. Kinderen knippen"
+                        onChange={(event) => patchText(service.id, 'name', 'nl', event.target.value)}
+                      />
+                    </label>
+                    <label>
+                      <span>
+                        Naam Engels <small>mag leeg</small>
+                      </span>
+                      <input
+                        aria-label={`${name} naam Engels`}
+                        value={service.name.en}
+                        maxLength={60}
+                        onChange={(event) => patchText(service.id, 'name', 'en', event.target.value)}
+                      />
+                    </label>
+                    <label>
+                      <span>
+                        Omschrijving <small>mag leeg</small>
+                      </span>
+                      <input
+                        aria-label={`${name} omschrijving`}
+                        value={service.detail.nl}
+                        maxLength={120}
+                        onChange={(event) => patchText(service.id, 'detail', 'nl', event.target.value)}
+                      />
+                    </label>
+                    <label>
+                      <span>
+                        Omschrijving Engels <small>mag leeg</small>
+                      </span>
+                      <input
+                        aria-label={`${name} omschrijving Engels`}
+                        value={service.detail.en}
+                        maxLength={120}
+                        onChange={(event) => patchText(service.id, 'detail', 'en', event.target.value)}
+                      />
+                    </label>
+                    <label className="is-short">
+                      <span>Prijs</span>
+                      <input
+                        aria-label={`${name} prijs`}
+                        value={service.price}
+                        inputMode="decimal"
+                        placeholder="€25"
+                        onChange={(event) => patchService(service.id, { price: event.target.value })}
+                        onBlur={() => patchService(service.id, { price: euroLabel(service.price.trim()) })}
+                      />
+                    </label>
+                    <label className="is-short">
+                      <span>
+                        Duur in minuten <small>per kwartier: 15, 30, 45 …</small>
+                      </span>
+                      <input
+                        aria-label={`${name} minuten`}
+                        inputMode="numeric"
+                        value={service.minutes}
+                        onChange={(event) => {
+                          const next = Number(event.target.value)
+                          if (Number.isFinite(next)) patchService(service.id, { minutes: next })
+                        }}
+                        onBlur={() => snapMinutes(service.id)}
+                      />
+                    </label>
+                    <label className="admin-switch">
+                      <input
+                        type="checkbox"
+                        aria-label={`${name} zichtbaar op de website`}
+                        checked={service.active}
+                        onChange={(event) => patchService(service.id, { active: event.target.checked })}
+                      />
+                      <span className="admin-switch-track" aria-hidden="true" />
+                      <span className="admin-switch-text">Zichtbaar op de website</span>
+                    </label>
+                  </div>
+                </li>
+              )
+            })}
+          </ol>
         </section>
       ) : null}
-      {templatesReady
-        ? TEMPLATE_KEYS.map((key) => (
-        <fieldset key={key} className="admin-field">
-          <legend>{TEMPLATE_LABEL[key]}</legend>
-          {TEMPLATE_LANGS.map((lang) => {
-            const item = templates.find((row) => row.key === key && row.lang === lang)
-            if (!item) return null
-            const label = TEMPLATE_LABEL[key]
-            return (
-              <div key={lang}>
-                <label>
-                  Onderwerp {lang}
-                  <input
-                    aria-label={`${label} ${lang} onderwerp`}
-                    value={item.subject}
-                    onChange={(event) => patchTemplate(key, lang, { subject: event.target.value })}
-                  />
-                </label>
-                <label>
-                  Bericht {lang}
-                  <textarea
-                    aria-label={`${label} ${lang} bericht`}
-                    rows={4}
-                    value={item.body}
-                    onChange={(event) => patchTemplate(key, lang, { body: event.target.value })}
-                  />
-                </label>
-              </div>
-            )
-          })}
-        </fieldset>
-      ))
-        : null}
-      <button type="button" className="admin-primary" disabled={(!servicesReady && !templatesReady) || busy} onClick={() => { void save() }}>
-        {busy ? 'Opslaan…' : 'Opslaan'}
-      </button>
+
+      {templatesReady ? (
+        <section className="admin-settings-section" aria-label="E-mails">
+          <div className="admin-settings-title">
+            <div>
+              <h2>E-mails naar klanten</h2>
+              <p className="admin-hint">
+                Deze mails gaan automatisch, in de taal waarin de klant boekte. Klik op <strong>Voorbeeld</strong> om te zien
+                hoe de mail er in de inbox uitziet.
+              </p>
+            </div>
+          </div>
+          <dl className="admin-mail-vars" aria-label="Invulvelden">
+            <div>
+              <dt>{'{{name}}'}</dt>
+              <dd>naam van de klant</dd>
+            </div>
+            <div>
+              <dt>{'{{service}}'}</dt>
+              <dd>de dienst</dd>
+            </div>
+            <div>
+              <dt>{'{{date}}'}</dt>
+              <dd>de dag, bijv. vrijdag 24 oktober</dd>
+            </div>
+            <div>
+              <dt>{'{{time}}'}</dt>
+              <dd>het tijdstip</dd>
+            </div>
+          </dl>
+          <ol className="admin-mail-list">
+            {TEMPLATE_KEYS.map((key, index) => {
+              const label = TEMPLATE_LABEL[key]
+              return (
+                <li key={key} className="admin-mail-card">
+                  <header className="admin-service-head">
+                    <span className="admin-service-no" aria-hidden="true">
+                      {index + 1}
+                    </span>
+                    <div className="admin-service-who">
+                      <h3>{label}</h3>
+                      <p>{MAIL_WHEN[key] ?? ''}</p>
+                    </div>
+                  </header>
+                  <div className="admin-mail-langs">
+                    {TEMPLATE_LANGS.map((lang) => {
+                      const item = templates.find((row) => row.key === key && row.lang === lang)
+                      if (!item) return null
+                      return (
+                        <div key={lang} className="admin-mail-lang">
+                          <div className="admin-mail-lang-head">
+                            <span className="admin-lang-tag">{lang === 'nl' ? 'Nederlands' : 'Engels'}</span>
+                            <button
+                              type="button"
+                              className="admin-text-button admin-preview-button"
+                              aria-label={`${label} ${lang} voorbeeld`}
+                              onClick={() => setPreview({ key, lang })}
+                            >
+                              <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                                <path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8Z" fill="none" stroke="currentColor" strokeWidth="1.5" />
+                                <circle cx="8" cy="8" r="2" fill="none" stroke="currentColor" strokeWidth="1.5" />
+                              </svg>
+                              Voorbeeld
+                            </button>
+                          </div>
+                          <label>
+                            <span>Onderwerp</span>
+                            <input
+                              aria-label={`${label} ${lang} onderwerp`}
+                              value={item.subject}
+                              onChange={(event) => patchTemplate(key, lang, { subject: event.target.value })}
+                            />
+                          </label>
+                          <label>
+                            <span>Bericht</span>
+                            <textarea
+                              aria-label={`${label} ${lang} bericht`}
+                              rows={9}
+                              value={item.body}
+                              onChange={(event) => patchTemplate(key, lang, { body: event.target.value })}
+                            />
+                          </label>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </li>
+              )
+            })}
+          </ol>
+        </section>
+      ) : null}
+
+      <div className="admin-save-bar">
+        <p className="admin-hint">{busy ? 'Bezig met opslaan…' : 'Wijzigingen staan pas vast na opslaan.'}</p>
+        <button
+          type="button"
+          className="admin-primary admin-save-button"
+          disabled={(!servicesReady && !templatesReady) || busy}
+          onClick={() => {
+            void save()
+          }}
+        >
+          {busy ? 'Opslaan…' : 'Opslaan'}
+        </button>
+      </div>
+
+      {preview && previewRow ? (
+        <MailPreview
+          label={TEMPLATE_LABEL[preview.key]}
+          lang={preview.lang}
+          subject={previewRow.subject}
+          body={previewRow.body}
+          service={sampleService(preview.lang)}
+          onClose={() => setPreview(null)}
+        />
+      ) : null}
     </div>
   )
 }
