@@ -88,7 +88,8 @@ test('maps live week blocks and occupancy into a schedule', async () => {
   const schedule = await api.loadPublicSchedule()
   vi.useRealTimers()
   // Only the agenda window (this Monday + 4 weeks + a week of slack) is fetched.
-  expect(blockFilters).toEqual(['date>=2026-10-05', 'date<=2026-11-09'])
+  // Ten weeks of agenda plus a week of slack.
+  expect(blockFilters).toEqual(['date>=2026-10-05', 'date<=2026-12-21'])
   const listed = await api.loadServices()
   const zoned = schedule.bookings?.[1]
 

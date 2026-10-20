@@ -1,11 +1,11 @@
 import { expect, test } from 'vitest'
-import { agendaDays, SERVICE_MINUTES, SLOT_MINUTES, spanCells, spanStarts } from './schedule'
+import { agendaDays, SERVICE_MINUTES, SLOT_MINUTES, spanCells, spanStarts, firstBookableDate, hasFreeStart, monthCells, monthOf } from './schedule'
 
 const saturday = new Date('2026-10-03T11:00:00')
 
 test('lists four weeks from Monday and keeps Sunday last', () => {
   const days = agendaDays('cut', saturday)
-  expect(days).toHaveLength(28)
+  expect(days).toHaveLength(70)
   expect(days[0].date).toBe('2026-09-28')
   expect(days[0].weekday).toBe('mon')
   expect(days[6].date).toBe('2026-10-04')
@@ -141,4 +141,20 @@ test('a confirmed booking of 75 minutes blocks five quarter-hours and every star
   expect(at('09:45').taken).toBe(true)
   expect(at('09:30').taken).toBe(false)
   expect(at('11:15').taken).toBe(false)
+})
+
+test('a month is six Monday-first weeks with the neighbouring days marked', () => {
+  const cells = monthCells(2026, 9) // October 2026 starts on a Thursday
+  expect(cells).toHaveLength(42)
+  expect(cells[0]).toEqual({ date: '2026-09-28', inMonth: false })
+  expect(cells[3]).toEqual({ date: '2026-10-01', inMonth: true })
+  expect(cells[33]).toEqual({ date: '2026-10-31', inMonth: true })
+  expect(cells[34].inMonth).toBe(false)
+  expect(monthOf('2026-10-06')).toEqual({ year: 2026, month: 9 })
+})
+
+test('the first bookable day is the first with a start the service fits in', () => {
+  const days = agendaDays('cut', new Date('2026-10-05T17:30:00'))
+  expect(hasFreeStart(days[0])).toBe(false) // Monday evening: nothing fits before 18:00
+  expect(firstBookableDate(days)).toBe('2026-10-06')
 })

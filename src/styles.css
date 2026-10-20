@@ -1333,3 +1333,68 @@ button.inbox-count { border: 0; cursor: pointer; width: auto; }
   .contact-details { padding: 40px 16px; }
   .contact-map { min-height: 320px; }
 }
+
+/* ---------- month calendar (site and dashboard) */
+.cal { display: grid; gap: 8px; }
+.cal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cal-title {
+  margin: 0; font-family: var(--font-display); font-size: 1.3rem; font-weight: 720;
+  letter-spacing: -0.03em; text-transform: capitalize;
+}
+.cal-nav { display: flex; gap: 6px; }
+.cal-nav button {
+  min-width: 44px; min-height: 44px; padding: 0; cursor: pointer;
+  border: 1px solid var(--ink); background: #fff; color: var(--ink); font-size: 1.05rem;
+}
+.cal-nav button:disabled { opacity: 0.28; cursor: default; }
+.cal-weekdays, .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cal-weekdays span {
+  padding: 2px 0; text-align: center; font-size: 0.68rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: #6b665c;
+}
+.cal-grid > div { min-width: 0; }
+.cal-day {
+  position: relative; width: 100%; min-height: 46px; padding: 4px 2px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  border: 1px solid rgba(22, 22, 22, 0.16); background: #fff; color: var(--ink);
+  font-weight: 500; font-size: 0.95rem; cursor: pointer;
+}
+.cal-day:disabled { cursor: default; color: rgba(22, 22, 22, 0.32); background: #efece4; border-color: transparent; }
+.cal-day.is-today { box-shadow: inset 0 0 0 2px var(--ink); }
+.cal-day.is-on { background: var(--yellow); border-color: var(--yellow); font-weight: 700; }
+.cal-day.is-closed { text-decoration: line-through; }
+.cal-dot { display: inline-block; width: 6px; height: 6px; background: var(--yellow); }
+.cal-day.is-on .cal-dot { background: var(--ink); }
+.cal-legend { margin: 0; display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #5c574e; }
+.day-times { display: grid; gap: 8px; }
+.day-times h4 { margin: 0; font-family: var(--font-display); font-size: 1.05rem; letter-spacing: -0.03em; }
+.day-times .agenda-slots { flex-direction: row; flex-wrap: wrap; gap: 6px; }
+.day-times .agenda-slots button { flex: 0 0 auto; min-width: 66px; min-height: 40px; padding: 0 10px; font-size: 0.86rem; }
+.day-times-empty { margin: 0; font-size: 0.9rem; color: #5c574e; }
+@media (max-width: 800px) {
+  .cal-day { min-height: 42px; font-size: 0.9rem; }
+  .day-times .agenda-slots button { min-width: 60px; min-height: 44px; }
+}
+
+/* the dashboard's month: hours, bookings and closed quarters per day */
+.admin-month { padding: 12px; background: #fff; border: 1px solid #d9d3c7; }
+.admin-month .cal-day { min-height: 60px; align-items: flex-start; justify-content: flex-start; gap: 2px; padding: 5px 6px; text-align: left; }
+.admin-month .cal-day.is-week:not(.is-on) { box-shadow: inset 0 3px 0 var(--yellow); }
+.admin-month .cal-day.is-past:not(.is-on) { color: rgba(22, 22, 22, 0.45); background: #f4f1ea; }
+.admin-month .cal-day.is-closed { text-decoration: none; }
+.admin-month .cal-day.is-closed .admin-month-hours { color: #8a1600; }
+.admin-month-num { font-weight: 700; }
+.admin-month-hours { font-size: 0.64rem; color: #5c574e; white-space: nowrap; }
+.admin-month .cal-day.is-on .admin-month-hours { color: #3d3a33; }
+.admin-month-count {
+  position: absolute; top: 4px; right: 4px; min-width: 18px; height: 18px; padding: 0 5px;
+  display: inline-grid; place-items: center;
+  background: var(--ink); color: #f4f1ea; font-size: 0.66rem; font-weight: 700;
+}
+.admin-month .cal-day.is-on .admin-month-count { background: var(--ink); }
+.admin-month-shut { position: absolute; left: 6px; bottom: 5px; width: 14px; height: 4px; background: var(--ink); }
+@media (max-width: 720px) {
+  .admin-month { padding: 8px; }
+  .admin-month .cal-day { min-height: 52px; padding: 4px; }
+  .admin-month-hours { display: none; }
+}

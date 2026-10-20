@@ -47,6 +47,11 @@ export type Copy = {
   monthShort: string[]
   weekPrev: string
   weekNext: string
+  monthPrev: string
+  monthNext: string
+  pickDayHint: string
+  dayFull: string
+  freeLegend: string
   closedLabel: string
   aboutKicker: string
   portraitAlt: string
@@ -155,6 +160,11 @@ export const copy: Record<Lang, Copy> = {
     monthShort: ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'],
     weekPrev: 'Vorige week',
     weekNext: 'Volgende week',
+    monthPrev: 'Vorige maand',
+    monthNext: 'Volgende maand',
+    pickDayHint: 'Kies een dag met een stip, dan zie je de vrije tijden.',
+    dayFull: 'Geen vrije tijd meer op deze dag.',
+    freeLegend: 'vrije tijd',
     closedLabel: 'dicht',
     aboutKicker: 'DE BARBER',
     portraitAlt: 'Bjorn, kapper en barbier bij Bjorn’s Barber in Axel',
@@ -261,6 +271,11 @@ export const copy: Record<Lang, Copy> = {
     monthShort: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
     weekPrev: 'Previous week',
     weekNext: 'Next week',
+    monthPrev: 'Previous month',
+    monthNext: 'Next month',
+    pickDayHint: 'Pick a day with a dot to see its free times.',
+    dayFull: 'No free time left on this day.',
+    freeLegend: 'free time',
     closedLabel: 'closed',
     aboutKicker: 'THE BARBER',
     portraitAlt: 'Bjorn, the barber at Bjorn’s Barber in Axel',

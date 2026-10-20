@@ -64,6 +64,7 @@ test('shows the chosen service and time above send', async () => {
         <BookingForm />
       </LanguageProvider>,
     )
+    fireEvent.click(screen.getByRole('button', { name: 'di 6 okt' }))
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     const summary = screen.getByTestId('booking-summary')
     expect(summary).toHaveTextContent('Knippen + baard')
@@ -127,6 +128,7 @@ test('a free slot books through submitBook', async () => {
       </LanguageProvider>,
     )
     await user.click(screen.getByRole('button', { name: /^Knippen \d+ min$/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'di 6 okt' }))
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
@@ -200,7 +202,7 @@ test('an empty Dutch submit follows the active language', async () => {
   expect(screen.queryByText('Vul dit nog even in.')).not.toBeInTheDocument()
 })
 
-test('opens on the first week that still has a free slot', async () => {
+test('opens on the month of the first day with free time, with that day picked', async () => {
   window.history.replaceState(null, '', '/?lang=nl')
   localStorage.clear()
   vi.useFakeTimers({ toFake: ['Date'] })
@@ -211,9 +213,12 @@ test('opens on the first week that still has a free slot', async () => {
         <BookingForm />
       </LanguageProvider>,
     )
-    const slot = screen.getByRole('button', { name: 'ma 5 okt 09:00' })
-    expect(slot).toBeEnabled()
-    expect(screen.queryByRole('button', { name: 'ma 28 sep 09:00' })).not.toBeInTheDocument()
+    // Sunday 4 October: the first free day is Monday the 5th, so October opens with it picked.
+    expect(screen.getByRole('heading', { name: 'oktober 2026' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'ma 5 okt' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'ma 5 okt 09:00' })).toBeEnabled()
+    // Days of September are not in this month's grid at all.
+    expect(screen.queryByRole('button', { name: 'ma 28 sep' })).not.toBeInTheDocument()
   } finally {
     vi.useRealTimers()
   }
@@ -231,6 +236,7 @@ test('a free slot can be selected without picking a service first', async () => 
         <BookingForm />
       </LanguageProvider>,
     )
+    fireEvent.click(screen.getByRole('button', { name: 'di 6 okt' }))
     const slot = screen.getByRole('button', { name: 'di 6 okt 09:00' })
     expect(slot).toBeEnabled()
     await user.click(slot)
@@ -253,15 +259,19 @@ test('closed days stay visible and taken times stay blocked', async () => {
       </LanguageProvider>,
     )
     expect(screen.getByRole('heading', { name: 'oktober 2026' })).toBeInTheDocument()
-    expect(screen.getAllByText('dicht')).toHaveLength(2)
-    expect(screen.getByText('zo 11 okt')).toBeInTheDocument()
+    // The weekend is closed: shown, but not pickable.
+    expect(screen.getByRole('button', { name: 'za 10 okt' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'zo 11 okt' })).toHaveClass('is-closed')
+    fireEvent.click(screen.getByRole('button', { name: 'ma 5 okt' }))
     expect(screen.getByRole('button', { name: 'ma 5 okt 10:00' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'di 6 okt' }))
     expect(screen.getByRole('button', { name: 'di 6 okt 09:00' })).toBeEnabled()
-    await userEvent.click(screen.getByRole('button', { name: 'Volgende week' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Volgende week' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Volgende week' }))
-    expect(screen.getByRole('heading', { name: 'oktober – november 2026' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'ma 26 okt 09:00' })).toBeEnabled()
+    await userEvent.click(screen.getByRole('button', { name: 'Volgende maand' }))
+    expect(screen.getByRole('heading', { name: 'november 2026' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'ma 2 nov' }))
+    expect(screen.getByRole('button', { name: 'ma 2 nov 09:00' })).toBeEnabled()
+    await userEvent.click(screen.getByRole('button', { name: 'Vorige maand' }))
+    expect(screen.getByRole('heading', { name: 'oktober 2026' })).toBeInTheDocument()
   } finally {
     vi.useRealTimers()
   }
@@ -278,7 +288,7 @@ test('a live dashboard close updates the public agenda immediately', async () =>
         <BookingForm />
       </LanguageProvider>,
     )
-    expect(screen.getAllByText('dicht')).toHaveLength(2)
+    expect(screen.getByRole('button', { name: 'di 6 okt' })).toBeEnabled()
     loadPublicSchedule.mockResolvedValue({
       week: defaultSchedule.week,
       blocks: [{ date: '2026-10-06' }, { date: '2026-10-07', time: '15:00' }],
@@ -286,9 +296,12 @@ test('a live dashboard close updates the public agenda immediately', async () =>
     })
     publishLiveSchedule()
     await waitFor(() => {
-      expect(screen.getAllByText('dicht')).toHaveLength(3)
+      expect(screen.getByRole('button', { name: 'di 6 okt' })).toBeDisabled()
     })
+    expect(screen.getByRole('button', { name: 'di 6 okt' })).toHaveClass('is-closed')
+    fireEvent.click(screen.getByRole('button', { name: 'wo 7 okt' }))
     expect(screen.getByRole('button', { name: 'wo 7 okt 15:00' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'do 8 okt' }))
     expect(screen.getByRole('button', { name: 'do 8 okt 10:00' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'do 8 okt 09:30' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'do 8 okt 11:00' })).toBeEnabled()
@@ -313,8 +326,9 @@ test('the agenda follows the loaded public schedule', async () => {
       </LanguageProvider>,
     )
     await waitFor(() => {
-      expect(screen.getAllByText('dicht')).toHaveLength(3)
+      expect(screen.getByRole('button', { name: 'di 6 okt' })).toHaveClass('is-closed')
     })
+    expect(screen.getByRole('button', { name: 'di 6 okt' })).toBeDisabled()
   } finally {
     vi.useRealTimers()
   }
@@ -333,6 +347,7 @@ test('a taken book error shows the Dutch taken line', async () => {
         <BookingForm />
       </LanguageProvider>,
     )
+    fireEvent.click(screen.getByRole('button', { name: 'di 6 okt' }))
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
@@ -358,6 +373,7 @@ test('a successful slot book takes that start and ignores another submit', async
         <BookingForm />
       </LanguageProvider>,
     )
+    fireEvent.click(screen.getByRole('button', { name: 'di 6 okt' }))
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
@@ -397,6 +413,7 @@ test('a second click while book is in flight does not submit twice', async () =>
         <BookingForm />
       </LanguageProvider>,
     )
+    fireEvent.click(screen.getByRole('button', { name: 'di 6 okt' }))
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
@@ -460,6 +477,7 @@ test('a late schedule load keeps a start booked in this session', async () => {
         <BookingForm />
       </LanguageProvider>,
     )
+    fireEvent.click(screen.getByRole('button', { name: 'di 6 okt' }))
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
@@ -494,6 +512,7 @@ test('a taken time reloads the agenda so the grid is honest again', async () => 
         <BookingForm />
       </LanguageProvider>,
     )
+    fireEvent.click(screen.getByRole('button', { name: 'di 6 okt' }))
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
@@ -544,6 +563,7 @@ test('the site blackens exactly the half-hours the dashboard closed', async () =
         <BookingForm />
       </LanguageProvider>,
     )
+    fireEvent.click(screen.getByRole('button', { name: 'di 6 okt' }))
     await waitFor(() => expect(screen.getByRole('button', { name: 'di 6 okt 10:30' })).toHaveClass('is-taken'))
     expect(screen.getByRole('button', { name: 'di 6 okt 11:00' })).toHaveClass('is-taken')
     // Knippen + baard (60 min) from 10:00 would run into 10:30: grey, not black.
@@ -572,6 +592,7 @@ test('booking without a phone number is stopped with a hint at the field', async
         <BookingForm />
       </LanguageProvider>,
     )
+    fireEvent.click(screen.getByRole('button', { name: 'di 6 okt' }))
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
@@ -602,6 +623,7 @@ test('choosing a start shows the whole appointment and the end time', async () =
       </LanguageProvider>,
     )
     // Knippen + baard: 75 minutes = five quarter-hours.
+    fireEvent.click(screen.getByRole('button', { name: 'di 6 okt' }))
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     expect(screen.getByRole('button', { name: 'di 6 okt 09:00' })).toHaveClass('is-on')
     for (const time of ['09:15', '09:30', '09:45', '10:00']) {
@@ -640,6 +662,7 @@ test('a chosen start is let go when a reload shows it taken', async () => {
         <BookingForm />
       </LanguageProvider>,
     )
+    fireEvent.click(screen.getByRole('button', { name: 'di 6 okt' }))
     await user.click(screen.getByRole('button', { name: 'di 6 okt 11:00' }))
     expect(screen.getByTestId('booking-summary')).toHaveTextContent('di 6 okt 11:00')
     loadPublicSchedule.mockResolvedValue({
@@ -671,6 +694,7 @@ test('the agenda re-reads the schedule when the window regains focus', async () 
     loadPublicSchedule.mockResolvedValue({ ...defaultSchedule, blocks: [{ date: '2026-10-06', time: '13:15' }] })
     window.dispatchEvent(new Event('focus'))
     await waitFor(() => expect(loadPublicSchedule).toHaveBeenCalledTimes(2))
+    fireEvent.click(screen.getByRole('button', { name: 'di 6 okt' }))
     await waitFor(() => expect(screen.getByRole('button', { name: 'di 6 okt 13:15' })).toHaveClass('is-taken'))
     expect(screen.getByRole('button', { name: 'di 6 okt 13:00' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'di 6 okt 12:45' })).toBeDisabled()
@@ -695,6 +719,7 @@ test('the last start that fits highlights the appointment all the way to closing
     )
     // Knippen + baard (75 min), closing at 18:00: 16:45 is the last start that fits.
     for (const time of ['17:00', '17:15', '17:30', '17:45']) {
+      fireEvent.click(screen.getByRole('button', { name: 'di 6 okt' }))
       const cell = screen.getByRole('button', { name: `di 6 okt ${time}` })
       expect(cell).toBeDisabled()
       expect(cell).toHaveClass('is-nofit')
@@ -733,6 +758,7 @@ test('a service added in the dashboard can be booked; a hidden one is not offere
     expect(screen.queryByRole('button', { name: 'Oude dienst' })).not.toBeInTheDocument()
     await user.click(kids)
     expect(screen.getByTestId('booking-summary')).toHaveTextContent('Kinderen knippen · 30 min')
+    fireEvent.click(screen.getByRole('button', { name: 'di 6 okt' }))
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')

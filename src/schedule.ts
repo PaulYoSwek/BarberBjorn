@@ -66,7 +66,8 @@ export type AgendaDay = {
   slots: Slot[]
 }
 
-export const AGENDA_DAYS = 28
+/** How far ahead the calendar reaches: ten weeks from this Monday. */
+export const AGENDA_DAYS = 70
 
 const WEEKDAYS: Weekday[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 
@@ -198,6 +199,31 @@ export function agendaDays(
     }
     return { date, weekday, closed: false, slots }
   })
+}
+
+export type MonthCell = { date: string; inMonth: boolean }
+
+/** The 42 cells (six Monday-first weeks) that show a month; days of the neighbouring months are marked. */
+export function monthCells(year: number, month: number): MonthCell[] {
+  const first = new Date(year, month, 1, 12)
+  const start = addDays(first, -((first.getDay() + 6) % 7))
+  return Array.from({ length: 42 }, (_, index) => {
+    const day = addDays(start, index)
+    return { date: dateIso(day), inMonth: day.getMonth() === month }
+  })
+}
+
+export function monthOf(date: string): { year: number; month: number } {
+  return { year: Number(date.slice(0, 4)), month: Number(date.slice(5, 7)) - 1 }
+}
+
+/** A day with at least one start the chosen service fits in. */
+export function hasFreeStart(day: AgendaDay): boolean {
+  return !day.closed && day.slots.some((slot) => slot.fits && !slot.taken && !slot.past)
+}
+
+export function firstBookableDate(days: AgendaDay[]): string | undefined {
+  return days.find(hasFreeStart)?.date
 }
 
 export function firstBookableWeek(days: AgendaDay[], size = 7): number {

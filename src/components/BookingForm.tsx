@@ -14,18 +14,22 @@ import {
 import {
   agendaDays,
   defaultSchedule,
-  firstBookableWeek,
+  firstBookableDate,
+  hasFreeStart,
+  monthOf,
   DEFAULT_MINUTES,
   SERVICE_MINUTES,
   spanStarts,
   type AgendaDay,
   type BookingHold,
+  type MonthCell,
   type Schedule,
 } from '../schedule'
+import { MonthCalendar } from './MonthCalendar'
 
 const empty: BookingInput = { service: 'both', name: '', email: '', phone: '', slot: '', kind: 'slot' }
 const WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const
-const WEEK = 7
+const MONDAY_FIRST = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
 /** How often the agenda re-reads the live schedule while it is on screen. */
 const REFRESH_MS = 60_000
 
@@ -36,16 +40,6 @@ function monthIndex(date: string) {
 function dayStamp(day: AgendaDay, labels: { key: string; label: string }[], short: string[]) {
   const name = labels.find((item) => item.key === day.weekday)?.label ?? day.weekday
   return `${name} ${Number(day.date.slice(8, 10))} ${short[monthIndex(day.date)]}`
-}
-
-function monthTitle(visible: AgendaDay[], months: string[]) {
-  const first = monthIndex(visible[0].date)
-  const last = monthIndex(visible[visible.length - 1].date)
-  const year = visible[0].date.slice(0, 4)
-  const yearEnd = visible[visible.length - 1].date.slice(0, 4)
-  if (first === last && year === yearEnd) return `${months[first]} ${year}`
-  if (year === yearEnd) return `${months[first]} – ${months[last]} ${year}`
-  return `${months[first]} ${year} – ${months[last]} ${yearEnd}`
 }
 
 function customSlot(date: string, time: string) {
@@ -105,7 +99,10 @@ export function BookingForm() {
   const [customTime, setCustomTime] = useState('')
   const inputRef = useRef(input)
   inputRef.current = input
-  const [week, setWeek] = useState(0)
+  /** The day whose times are shown; empty means "the first day with a free time". */
+  const [pickedDate, setPickedDate] = useState('')
+  /** The month on screen; null follows the picked day. */
+  const [viewMonth, setViewMonth] = useState<{ year: number; month: number } | null>(null)
   const [hover, setHover] = useState('')
   const [latched, setLatched] = useState(false)
   const busy = useRef(false)
@@ -185,16 +182,23 @@ export function BookingForm() {
     () => agendaDays(input.service, new Date(), agendaExtra),
     [input.service, agendaExtra],
   )
-  const visible = days.slice(week * WEEK, week * WEEK + WEEK)
-  const lastWeek = Math.ceil(days.length / WEEK) - 1
-
-  useEffect(() => {
-    setWeek((current) => {
-      const page = days.slice(current * WEEK, current * WEEK + WEEK)
-      const open = page.some((day) => !day.closed && day.slots.some((slot) => slot.fits && !slot.taken && !slot.past))
-      return open ? current : firstBookableWeek(days, WEEK)
-    })
-  }, [days])
+  const byDate = useMemo(() => new Map(days.map((day) => [day.date, day])), [days])
+  // A picked day that lost its last free time (someone booked, hours changed) falls back to the first free one.
+  const pickedDay = byDate.get(pickedDate)
+  const picked = pickedDay && hasFreeStart(pickedDay) ? pickedDate : (firstBookableDate(days) ?? '')
+  const shownDay = picked ? byDate.get(picked) : undefined
+  const firstMonth = monthOf(days[0].date)
+  const lastMonth = monthOf(days[days.length - 1].date)
+  const shownMonth = viewMonth ?? monthOf(picked || days[0].date)
+  const monthNumber = (value: { year: number; month: number }) => value.year * 12 + value.month
+  const canPrev = monthNumber(shownMonth) > monthNumber(firstMonth)
+  const canNext = monthNumber(shownMonth) < monthNumber(lastMonth)
+  const shiftMonth = (step: number) => {
+    const total = monthNumber(shownMonth) + step
+    setViewMonth({ year: Math.floor(total / 12), month: total % 12 })
+  }
+  const todayDate = todayIso()
+  const weekdayLabels = MONDAY_FIRST.map((key) => t.days.find((item) => item.key === key)?.label ?? key)
 
   // A chosen start that no longer fits (someone else booked, hours changed) is let go.
   useEffect(() => {
@@ -342,75 +346,106 @@ export function BookingForm() {
             </div>
           ) : (
             <>
-              <div className="agenda-head">
-                <h3 className="agenda-month">{visible.length > 0 ? monthTitle(visible, t.months) : ''}</h3>
-                <div className="agenda-week">
-                  <button type="button" aria-label={t.weekPrev} disabled={week === 0} onClick={() => setWeek((current) => current - 1)}>
-                    ←
-                  </button>
-                  <button type="button" aria-label={t.weekNext} disabled={week >= lastWeek} onClick={() => setWeek((current) => current + 1)}>
-                    →
-                  </button>
-                </div>
-              </div>
-              <div className="agenda">
-              {visible.map((day) => {
-                const label = dayStamp(day, t.days, t.monthShort)
-                return (
-                  <div key={day.date} className={day.closed ? 'agenda-day is-closed' : 'agenda-day'}>
-                    <div className="agenda-when">
-                      <strong>{label}</strong>
-                      {day.closed && <span>{t.closedLabel}</span>}
-                    </div>
-                    {!day.closed && (
-                      <div className="agenda-slots">
-                        {day.slots.map((slot) => {
-                          const blocked = !slot.fits || slot.taken || slot.past
-                          const on = input.slot === slot.start
-                          const inSpan = !on && covered.has(slot.start)
-                          const inPreview = !on && !inSpan && previewed.has(slot.start)
-                          // Black only where the dashboard shows closed or booked; a start that is open
-                          // but too short for the chosen service is greyed out like a past time.
-                          const kind = slot.past
-                            ? 'is-past'
-                            : slot.held
-                              ? 'is-taken'
-                              : slot.taken || !slot.fits
-                                ? 'is-nofit'
-                                : undefined
-                          return (
-                            <button
-                              key={slot.start}
-                              type="button"
-                              aria-label={`${label} ${slot.time}`}
-                              title={kind === 'is-nofit' ? (slot.fits ? t.noFitHint : t.noFitError) : undefined}
-                              aria-pressed={on}
-                              disabled={blocked}
-                              className={
-                                [on ? 'is-on' : undefined, inSpan ? 'is-span' : undefined, inPreview ? 'is-preview' : undefined, kind]
-                                  .filter(Boolean)
-                                  .join(' ') || undefined
-                              }
-                              onMouseEnter={() => {
-                                if (!blocked) setHover(slot.start)
-                              }}
-                              onMouseLeave={() => setHover('')}
-                              onFocus={() => {
-                                if (!blocked) setHover(slot.start)
-                              }}
-                              onBlur={() => setHover('')}
-                              onClick={() => edit({ ...input, slot: slot.start })}
-                            >
-                              {slot.time}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    )}
+              <MonthCalendar
+                year={shownMonth.year}
+                month={shownMonth.month}
+                title={`${t.months[shownMonth.month]} ${shownMonth.year}`}
+                weekdayLabels={weekdayLabels}
+                prevLabel={t.monthPrev}
+                nextLabel={t.monthNext}
+                canPrev={canPrev}
+                canNext={canNext}
+                onPrev={() => shiftMonth(-1)}
+                onNext={() => shiftMonth(1)}
+                renderDay={(cell: MonthCell) => {
+                  const day = byDate.get(cell.date)
+                  const free = day ? hasFreeStart(day) : false
+                  const label = day
+                    ? dayStamp(day, t.days, t.monthShort)
+                    : `${Number(cell.date.slice(8, 10))} ${t.monthShort[monthIndex(cell.date)]}`
+                  const past = cell.date < todayDate
+                  const classes = [
+                    'cal-day',
+                    cell.date === picked ? 'is-on' : undefined,
+                    cell.date === todayDate ? 'is-today' : undefined,
+                    day?.closed ? 'is-closed' : undefined,
+                    // Days before this week or past the horizon stay visible, just muted.
+                    past || !day ? 'is-past' : undefined,
+                  ]
+                    .filter(Boolean)
+                    .join(' ')
+                  return (
+                    <button
+                      type="button"
+                      className={classes}
+                      aria-label={label}
+                      aria-pressed={cell.date === picked}
+                      disabled={!free}
+                      onClick={() => {
+                        setPickedDate(cell.date)
+                        setViewMonth(null)
+                      }}
+                    >
+                      <span>{Number(cell.date.slice(8, 10))}</span>
+                      {free ? <i className="cal-dot" aria-hidden="true" /> : null}
+                    </button>
+                  )
+                }}
+              />
+              <p className="cal-legend">
+                <i className="cal-dot" aria-hidden="true" /> {t.freeLegend} · {t.pickDayHint}
+              </p>
+              {shownDay ? (
+                <div className="day-times">
+                  <h4>{dayStamp(shownDay, t.days, t.monthShort)}</h4>
+                  <div className="agenda-slots">
+                    {shownDay.slots.map((slot) => {
+                      const label = dayStamp(shownDay, t.days, t.monthShort)
+                      const blocked = !slot.fits || slot.taken || slot.past
+                      const on = input.slot === slot.start
+                      const inSpan = !on && covered.has(slot.start)
+                      const inPreview = !on && !inSpan && previewed.has(slot.start)
+                      // Black only where the dashboard shows closed or booked; a start that is open
+                      // but too short for the chosen service is greyed out like a past time.
+                      const kind = slot.past
+                        ? 'is-past'
+                        : slot.held
+                          ? 'is-taken'
+                          : slot.taken || !slot.fits
+                            ? 'is-nofit'
+                            : undefined
+                      return (
+                        <button
+                          key={slot.start}
+                          type="button"
+                          aria-label={`${label} ${slot.time}`}
+                          title={kind === 'is-nofit' ? (slot.fits ? t.noFitHint : t.noFitError) : undefined}
+                          aria-pressed={on}
+                          disabled={blocked}
+                          className={
+                            [on ? 'is-on' : undefined, inSpan ? 'is-span' : undefined, inPreview ? 'is-preview' : undefined, kind]
+                              .filter(Boolean)
+                              .join(' ') || undefined
+                          }
+                          onMouseEnter={() => {
+                            if (!blocked) setHover(slot.start)
+                          }}
+                          onMouseLeave={() => setHover('')}
+                          onFocus={() => {
+                            if (!blocked) setHover(slot.start)
+                          }}
+                          onBlur={() => setHover('')}
+                          onClick={() => edit({ ...input, slot: slot.start })}
+                        >
+                          {slot.time}
+                        </button>
+                      )
+                    })}
                   </div>
-                )
-              })}
-              </div>
+                </div>
+              ) : (
+                <p className="day-times-empty">{t.dayFull}</p>
+              )}
               <div className="agenda-week">
                 <button type="button" onClick={chooseCustom}>{t.customTimeCta}</button>
               </div>

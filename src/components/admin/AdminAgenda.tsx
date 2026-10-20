@@ -5,8 +5,11 @@ import { addDaysIso, COPY_WEEKS, weekHoursFromDays, type BlockPattern } from '..
 import { adminWrite, loadAdminBlocks, loadPublicSchedule, publishLiveSchedule, type InboxRow } from '../../planning-api'
 import {
   agendaDays,
+  dateIso,
   defaultSchedule,
+  monthOf,
   SLOT_MINUTES,
+  type MonthCell,
   type AgendaDay,
   type DayHours,
   type Schedule,
@@ -15,6 +18,9 @@ import {
 } from '../../schedule'
 import { serviceName } from './admin-defaults'
 import { AdminPlan, type PlanCheck } from './AdminPlan'
+import { MonthCalendar } from '../MonthCalendar'
+
+const MONDAY_FIRST: Weekday[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
 
 const WEEK = 7
 const DEFAULT_OPEN: DayHours = { open: '09:00', close: '18:00' }
@@ -175,6 +181,8 @@ export function AdminAgenda({ clients = [], onBooked }: Props) {
   const [edition, setEdition] = useState(0)
   const [week, setWeek] = useState(0)
   const [picked, setPicked] = useState<string[]>([])
+  /** The month on top; null follows the week in view. */
+  const [viewMonth, setViewMonth] = useState<{ year: number; month: number } | null>(null)
   const [ready, setReady] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [done, setDone] = useState<string | null>(null)
@@ -248,6 +256,31 @@ export function AdminAgenda({ clients = [], onBooked }: Props) {
   }
 
   const fallback = visible.find((day) => !('closed' in hoursFor(day)))?.date ?? visible[0]?.date
+
+  // The month calendar: hours, bookings and closed quarters per day, as a map of the weeks below.
+  const monthNumber = (value: { year: number; month: number }) => value.year * 12 + value.month
+  const firstMonth = monthOf(days[0]?.date ?? dateIso(new Date()))
+  const lastMonth = monthOf(days[days.length - 1]?.date ?? dateIso(new Date()))
+  const shownMonth = viewMonth ?? monthOf(visible[0]?.date ?? days[0]?.date ?? dateIso(new Date()))
+  const todayDate = dateIso(new Date())
+  function shiftMonth(step: number) {
+    const total = monthNumber(shownMonth) + step
+    setViewMonth({ year: Math.floor(total / 12), month: total % 12 })
+  }
+  /** A day in the month opens its week below and selects that day. */
+  function openDay(date: string) {
+    const index = days.findIndex((day) => day.date === date)
+    if (index < 0) return
+    setWeek(Math.floor(index / WEEK))
+    setPicked([date])
+    setViewMonth(null)
+  }
+  function bookingsOn(date: string): number {
+    return people.filter((row) => row.status === 'confirmed' && row.start.startsWith(date)).length
+  }
+  function closedQuartersOn(date: string): number {
+    return (view.blocks ?? []).filter((block) => block.date === date && block.time).length
+  }
   const selected = picked.filter((date) => visible.some((day) => day.date === date))
   const selectedDates = selected.length > 0 ? selected : fallback ? [fallback] : []
   const selectedDays = visible.filter((day) => selectedDates.includes(day.date))
@@ -500,6 +533,59 @@ export function AdminAgenda({ clients = [], onBooked }: Props) {
           ))}
         </ul>
       </header>
+      <MonthCalendar
+        className="admin-month"
+        year={shownMonth.year}
+        month={shownMonth.month}
+        title={`${copy.nl.months[shownMonth.month]} ${shownMonth.year}`}
+        weekdayLabels={MONDAY_FIRST.map(dayName)}
+        prevLabel="Vorige maand"
+        nextLabel="Volgende maand"
+        canPrev={monthNumber(shownMonth) > monthNumber(firstMonth)}
+        canNext={monthNumber(shownMonth) < monthNumber(lastMonth)}
+        onPrev={() => shiftMonth(-1)}
+        onNext={() => shiftMonth(1)}
+        renderDay={(cell: MonthCell) => {
+          const day = days.find((item) => item.date === cell.date)
+          const number = Number(cell.date.slice(8, 10))
+          const label = `${number} ${copy.nl.months[Number(cell.date.slice(5, 7)) - 1]}`
+          if (!day) {
+            return (
+              <button type="button" className="cal-day is-past" aria-label={label} disabled>
+                <span>{number}</span>
+              </button>
+            )
+          }
+          const dayHours = hoursFor(day)
+          const closed = 'closed' in dayHours
+          const count = bookingsOn(cell.date)
+          const shut = closedQuartersOn(cell.date)
+          const inWeek = visible.some((item) => item.date === cell.date)
+          const classes = [
+            'cal-day',
+            selectedDates.includes(cell.date) ? 'is-on' : inWeek ? 'is-week' : undefined,
+            cell.date === todayDate ? 'is-today' : undefined,
+            closed ? 'is-closed' : undefined,
+            cell.date < todayDate ? 'is-past' : undefined,
+          ]
+            .filter(Boolean)
+            .join(' ')
+          return (
+            <button
+              type="button"
+              className={classes}
+              aria-label={`${label}${closed ? ', dicht' : `, ${dayHours.open}–${dayHours.close}`}${count ? `, ${count} ${count === 1 ? 'afspraak' : 'afspraken'}` : ''}`}
+              aria-pressed={selectedDates.includes(cell.date)}
+              onClick={() => openDay(cell.date)}
+            >
+              <span className="admin-month-num">{number}</span>
+              <span className="admin-month-hours">{closed ? 'dicht' : `${dayHours.open}–${dayHours.close}`}</span>
+              {count ? <span className="admin-month-count">{count}</span> : null}
+              {shut ? <i className="admin-month-shut" aria-hidden="true" /> : null}
+            </button>
+          )
+        }}
+      />
       <div className="admin-toolbar">
         <div className="admin-week">
           <button type="button" disabled={week === 0} onClick={() => setWeek((current) => current - 1)}>
