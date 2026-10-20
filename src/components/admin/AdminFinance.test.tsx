@@ -111,3 +111,13 @@ test('the CSV for the bookkeeper carries one line per appointment', async () => 
     vi.unstubAllGlobals()
   }
 })
+
+test('the month report charts six months of revenue and compares with the month before', () => {
+  render(<AdminFinance rows={rows} prices={PRICES} />)
+  const chart = screen.getByRole('img', { name: /Omzet per maand/ })
+  // Six bars up to the month in view; September had €40, October €79.
+  expect(chart.getAttribute('aria-label')).toContain('sep €40, okt €79')
+  expect(chart.querySelectorAll('rect')).toHaveLength(6)
+  expect(chart.querySelector('g.is-on text')).toHaveTextContent('€79')
+  expect(screen.getByText('+98% t.o.v. vorige maand')).toBeInTheDocument()
+})

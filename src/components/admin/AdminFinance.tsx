@@ -49,12 +49,75 @@ function download(name: string, text: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
-function SummaryTiles({ summary }: { summary: Summary }) {
+/** "yyyy-mm" shifted by a number of months. */
+function shiftMonth(month: string, delta: number): string {
+  const total = Number(month.slice(0, 4)) * 12 + Number(month.slice(5, 7)) - 1 + delta
+  return `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, '0')}`
+}
+
+/** Change against the month before, as "+12%" / "−8%"; nothing when there is no base. */
+function changeLabel(current: number, previous: number): string | null {
+  if (previous <= 0) return null
+  const change = Math.round(((current - previous) / previous) * 100)
+  if (change === 0) return 'gelijk aan vorige maand'
+  return `${change > 0 ? '+' : '−'}${Math.abs(change)}% t.o.v. vorige maand`
+}
+
+type MonthPoint = { month: string; total: number; appointments: number }
+
+/**
+ * Revenue per month for the six months up to `until`, as plain bars: one
+ * series in ink, the month in view in yellow, the value on each bar.
+ */
+function MonthChart({ points, focus }: { points: MonthPoint[]; focus: string | null }) {
+  const width = 600
+  const height = 150
+  const top = 26
+  const bottom = 26
+  const gap = 10
+  const slot = width / points.length
+  const bar = slot - gap
+  const max = Math.max(1, ...points.map((point) => point.total))
+  const scale = (height - top - bottom) / max
+  const title = points.map((point) => `${copy.nl.monthShort[Number(point.month.slice(5, 7)) - 1]} ${formatMoney(point.total)}`).join(', ')
+  return (
+    <figure className="finance-chart">
+      <figcaption>Omzet per maand</figcaption>
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Omzet per maand: ${title}`}>
+        <line x1="0" y1={height - bottom + 0.5} x2={width} y2={height - bottom + 0.5} className="finance-chart-axis" />
+        {points.map((point, index) => {
+          const h = point.total * scale
+          const x = index * slot + gap / 2
+          const y = height - bottom - h
+          const label = copy.nl.monthShort[Number(point.month.slice(5, 7)) - 1]
+          const on = point.month === focus
+          return (
+            <g key={point.month} className={on ? 'is-on' : undefined}>
+              <title>{`${label} ${point.month.slice(0, 4)}: ${formatMoney(point.total)} · ${point.appointments} ${point.appointments === 1 ? 'afspraak' : 'afspraken'}`}</title>
+              <rect x={x} y={height - bottom - Math.max(h, 2)} width={bar} height={Math.max(h, 2)} className="finance-chart-bar" />
+              {point.total > 0 ? (
+                <text x={x + bar / 2} y={y - 7} textAnchor="middle" className="finance-chart-value">
+                  {formatMoney(point.total)}
+                </text>
+              ) : null}
+              <text x={x + bar / 2} y={height - 8} textAnchor="middle" className="finance-chart-month">
+                {label}
+              </text>
+            </g>
+          )
+        })}
+      </svg>
+    </figure>
+  )
+}
+
+function SummaryTiles({ summary, change }: { summary: Summary; change: string | null }) {
   return (
     <dl className="admin-stats finance-tiles">
       <div className="is-total">
         <dt>Omzet</dt>
         <dd>{formatMoney(summary.total)}</dd>
+        {change ? <p className="finance-change">{change}</p> : null}
       </div>
       <div>
         <dt>Diensten</dt>
@@ -109,6 +172,15 @@ export function AdminFinance({ rows, prices }: Props) {
   }, [income])
 
   const label = periodLabel(period, copy.nl.months)
+  // Six months of context, ending at the month in view (or this month).
+  const chartEnd = kind === 'month' ? month : thisMonth()
+  const perMonth = useMemo(() => new Map(byMonth(income, prices).map((item) => [item.month, item.summary])), [income, prices])
+  const points: MonthPoint[] = Array.from({ length: 6 }, (_, index) => {
+    const key = shiftMonth(chartEnd, index - 5)
+    const found = perMonth.get(key)
+    return { month: key, total: found?.total ?? 0, appointments: found?.appointments ?? 0 }
+  })
+  const change = kind === 'month' ? changeLabel(summary.total, perMonth.get(shiftMonth(month, -1))?.total ?? 0) : null
   const rowsNewestFirst = inRange.slice().sort((a, b) => b.start.localeCompare(a.start))
   const printedOn = new Date().toISOString().slice(0, 10)
 
@@ -194,9 +266,10 @@ export function AdminFinance({ rows, prices }: Props) {
           </p>
         </div>
 
-        <SummaryTiles summary={summary} />
+        <SummaryTiles summary={summary} change={change} />
+        <MonthChart points={points} focus={kind === 'month' ? month : null} />
 
-        <table className="finance-table is-vat">
+        <div className="finance-scroll"><table className="finance-table is-vat">
           <caption>Btw in de omzet</caption>
           <tbody>
             <tr>
@@ -215,10 +288,10 @@ export function AdminFinance({ rows, prices }: Props) {
               <td>waarvan btw {formatMoney(summary.vatServices + summary.vatProducts)}</td>
             </tr>
           </tbody>
-        </table>
+        </table></div>
 
         {kind !== 'month' ? (
-          <table className="finance-table">
+          <div className="finance-scroll"><table className="finance-table">
             <caption>{kind === 'year' ? 'Per maand' : 'Per jaar en per maand'}</caption>
             <thead>
               <tr>
@@ -245,10 +318,10 @@ export function AdminFinance({ rows, prices }: Props) {
                   </tr>
                 ))}
             </tbody>
-          </table>
+          </table></div>
         ) : null}
 
-        <table className="finance-table">
+        <div className="finance-scroll"><table className="finance-table">
           <caption>{kind === 'month' ? 'Alle afspraken' : 'Afspraken'}</caption>
           <thead>
             <tr>
@@ -290,7 +363,7 @@ export function AdminFinance({ rows, prices }: Props) {
               )
             })}
           </tbody>
-        </table>
+        </table></div>
       </section>
 
       {upcoming.appointments > 0 ? (
