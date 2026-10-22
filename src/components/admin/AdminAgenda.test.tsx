@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
+import { render, screen, within, fireEvent, act, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { weekHoursFromDays } from '../../planning'
@@ -550,11 +550,25 @@ test('typing part of a name offers the known client; a tap fills mail and phone'
   await user.click(screen.getByRole('radio', { name: 'Afspraak te plannen' }))
   await user.click(screen.getByRole('button', { name: 'ma 5 okt 12:00 vrij' }))
   await user.type(screen.getByLabelText('Naam'), 'ja')
-  const option = screen.getByRole('option', { name: /Jan de Vries/ })
+  const option = within(screen.getByRole('listbox', { name: 'Bekende klanten' })).getByRole('option', { name: /Jan de Vries/ })
   expect(option).toHaveTextContent('06 12345678 · jan@example.com')
   await user.click(option)
   expect(screen.getByLabelText('Naam')).toHaveValue('Jan de Vries')
   expect(screen.getByLabelText('E-mail (mag leeg)')).toHaveValue('jan@example.com')
   expect(screen.getByLabelText('Telefoon (mag leeg)')).toHaveValue('06 12345678')
   expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+})
+
+test('a client can be picked from the list, which fills name, mail and phone', async () => {
+  await openReady()
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  await user.click(screen.getByRole('radio', { name: 'Afspraak te plannen' }))
+  await user.click(screen.getByRole('button', { name: 'ma 5 okt 12:00 vrij' }))
+  const picker = screen.getByLabelText('Bekende klant')
+  expect(picker).toHaveTextContent('Sara Meijer · 06 87654321')
+  await user.selectOptions(picker, 'sara meijer')
+  expect(screen.getByLabelText('Naam')).toHaveValue('Sara Meijer')
+  expect(screen.getByLabelText('E-mail (mag leeg)')).toHaveValue('sara@example.com')
+  expect(screen.getByLabelText('Telefoon (mag leeg)')).toHaveValue('06 87654321')
+  expect(picker).toHaveValue('sara meijer')
 })

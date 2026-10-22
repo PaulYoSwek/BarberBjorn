@@ -115,6 +115,9 @@ export function AdminPlan({ date, time, stamp, people, check, onClose, onBooked 
   const [stored, setStored] = useState<Person[]>([])
   const [picking, setPicking] = useState(false)
   const known = knownPeople(people, stored)
+  // The picker lists everyone by name; a tap on one fills the form, like the suggestions do.
+  const roster = [...known].sort((a, b) => a.name.localeCompare(b.name, 'nl'))
+  const pickedKey = roster.find((person) => keyOf(person.name) === keyOf(name)) ? keyOf(name) : ''
   const suggestions = picking ? suggestPeople(known, name) : []
 
   // Clients kept on the Klanten tab, so someone added by hand is found too. Offline: just the bookings.
@@ -231,6 +234,27 @@ export function AdminPlan({ date, time, stamp, people, check, onClose, onBooked 
             ))}
           </select>
         </label>
+        {roster.length > 0 ? (
+          <label>
+            Bekende klant
+            <select
+              aria-label="Bekende klant"
+              value={pickedKey}
+              onChange={(event) => {
+                const person = roster.find((item) => keyOf(item.name) === event.target.value)
+                if (person) choose(person)
+              }}
+            >
+              <option value="">Kies een klant, of typ een nieuwe naam</option>
+              {roster.map((person) => (
+                <option key={person.name} value={keyOf(person.name)}>
+                  {person.name}
+                  {person.phone ? ` · ${person.phone}` : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         <div className="admin-plan-name">
           <label>
             Naam
