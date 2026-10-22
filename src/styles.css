@@ -2234,3 +2234,18 @@ button.inbox-count { border: 0; cursor: pointer; width: auto; }
   .admin-day-nav { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; overflow: visible; }
   .admin-day-nav button { min-width: 0; padding: 6px 2px; font-size: 0.72rem; line-height: 1.15; white-space: normal; text-align: center; }
 }
+
+/* ---------- plan dialog: known clients under the name while typing (datalist does nothing on an iPhone) */
+.admin-plan-name { position: relative; display: grid; }
+.admin-plan-suggest {
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 2; margin: 2px 0 0; padding: 0; list-style: none;
+  background: #fff; border: 1px solid var(--ink); box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18); max-height: 240px; overflow-y: auto;
+}
+.admin-plan-suggest button {
+  width: 100%; display: grid; gap: 1px; text-align: left; padding: 8px 12px; min-height: 44px;
+  border: 0; border-bottom: 1px solid var(--hair); background: #fff; font: inherit; cursor: pointer;
+}
+.admin-plan-suggest li:last-child button { border-bottom: 0; }
+.admin-plan-suggest button:hover, .admin-plan-suggest button[aria-selected="true"] { background: #fbf3cc; }
+.admin-plan-suggest strong { font-size: 0.92rem; font-weight: 600; }
+.admin-plan-suggest span { font-size: 0.76rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

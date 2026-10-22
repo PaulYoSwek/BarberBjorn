@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { euroLabel } from '../../clients'
 import type { ServiceId } from '../../content'
-import { adminBook, type InboxRow } from '../../planning-api'
+import { adminBook, loadClients, type InboxRow } from '../../planning-api'
 import { SLOT_MINUTES } from '../../schedule'
 import { offered, serviceCatalog } from '../../service-catalog'
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -44,17 +44,61 @@ function errorText(error: string): string {
   return 'Inplannen mislukt. Probeer het nog eens.'
 }
 
-/** Known clients, newest booking first, one per name. */
-function knownPeople(people: InboxRow[]): InboxRow[] {
-  const seen = new Set<string>()
-  const list: InboxRow[] = []
+type Person = { name: string; email: string; phone: string }
+
+function keyOf(name: string): string {
+  return name.trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+/**
+ * Everyone Bjorn has cut or written down, one per name: the bookings first
+ * (newest wins, so the latest mail and phone are used), then the clients he
+ * keeps on the Klanten tab who never booked through the site.
+ */
+export function knownPeople(people: InboxRow[], stored: Person[] = []): Person[] {
+  const seen = new Map<string, Person>()
   for (const row of [...people].sort((a, b) => b.start.localeCompare(a.start))) {
-    const key = row.name.trim().toLowerCase()
-    if (!key || seen.has(key)) continue
-    seen.add(key)
-    list.push(row)
+    const key = keyOf(row.name)
+    if (!key) continue
+    const found = seen.get(key)
+    if (!found) seen.set(key, { name: row.name.trim(), email: row.email.trim(), phone: row.phone.trim() })
+    else {
+      if (!found.email && row.email.trim()) found.email = row.email.trim()
+      if (!found.phone && row.phone.trim()) found.phone = row.phone.trim()
+    }
   }
-  return list
+  for (const person of stored) {
+    const key = keyOf(person.name)
+    if (!key) continue
+    const found = seen.get(key)
+    if (!found) seen.set(key, { name: person.name.trim(), email: person.email.trim(), phone: person.phone.trim() })
+    else {
+      if (!found.email && person.email.trim()) found.email = person.email.trim()
+      if (!found.phone && person.phone.trim()) found.phone = person.phone.trim()
+    }
+  }
+  return [...seen.values()]
+}
+
+/** The people whose name, mail or phone contains what Bjorn typed so far; first names first. */
+export function suggestPeople(known: Person[], typed: string, limit = 6): Person[] {
+  const query = keyOf(typed)
+  if (!query) return []
+  const digits = query.replace(/\D/g, '')
+  const scored = known
+    .map((person) => {
+      const name = keyOf(person.name)
+      let score = 0
+      if (name === query) score = 4
+      else if (name.startsWith(query)) score = 3
+      else if (name.split(' ').some((part) => part.startsWith(query))) score = 2
+      else if (name.includes(query) || person.email.toLowerCase().includes(query)) score = 1
+      else if (digits.length >= 3 && person.phone.replace(/\D/g, '').includes(digits)) score = 1
+      return { person, score }
+    })
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score || a.person.name.localeCompare(b.person.name))
+  return scored.slice(0, limit).map((item) => item.person)
 }
 
 export function AdminPlan({ date, time, stamp, people, check, onClose, onBooked }: Props) {
@@ -68,7 +112,23 @@ export function AdminPlan({ date, time, stamp, people, check, onClose, onBooked 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const first = useRef<HTMLSelectElement>(null)
-  const known = knownPeople(people)
+  const [stored, setStored] = useState<Person[]>([])
+  const [picking, setPicking] = useState(false)
+  const known = knownPeople(people, stored)
+  const suggestions = picking ? suggestPeople(known, name) : []
+
+  // Clients kept on the Klanten tab, so someone added by hand is found too. Offline: just the bookings.
+  useEffect(() => {
+    let cancelled = false
+    loadClients()
+      .then((list) => {
+        if (!cancelled) setStored(list.clients)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     first.current?.focus()
@@ -88,10 +148,19 @@ export function AdminPlan({ date, time, stamp, people, check, onClose, onBooked 
 
   function pickName(value: string) {
     setName(value)
-    const match = known.find((row) => row.name.trim().toLowerCase() === value.trim().toLowerCase())
+    setPicking(true)
+    const match = known.find((person) => keyOf(person.name) === keyOf(value))
     if (!match) return
     if (!email.trim() && match.email) setEmail(match.email)
     if (!phone.trim() && match.phone) setPhone(match.phone)
+  }
+
+  /** A tap on a suggestion fills everything in; the typed text is replaced by the name on record. */
+  function choose(person: Person) {
+    setName(person.name)
+    if (person.email) setEmail(person.email)
+    if (person.phone) setPhone(person.phone)
+    setPicking(false)
   }
 
   async function submit(event: FormEvent) {
@@ -162,22 +231,44 @@ export function AdminPlan({ date, time, stamp, people, check, onClose, onBooked 
             ))}
           </select>
         </label>
-        <label>
-          Naam
-          <input
-            value={name}
-            maxLength={80}
-            autoComplete="off"
-            list="admin-plan-people"
-            onChange={(event) => pickName(event.target.value)}
-            required
-          />
-          <datalist id="admin-plan-people">
-            {known.map((row) => (
-              <option key={row.id} value={row.name} />
-            ))}
-          </datalist>
-        </label>
+        <div className="admin-plan-name">
+          <label>
+            Naam
+            <input
+              value={name}
+              maxLength={80}
+              autoComplete="off"
+              autoCapitalize="words"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded={suggestions.length > 0}
+              aria-controls="admin-plan-people"
+              onChange={(event) => pickName(event.target.value)}
+              onFocus={() => setPicking(true)}
+              onBlur={() => setPicking(false)}
+              required
+            />
+          </label>
+          {suggestions.length > 0 ? (
+            <ul className="admin-plan-suggest" id="admin-plan-people" role="listbox" aria-label="Bekende klanten">
+              {suggestions.map((person) => (
+                <li key={person.name} role="presentation">
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={keyOf(person.name) === keyOf(name)}
+                    // Mouse-down would blur the input and close the list before the click lands.
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => choose(person)}
+                  >
+                    <strong>{person.name}</strong>
+                    <span>{[person.phone, person.email].filter(Boolean).join(' · ') || 'geen gegevens'}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
         <label>
           Telefoon (mag leeg)
           <input type="tel" value={phone} maxLength={40} onChange={(event) => setPhone(event.target.value)} />

@@ -543,3 +543,18 @@ test('an appointment earlier today can be written down afterwards, without a mai
   expect(adminBook).toHaveBeenCalledWith(expect.objectContaining({ start: '2026-10-05T12:00:00', name: 'Lauren Willaert', mail: false }))
   expect(screen.queryByRole('dialog', { name: 'Afspraak plannen' })).not.toBeInTheDocument()
 })
+
+test('typing part of a name offers the known client; a tap fills mail and phone', async () => {
+  await openReady()
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  await user.click(screen.getByRole('radio', { name: 'Afspraak te plannen' }))
+  await user.click(screen.getByRole('button', { name: 'ma 5 okt 12:00 vrij' }))
+  await user.type(screen.getByLabelText('Naam'), 'ja')
+  const option = screen.getByRole('option', { name: /Jan de Vries/ })
+  expect(option).toHaveTextContent('06 12345678 · jan@example.com')
+  await user.click(option)
+  expect(screen.getByLabelText('Naam')).toHaveValue('Jan de Vries')
+  expect(screen.getByLabelText('E-mail (mag leeg)')).toHaveValue('jan@example.com')
+  expect(screen.getByLabelText('Telefoon (mag leeg)')).toHaveValue('06 12345678')
+  expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+})
