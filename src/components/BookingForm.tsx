@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import { todayIso, validateBooking, type BookingInput } from '../booking'
+import { euroLabel } from '../clients'
 import { copy, type ServiceId } from '../content'
 import { completeService, offered, SEED_SERVICES, setServiceCatalog, type ServiceInfo } from '../service-catalog'
 import { useLang } from '../language'
@@ -383,7 +384,10 @@ export function BookingForm() {
                   onClick={() => setService(item.id)}
                 >
                   {item.name[lang]}{' '}
-                  <span>{mins} min</span>
+                  <span>
+                    {mins} min · {euroLabel(item.price)}
+                  </span>
+                  {item.detail[lang] ? <small>{item.detail[lang]}</small> : null}
                 </button>
               )
             })}

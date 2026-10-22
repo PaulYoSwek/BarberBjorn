@@ -44,11 +44,11 @@ test('starts on knippen + baard and lets you pick a service', async () => {
   )
   expect(screen.queryByText('Allebei')).not.toBeInTheDocument()
   expect(screen.queryByText('Beide')).not.toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /^Knippen \+ baard \d+ min$/ })).toHaveAttribute('aria-pressed', 'true')
-  expect(screen.getByRole('button', { name: /^Knippen \d+ min$/ })).toHaveAttribute('aria-pressed', 'false')
-  expect(screen.getByRole('button', { name: /^Baard \d+ min$/ })).toHaveAttribute('aria-pressed', 'false')
-  await userEvent.click(screen.getByRole('button', { name: /^Knippen \d+ min$/ }))
-  expect(screen.getByRole('button', { name: /^Knippen \d+ min$/ })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByRole('button', { name: /^Knippen \+ baard \d+ min · €/ })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByRole('button', { name: /^Knippen \d+ min · €/ })).toHaveAttribute('aria-pressed', 'false')
+  expect(screen.getByRole('button', { name: /^Baard \d+ min · €/ })).toHaveAttribute('aria-pressed', 'false')
+  await userEvent.click(screen.getByRole('button', { name: /^Knippen \d+ min · €/ }))
+  expect(screen.getByRole('button', { name: /^Knippen \d+ min · €/ })).toHaveAttribute('aria-pressed', 'true')
   expect(screen.getByTestId('booking-summary')).toHaveTextContent('Knippen')
 })
 
@@ -102,7 +102,7 @@ test('a free slot books through submitBook', async () => {
         <BookingForm />
       </LanguageProvider>,
     )
-    await user.click(screen.getByRole('button', { name: /^Knippen \d+ min$/ }))
+    await user.click(screen.getByRole('button', { name: /^Knippen \d+ min · €/ }))
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     await user.type(screen.getByLabelText('Naam'), 'Sam')
     await user.type(screen.getByLabelText('E-mail'), 'sam@mail.nl')
@@ -468,7 +468,7 @@ test('the site blackens exactly the half-hours the dashboard closed', async () =
     expect(ten).toHaveClass('is-nofit')
     expect(ten).not.toHaveClass('is-taken')
     // A beard (20 min) fits at 10:00.
-    await user.click(screen.getByRole('button', { name: /^Baard \d+ min$/ }))
+    await user.click(screen.getByRole('button', { name: /^Baard \d+ min · €/ }))
     expect(screen.getByRole('button', { name: 'di 6 okt 10:00' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'di 6 okt 10:30' })).toHaveClass('is-taken')
   } finally {
@@ -526,7 +526,7 @@ test('choosing a start shows the whole appointment and the end time', async () =
     expect(screen.getByRole('button', { name: 'di 6 okt 10:15' })).not.toHaveClass('is-span')
     expect(screen.getByTestId('booking-summary')).toHaveTextContent('di 6 okt 09:00–10:15')
     // Switching to a 45-minute cut narrows the span and asks for a start again.
-    await user.click(screen.getByRole('button', { name: /^Knippen \d+ min$/ }))
+    await user.click(screen.getByRole('button', { name: /^Knippen \d+ min · €/ }))
     expect(screen.getByTestId('booking-summary')).toHaveTextContent('Nog geen tijd gekozen')
     await user.click(screen.getByRole('button', { name: 'di 6 okt 09:00' }))
     expect(screen.getByRole('button', { name: 'di 6 okt 09:30' })).toHaveClass('is-span')
@@ -582,7 +582,7 @@ test('the agenda re-reads the schedule when the window regains focus', async () 
       </LanguageProvider>,
     )
     await waitFor(() => expect(loadPublicSchedule).toHaveBeenCalledTimes(1))
-    fireEvent.click(screen.getByRole('button', { name: /^Knippen \d+ min$/ }))
+    fireEvent.click(screen.getByRole('button', { name: /^Knippen \d+ min · €/ }))
     // The dashboard on another device closes 13:15; a 45-minute cut at 13:00 must stop being offered.
     loadPublicSchedule.mockResolvedValue({ ...defaultSchedule, blocks: [{ date: '2026-10-06', time: '13:15' }] })
     window.dispatchEvent(new Event('focus'))
@@ -645,7 +645,7 @@ test('a service added in the dashboard can be booked; a hidden one is not offere
         <BookingForm />
       </LanguageProvider>,
     )
-    const kids = await screen.findByRole('button', { name: /^Kinderen knippen \d+ min$/ })
+    const kids = await screen.findByRole('button', { name: /^Kinderen knippen \d+ min · €/ })
     expect(screen.queryByRole('button', { name: 'Oude dienst' })).not.toBeInTheDocument()
     await user.click(kids)
     expect(screen.getByTestId('booking-summary')).toHaveTextContent('Kinderen knippen · 30 min')
