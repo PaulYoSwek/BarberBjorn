@@ -2215,3 +2215,22 @@ button.inbox-count { border: 0; cursor: pointer; width: auto; }
   .admin-mail-compose { padding: 14px; }
   .admin-mail-compose-grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Later restyles set the agenda back to two columns; on a phone the grid goes under the controls. */
+@media (max-width: 960px) {
+  .admin-agenda-body { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---------- phone: rules that later desktop restyles had overridden */
+@media (max-width: 720px) {
+  .admin-card { margin: 0; width: 100%; padding: 12px; border: 0; box-shadow: none; }
+  .admin-finance > *, .finance-report > * { min-width: 0; }
+  .finance-scroll { min-width: 0; max-width: 100%; }
+  .finance-table.is-vat th, .finance-table.is-vat td { white-space: normal; }
+  /* The tab label and its badge stay on one line: the badge sits in the corner. */
+  .admin-tabs button { position: relative; white-space: nowrap; }
+  .admin-tabs .admin-badge { position: absolute; top: 6px; right: 6px; margin: 0; min-width: 18px; height: 18px; font-size: 0.66rem; }
+  /* All seven days of the week fit on one row. */
+  .admin-day-nav { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; overflow: visible; }
+  .admin-day-nav button { min-width: 0; padding: 6px 2px; font-size: 0.72rem; line-height: 1.15; white-space: normal; text-align: center; }
+}
