@@ -20,7 +20,8 @@ function wallOf(date: Date): string {
 
 /**
  * Bjorn plans an appointment himself from the dashboard. It is confirmed at once.
- * Closed times and opening hours are his to overrule; another booking is not.
+ * Closed times, opening hours and the clock are his to overrule (a walk-in is
+ * often written down afterwards); another booking is not.
  */
 servePost(async (req) => {
   const denied = await rejectUnlessSession(req)
@@ -36,7 +37,8 @@ servePost(async (req) => {
   const mail = record.mail === true
   if (!service || !WALL.test(start) || !name) return json(req, 400, { ok: false, error: 'invalid' })
   if (email && !EMAIL.test(email)) return json(req, 400, { ok: false, error: 'email' })
-  if (start <= wallOf(salonNow())) return json(req, 400, { ok: false, error: 'past' })
+  // An appointment that already happened gets no confirmation mail.
+  const over = start <= wallOf(salonNow())
 
   const db = serviceClient()
   const schedule = await loadSchedule(db)
@@ -78,7 +80,7 @@ servePost(async (req) => {
 
   await rememberClient(db, { name, email, phone })
   let sent = false
-  if (mail && email) {
+  if (mail && email && !over) {
     try {
       sent = (await sendBookingMail(db, { id: row.id, email, name, service, start, lang: 'nl' }, 'accepted')).sent
     } catch {

@@ -24,6 +24,13 @@ function clock(total: number): string {
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
 }
 
+/** The salon clock as the agenda writes it: yyyy-mm-ddThh:mm:00. */
+function wallNow(): string {
+  const now = new Date()
+  const pad = (part: number) => String(part).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:00`
+}
+
 function endOf(time: string, minutes: number): string {
   const [hours, mins] = time.split(':').map(Number)
   return clock(hours * 60 + mins + minutes)
@@ -75,6 +82,8 @@ export function AdminPlan({ date, time, stamp, people, check, onClose, onBooked 
   const chosen = services.find((item) => item.id === service) ?? services[0]
   const length = chosen?.minutes ?? 30
   const under = check(date, start, length)
+  // A walk-in is often written down afterwards; it counts as been, and gets no mail.
+  const over = `${date}T${start}:00` <= wallNow()
   const emailOk = !email.trim() || EMAIL.test(email.trim())
 
   function pickName(value: string) {
@@ -94,7 +103,7 @@ export function AdminPlan({ date, time, stamp, people, check, onClose, onBooked 
     setBusy(true)
     setError(null)
     const wall = `${date}T${start}:00`
-    const send = mail && email.trim() !== ''
+    const send = mail && !over && email.trim() !== ''
     const result = await adminBook({
       service,
       start: wall,
@@ -183,7 +192,10 @@ export function AdminPlan({ date, time, stamp, people, check, onClose, onBooked 
             onChange={(event) => setEmail(event.target.value)}
           />
         </label>
-        {email.trim() ? (
+        {over ? (
+          <p className="admin-plan-warn">Dit tijdstip is al geweest. De afspraak telt meteen als geweest; er gaat geen mail.</p>
+        ) : null}
+        {email.trim() && !over ? (
           <label className="admin-plan-check">
             <input type="checkbox" checked={mail} onChange={(event) => setMail(event.target.checked)} />
             Stuur een bevestiging per mail
