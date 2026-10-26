@@ -572,3 +572,49 @@ test('a client can be picked from the list, which fills name, mail and phone', a
   expect(screen.getByLabelText('Telefoon (mag leeg)')).toHaveValue('06 87654321')
   expect(picker).toHaveValue('sara meijer')
 })
+
+test('a booked appointment can get another service from its dialog', async () => {
+  await openReady()
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  await user.click(await screen.findByRole('button', { name: 'ma 5 okt 10:00 geboekt Jan de Vries' }))
+  const dialog = screen.getByRole('dialog', { name: 'Boeking' })
+  expect(within(dialog).getByRole('button', { name: 'Dienst opslaan' })).toBeDisabled()
+  await user.selectOptions(within(dialog).getByLabelText('Dienst'), 'beard')
+  expect(dialog).toHaveTextContent('Wordt 10:00–10:30.')
+  await user.click(within(dialog).getByRole('button', { name: 'Dienst opslaan' }))
+  expect(adminWrite).toHaveBeenCalledWith({ type: 'bookingService', id: 'demo-jan', service: 'beard' })
+  expect(screen.queryByRole('dialog', { name: 'Boeking' })).not.toBeInTheDocument()
+  expect(screen.getByRole('status')).toHaveTextContent('Dienst gewijzigd: Jan de Vries, Baard om 10:00.')
+})
+
+test('a longer service that runs into the next appointment is refused with a reason', async () => {
+  adminWrite.mockResolvedValue({ ok: false, error: 'overlap' })
+  await openReady()
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  await user.click(await screen.findByRole('button', { name: 'ma 5 okt 10:00 geboekt Jan de Vries' }))
+  const dialog = screen.getByRole('dialog', { name: 'Boeking' })
+  await user.selectOptions(within(dialog).getByLabelText('Dienst'), 'both')
+  await user.click(within(dialog).getByRole('button', { name: 'Dienst opslaan' }))
+  expect(within(dialog).getByRole('alert')).toHaveTextContent('loopt de afspraak over een andere afspraak heen')
+  expect(screen.getByRole('dialog', { name: 'Boeking' })).toBeInTheDocument()
+})
+
+test('a booked appointment can be removed after a confirmation', async () => {
+  await openReady()
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  await user.click(await screen.findByRole('button', { name: 'ma 5 okt 10:00 geboekt Jan de Vries' }))
+  const dialog = screen.getByRole('dialog', { name: 'Boeking' })
+  await user.click(within(dialog).getByRole('button', { name: 'Afspraak verwijderen' }))
+  expect(adminWrite).not.toHaveBeenCalled()
+  expect(dialog).toHaveTextContent('Dit kan niet ongedaan worden')
+  // After the delete the server no longer has Jan, in the bookings nor in the public occupancy.
+  loadInbox.mockResolvedValue(DEMO_INBOX.filter((row) => row.id !== 'demo-jan'))
+  loadPublicSchedule.mockResolvedValue({
+    ...DEMO_SCHEDULE,
+    bookings: (DEMO_SCHEDULE.bookings ?? []).filter((hold) => hold.start !== '2026-10-05T10:00:00'),
+  })
+  await user.click(within(dialog).getByRole('button', { name: 'Echt verwijderen' }))
+  expect(adminWrite).toHaveBeenCalledWith({ type: 'bookingDelete', id: 'demo-jan' })
+  expect(screen.getByRole('status')).toHaveTextContent('Afspraak verwijderd: Jan de Vries, 10:00.')
+  expect(await screen.findByRole('button', { name: 'ma 5 okt 10:00 vrij' })).toBeInTheDocument()
+})

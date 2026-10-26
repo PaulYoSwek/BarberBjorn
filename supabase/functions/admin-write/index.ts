@@ -3,6 +3,8 @@ import { MAIL_KEYS } from '../../../src/mail-templates.ts'
 import { addDaysIso, weeklyBlockRows, type BlockPattern } from '../../../src/planning.ts'
 import type { DayHours, Weekday } from '../../../src/schedule.ts'
 import { isSchemaMissing } from '../_shared/clients.ts'
+import { confirmedOverlaps } from '../_shared/holds.ts'
+import { utcToSalonWall } from '../_shared/salon.ts'
 import { serviceClient } from '../_shared/db.ts'
 import { json, readJson, rejectUnlessSession, servePost } from '../_shared/http.ts'
 
@@ -116,6 +118,48 @@ servePost(async (req) => {
       : await db.from('products').insert(fields).select('id').single()
     if (saved.error) throw new Error(saved.error.message)
     return json(req, 200, { ok: true, id: (saved.data as { id: string }).id })
+  }
+
+  if (record.type === 'bookingService') {
+    // Bjorn swaps the service on an appointment; the new length may not run into another one.
+    const id = typeof record.id === 'string' ? record.id : ''
+    const service = typeof record.service === 'string' ? record.service : ''
+    if (!id || !SERVICE_ID.test(service)) return json(req, 400, { ok: false, error: 'invalid' })
+    const found = await db.from('bookings').select('id, start, status').eq('id', id).maybeSingle()
+    if (found.error) throw new Error(found.error.message)
+    if (!found.data) return json(req, 404, { ok: false, error: 'missing' })
+    const booking = found.data as { id: string; start: string; status: string }
+    const offer = await db.from('services').select('minutes, price, active').eq('id', service).maybeSingle()
+    if (offer.error) throw new Error(offer.error.message)
+    const info = offer.data as { minutes?: number; price?: string; active?: boolean } | null
+    if (!info || info.active === false || typeof info.minutes !== 'number') return json(req, 400, { ok: false, error: 'service' })
+    if (booking.status === 'confirmed') {
+      const overlaps = await confirmedOverlaps(db, id, utcToSalonWall(String(booking.start)), info.minutes)
+      if (overlaps.length > 0) return json(req, 409, { ok: false, error: 'overlap' })
+    }
+    // The discount was for the old service; the new list price applies.
+    const updated = await db
+      .from('bookings')
+      .update({ service, minutes: info.minutes, price: info.price ?? null, charged: null })
+      .eq('id', id)
+    if (updated.error) {
+      const error = updated.error as { code?: string; message?: string }
+      if (error.code === '23P01' || /overlap|exclusion/i.test(error.message ?? '')) {
+        return json(req, 409, { ok: false, error: 'overlap' })
+      }
+      throw new Error(error.message)
+    }
+    return json(req, 200, { ok: true, minutes: info.minutes, price: info.price ?? null })
+  }
+
+  if (record.type === 'bookingDelete') {
+    // Products sold with it go too (on delete cascade); the client record stays.
+    const id = typeof record.id === 'string' ? record.id : ''
+    if (!id) return json(req, 400, { ok: false, error: 'invalid' })
+    const removed = await db.from('bookings').delete().eq('id', id).select('id')
+    if (removed.error) throw new Error(removed.error.message)
+    if (!removed.data || removed.data.length === 0) return json(req, 404, { ok: false, error: 'missing' })
+    return json(req, 200, { ok: true })
   }
 
   if (record.type === 'clientDelete') {

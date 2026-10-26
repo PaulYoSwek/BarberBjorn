@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { copy, type ServiceId } from '../../content'
 import { bookingMoney, formatMoney, type OrderItem, type Product } from '../../finance'
-import { decideInbox, moveBooking, type InboxAction, type InboxRow } from '../../planning-api'
+import { decideInbox, moveBooking, publishLiveSchedule, type InboxAction, type InboxRow } from '../../planning-api'
 import { serviceName } from './admin-defaults'
+import { AdminBookingDetail } from './AdminBookingDetail'
 import { OrderEditor } from './OrderEditor'
 
 const STATUS_LABEL: Record<InboxRow['status'], string> = {
@@ -22,6 +23,10 @@ type Props = {
   products?: Product[]
   prices?: Partial<Record<ServiceId, string>>
   onOrderSaved?: (id: string, charged: number | null, items: OrderItem[]) => void
+  /** An appointment got another service. */
+  onUpdated?: (row: InboxRow) => void
+  /** An appointment was removed. */
+  onRemoved?: (id: string) => void
 }
 
 const MOVE_ERRORS: Record<string, string> = {
@@ -161,6 +166,8 @@ export function AdminInbox({
   products = [],
   prices = {},
   onOrderSaved,
+  onUpdated,
+  onRemoved,
 }: Props) {
   const [notice, setNotice] = useState<string | null>(null)
   const [done, setDone] = useState<string | null>(null)
@@ -168,6 +175,7 @@ export function AdminInbox({
   const decidingRef = useRef<string | null>(null)
   const [moving, setMoving] = useState<{ id: string; date: string; time: string } | null>(null)
   const [orderId, setOrderId] = useState<string | null>(null)
+  const [editId, setEditId] = useState<string | null>(null)
   const [movingBusy, setMovingBusy] = useState(false)
   const [filter, setFilter] = useState<InboxFilter>(DEFAULT_FILTER)
 
@@ -247,6 +255,7 @@ export function AdminInbox({
 
   const pendingCount = rows.filter((row) => row.status === 'pending').length
   const orderRow = orderId ? (rows.find((row) => row.id === orderId) ?? null) : null
+  const editRow = editId ? (rows.find((row) => row.id === editId) ?? null) : null
   const now = new Date()
   const shown = filterInbox(rows, filter, now)
   const groups = grouped(shown, now)
@@ -353,6 +362,27 @@ export function AdminInbox({
             ? 'Er staat niets meer gepland.'
             : null}
         </p>
+      ) : null}
+      {editRow ? (
+        <AdminBookingDetail
+          row={editRow}
+          stamp={stampOf(editRow.start).replace(/ om \d{2}:\d{2}$/, '')}
+          onClose={() => setEditId(null)}
+          onChanged={(row) => {
+            setEditId(null)
+            setNotice(null)
+            setDone(`Dienst gewijzigd: ${row.name}, ${serviceName(row.service)}.`)
+            publishLiveSchedule()
+            onUpdated?.(row)
+          }}
+          onDeleted={(row) => {
+            setEditId(null)
+            setNotice(null)
+            setDone(`Afspraak verwijderd: ${row.name}, ${stampOf(row.start)}.`)
+            publishLiveSchedule()
+            onRemoved?.(row.id)
+          }}
+        />
       ) : null}
       {orderRow ? (
         <div className="admin-modal" onClick={(event) => event.target === event.currentTarget && setOrderId(null)}>
@@ -473,7 +503,7 @@ export function AdminInbox({
                         </div>
                       </form>
                     ) : null}
-                    {!isMoving && (row.status === 'pending' || unsent || movable || row.status === 'confirmed' || row.status === 'noshow') ? (
+                    {!isMoving ? (
                       <div className="inbox-actions">
                         {row.status === 'confirmed' && over ? (
                           <button
@@ -554,6 +584,18 @@ export function AdminInbox({
                             Opnieuw mailen
                           </button>
                         ) : null}
+                        <button
+                          type="button"
+                          className="inbox-edit"
+                          aria-label={`${row.name} wijzigen`}
+                          onClick={() => {
+                            setMoving(null)
+                            setDone(null)
+                            setEditId(row.id)
+                          }}
+                        >
+                          Wijzigen
+                        </button>
                       </div>
                     ) : null}
                   </div>

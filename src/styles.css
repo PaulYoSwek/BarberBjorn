@@ -2258,3 +2258,21 @@ button.inbox-count { border: 0; cursor: pointer; width: auto; }
 .booking-services button span { opacity: 0.8; }
 .booking-services button small { display: block; font-size: 0.78rem; font-weight: 400; line-height: 1.3; opacity: 0.72; }
 .booking-services button.is-on small, .booking-services button.is-on span { opacity: 0.85; }
+
+/* ---------- a booked appointment: change the service or remove it */
+.admin-booking-edit h2 { margin: 0; font-size: 1.35rem; }
+.admin-booking-when { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+.admin-booking-what { margin: 0; color: var(--muted); font-size: 0.86rem; }
+.admin-booking-contact { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 0.9rem; }
+.admin-booking-contact a { color: inherit; }
+.admin-booking-danger { display: grid; gap: 8px; margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--hair-strong); }
+.admin-booking-danger p { margin: 0; font-size: 0.86rem; }
+.admin-booking-delete {
+  justify-self: start; width: auto; min-height: 40px; padding: 0 14px;
+  border: 1px solid #8c1d18; background: #fff; color: #8c1d18; font-weight: 700; cursor: pointer;
+}
+.admin-booking-delete:hover { background: #f9dedc; }
+.admin-plan-actions button.is-danger { background: #8c1d18; border-color: #8c1d18; color: #fff; }
+
+.inbox-actions .inbox-edit { margin-left: auto; background: #fff; border: 1px solid var(--hair-strong); color: var(--ink); font-weight: 600; }
+.inbox-actions .inbox-edit:hover { border-color: var(--ink); }

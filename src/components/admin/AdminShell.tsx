@@ -113,6 +113,16 @@ export function AdminShell({ pending, onLogout }: Props) {
   }
 
   /** Bjorn planned an appointment himself: show it at once, then fetch the real row. */
+  function onUpdated(row: InboxRow) {
+    setRows((current) => current.map((item) => (item.id === row.id ? row : item)))
+    pullInbox(false)
+  }
+
+  function onRemoved(id: string) {
+    setRows((current) => current.filter((item) => item.id !== id))
+    pullInbox(false)
+  }
+
   function onBooked(row: InboxRow) {
     setRows((current) => [...current, row])
     pullInbox(false)
@@ -196,7 +206,14 @@ export function AdminShell({ pending, onLogout }: Props) {
         </div>
       </header>
       <div className="admin-card">
-        {tab === 'agenda' ? <AdminAgenda clients={rows} onBooked={onBooked} /> : null}
+        {tab === 'agenda' ? (
+          <AdminAgenda
+            clients={rows}
+            onBooked={onBooked}
+            onUpdated={onUpdated}
+            onRemoved={onRemoved}
+          />
+        ) : null}
         {tab === 'finance' ? <AdminFinance rows={rows} prices={prices} /> : null}
         {tab === 'products' ? (
           <AdminProducts products={products} ready={productsReady} loaded={productsLoaded} onChanged={pullProducts} />
@@ -207,6 +224,8 @@ export function AdminShell({ pending, onLogout }: Props) {
             products={products}
             prices={prices}
             onOrderSaved={onOrderSaved}
+            onUpdated={onUpdated}
+            onRemoved={onRemoved}
             loading={!inboxLoaded}
             error={inboxError}
             onChanged={onDecided}

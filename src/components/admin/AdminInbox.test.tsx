@@ -4,7 +4,8 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { defaultSchedule } from '../../schedule'
 import { AdminShell } from './AdminShell'
 
-const { loadInbox, decideInbox, loadPublicSchedule, moveBooking, loadTemplates, saveOrder, loadProducts, loadServices } = vi.hoisted(() => ({
+const { loadInbox, decideInbox, loadPublicSchedule, moveBooking, loadTemplates, saveOrder, loadProducts, loadServices, adminWrite } = vi.hoisted(() => ({
+  adminWrite: vi.fn(),
   loadInbox: vi.fn(),
   decideInbox: vi.fn(),
   loadPublicSchedule: vi.fn(),
@@ -27,6 +28,7 @@ vi.mock('../../planning-api', async (importOriginal) => {
     saveOrder,
     loadProducts,
     loadServices,
+    adminWrite,
   }
 })
 
@@ -476,4 +478,30 @@ test('the bon opens as a popup and Escape closes it', async () => {
   expect(row('Kim Confirmed').contains(dialog)).toBe(false)
   await userEvent.keyboard('{Escape}')
   expect(screen.queryByRole('dialog', { name: 'Bon Kim Confirmed' })).not.toBeInTheDocument()
+})
+
+test('an appointment card opens a dialog to change the service or remove it', async () => {
+  adminWrite.mockReset()
+  adminWrite.mockResolvedValue({ ok: true })
+  loadInbox.mockResolvedValue([confirmed])
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  render(<AdminShell />)
+  await user.click(await screen.findByRole('button', { name: 'Afspraken' }))
+  await user.click(within(row('Kim Confirmed')).getByRole('button', { name: 'Kim Confirmed wijzigen' }))
+  const dialog = screen.getByRole('dialog', { name: 'Boeking' })
+  expect(dialog).toHaveTextContent('di 6 okt · 10:00')
+  loadInbox.mockResolvedValue([{ ...confirmed, service: 'cut', minutes: 45 }])
+  await user.selectOptions(within(dialog).getByLabelText('Dienst'), 'cut')
+  await user.click(within(dialog).getByRole('button', { name: 'Dienst opslaan' }))
+  expect(adminWrite).toHaveBeenCalledWith({ type: 'bookingService', id: 'conf-1', service: 'cut' })
+  expect(screen.getByRole('status')).toHaveTextContent('Dienst gewijzigd: Kim Confirmed, Knippen.')
+  expect(within(row('Kim Confirmed')).getByText(/Knippen · 45 min/)).toBeInTheDocument()
+
+  await user.click(within(row('Kim Confirmed')).getByRole('button', { name: 'Kim Confirmed wijzigen' }))
+  await user.click(within(screen.getByRole('dialog', { name: 'Boeking' })).getByRole('button', { name: 'Afspraak verwijderen' }))
+  loadInbox.mockResolvedValue([])
+  await user.click(screen.getByRole('button', { name: 'Echt verwijderen' }))
+  expect(adminWrite).toHaveBeenCalledWith({ type: 'bookingDelete', id: 'conf-1' })
+  expect(screen.getByRole('status')).toHaveTextContent('Afspraak verwijderd: Kim Confirmed')
+  await waitFor(() => expect(screen.queryByText('Kim Confirmed')).not.toBeInTheDocument())
 })

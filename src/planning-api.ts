@@ -253,6 +253,8 @@ export type AdminWriteBody =
   | { type: 'week'; week: Record<Weekday, DayHours>; clearDates?: string[] }
   | { type: 'exception'; date: string; hours: DayHours | null }
   | { type: 'copyBlocks'; from: string; weeks: number; pattern: Partial<Record<Weekday, BlockPattern[]>> }
+  | { type: 'bookingService'; id: string; service: string }
+  | { type: 'bookingDelete'; id: string }
 
 export type LoginResult = 'ok' | 'wrong' | 'unavailable'
 

@@ -15,6 +15,7 @@ import {
   type Weekday,
 } from '../../schedule'
 import { serviceName } from './admin-defaults'
+import { AdminBookingDetail } from './AdminBookingDetail'
 import { AdminPlan, type PlanCheck } from './AdminPlan'
 import { axisOf, blockStyle, TimeGrid, type GridColumn } from '../TimeGrid'
 
@@ -58,6 +59,13 @@ function dayName(weekday: Weekday): string {
 function dayStamp(day: { date: string; weekday: Weekday }): string {
   const month = copy.nl.monthShort[Number(day.date.slice(5, 7)) - 1]
   return `${dayName(day.weekday)} ${Number(day.date.slice(8, 10))} ${month}`
+}
+
+const WEEKDAYS: Weekday[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+
+/** The weekday of a yyyy-mm-dd date, read at noon so no time zone shifts it. */
+function weekdayOf(date: string): Weekday {
+  return WEEKDAYS[new Date(`${date}T12:00:00`).getDay()]
 }
 
 function dayChip(day: { date: string; weekday: Weekday }, hours: DayHours): string {
@@ -161,22 +169,19 @@ function windowDays(now: Date, schedule: Schedule): AgendaDay[] {
   })
 }
 
-const STATUS_LABEL: Record<InboxRow['status'], string> = {
-  pending: 'In afwachting',
-  confirmed: 'Bevestigd',
-  noshow: 'Niet gekomen',
-  declined: 'Geweigerd',
-}
-
 type Props = {
   clients?: InboxRow[]
   onBooked?: (row: InboxRow) => void
+  /** An appointment got another service. */
+  onUpdated?: (row: InboxRow) => void
+  /** An appointment was removed. */
+  onRemoved?: (id: string) => void
 }
 
 /** What a tap on a free quarter-hour does. */
 type Mode = 'shut' | 'plan'
 
-export function AdminAgenda({ clients = [], onBooked }: Props) {
+export function AdminAgenda({ clients = [], onBooked, onUpdated, onRemoved }: Props) {
   const people = clients
   const [cloud, setCloud] = useState<Schedule>(defaultSchedule)
   const [edition, setEdition] = useState(0)
@@ -201,6 +206,7 @@ export function AdminAgenda({ clients = [], onBooked }: Props) {
   const [note, setNote] = useState<Note>(NO_NOTE)
   const [mode, setMode] = useState<Mode>('shut')
   const [plan, setPlan] = useState<{ date: string; time: string; stamp: string } | null>(null)
+  const reload = useRef<() => void>(() => {})
   const local = useRef<LocalEdits>({ blocks: new Map(), exceptions: new Map(), week: null })
 
   function touch() {
@@ -229,6 +235,7 @@ export function AdminAgenda({ clients = [], onBooked }: Props) {
         })
     }
     load(true)
+    reload.current = () => load(false)
     // Bookings made on the site show up without a reload.
     const again = () => {
       if (document.visibilityState === 'visible') load(false)
@@ -493,6 +500,28 @@ export function AdminAgenda({ clients = [], onBooked }: Props) {
     onBooked?.(row)
   }
 
+  /** The agenda reads bookings from two places; keep both in step until the next load. */
+  function edited(row: InboxRow) {
+    setDetail(null)
+    setCloud((current) => ({
+      ...current,
+      bookings: (current.bookings ?? []).map((hold) => (hold.start === row.start ? { ...hold, minutes: row.minutes } : hold)),
+    }))
+    setDone(`Dienst gewijzigd: ${row.name}, ${serviceName(row.service)} om ${row.start.slice(11, 16)}.`)
+    publishLiveSchedule()
+    onUpdated?.(row)
+    reload.current()
+  }
+
+  function removed(row: InboxRow) {
+    setDetail(null)
+    setCloud((current) => ({ ...current, bookings: (current.bookings ?? []).filter((hold) => hold.start !== row.start) }))
+    setDone(`Afspraak verwijderd: ${row.name}, ${row.start.slice(11, 16)}.`)
+    publishLiveSchedule()
+    onRemoved?.(row.id)
+    reload.current()
+  }
+
   function togglePick(date: string) {
     setPicked((current) => {
       const inView = current.filter((item) => visible.some((day) => day.date === item))
@@ -688,31 +717,13 @@ export function AdminAgenda({ clients = [], onBooked }: Props) {
         />
       ) : null}
       {detail ? (
-        <div className="admin-booking" role="dialog" aria-label="Boeking">
-          <p className="admin-kicker">Boeking</p>
-          <h2>{detail.name}</h2>
-          <p>
-            {serviceName(detail.service)} · {detail.minutes} min
-          </p>
-          <p>
-            <a href={`mailto:${detail.email}`}>{detail.email}</a>
-          </p>
-          {detail.phone ? (
-            <p>
-              <a href={`tel:${detail.phone.replace(/\s+/g, '')}`}>{detail.phone}</a>
-            </p>
-          ) : null}
-          <p>
-            {detail.start.slice(0, 10)} {detail.start.slice(11, 16)} –{' '}
-            {clock(minutesOf(detail.start.slice(11, 16)) + detail.minutes)}
-          </p>
-          <p>{STATUS_LABEL[detail.status]}</p>
-          <p>{detail.kind === 'custom' ? 'Ander tijdstip' : 'Slot'}</p>
-          {detail.mail_sent ? null : <p>Mail niet gegaan</p>}
-          <button type="button" onClick={() => setDetail(null)}>
-            Sluiten
-          </button>
-        </div>
+        <AdminBookingDetail
+          row={detail}
+          stamp={dayStamp({ date: detail.start.slice(0, 10), weekday: weekdayOf(detail.start.slice(0, 10)) })}
+          onClose={() => setDetail(null)}
+          onChanged={edited}
+          onDeleted={removed}
+        />
       ) : null}
       {narrow && focused.length === 0 && visible.length > 1 ? (
         <div className="admin-day-nav">
