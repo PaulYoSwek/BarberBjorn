@@ -79,7 +79,10 @@ function weekTitle(days: AgendaDay[]): string {
   const last = days[days.length - 1]
   const a = `${Number(first.date.slice(8, 10))} ${copy.nl.monthShort[Number(first.date.slice(5, 7)) - 1]}`
   const b = `${Number(last.date.slice(8, 10))} ${copy.nl.monthShort[Number(last.date.slice(5, 7)) - 1]}`
-  return `${a} – ${b}`
+  // The agenda reaches two years ahead, so the year is always shown; a week across new year shows both.
+  const from = first.date.slice(0, 4)
+  const to = last.date.slice(0, 4)
+  return from === to ? `${a} – ${b} ${to}` : `${a} ${from} – ${b} ${to}`
 }
 
 function blockAt(date: string, time: string | undefined, schedule: Schedule): ScheduleBlock | undefined {

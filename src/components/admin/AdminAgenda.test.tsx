@@ -645,5 +645,13 @@ test('the agenda pages forward to two years from now', async () => {
   for (let index = 0; index < 105; index++) fireEvent.click(next)
   expect(next).toBeDisabled()
   // 105 weeks after the week of 5 October 2026.
-  expect(screen.getByText('9 okt – 15 okt')).toBeInTheDocument()
+  expect(screen.getByText('9 okt – 15 okt 2028')).toBeInTheDocument()
+})
+
+test('a week across new year shows both years', async () => {
+  await openReady()
+  expect(screen.getByText('5 okt – 11 okt 2026')).toBeInTheDocument()
+  const next = screen.getByRole('button', { name: 'Volgende week' })
+  for (let index = 0; index < 12; index++) fireEvent.click(next)
+  expect(screen.getByText('28 dec 2026 – 3 jan 2027')).toBeInTheDocument()
 })
