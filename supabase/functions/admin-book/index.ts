@@ -36,9 +36,9 @@ servePost(async (req) => {
   const phone = text(record.phone, 40)
   const mail = record.mail === true
   const paid = record.paid === true
-  // Bjorn may make it longer or shorter than the service, in quarter-hours, up to a working day.
+  // Bjorn may make it longer or shorter than the service, in five-minute steps, up to two hours.
   const asked = record.minutes
-  if (asked !== undefined && (typeof asked !== 'number' || !Number.isInteger(asked) || asked < 15 || asked > 480 || asked % 15 !== 0)) {
+  if (asked !== undefined && (typeof asked !== 'number' || !Number.isInteger(asked) || asked < 5 || asked > 120 || asked % 5 !== 0)) {
     return json(req, 400, { ok: false, error: 'invalid' })
   }
   if (!service || !WALL.test(start) || !name) return json(req, 400, { ok: false, error: 'invalid' })

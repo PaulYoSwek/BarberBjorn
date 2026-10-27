@@ -5,6 +5,8 @@ import { adminBook, loadClients, type InboxRow } from '../../planning-api'
 import { SLOT_MINUTES } from '../../schedule'
 import { offered, serviceCatalog } from '../../service-catalog'
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const LENGTH_STEP = 5
+const LENGTH_MAX = 120
 
 /** What lies under an appointment from a start time on, as the agenda shows it. */
 export type PlanCheck = { booked: boolean; shut: boolean; late: boolean }
@@ -154,8 +156,11 @@ export function AdminPlan({ date, time, stamp, people, check, onClose, onBooked 
   // Payment is tracked once the bookings carry it; a past walk-in is usually paid already.
   const tracksPayment = people.some((row) => row.paid !== undefined)
   const paid = paidChoice ?? over
+  // Five-minute steps up to two hours; a longer service keeps its own length in the list.
   const lengths: number[] = []
-  for (let total = SLOT_MINUTES; total <= 8 * 60; total += SLOT_MINUTES) lengths.push(total)
+  for (let total = LENGTH_STEP; total <= LENGTH_MAX; total += LENGTH_STEP) lengths.push(total)
+  if (!lengths.includes(standard)) lengths.push(standard)
+  lengths.sort((a, b) => a - b)
   const emailOk = !email.trim() || EMAIL.test(email.trim())
 
   function pickName(value: string) {

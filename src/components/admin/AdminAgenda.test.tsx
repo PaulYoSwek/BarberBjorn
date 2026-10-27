@@ -629,11 +629,14 @@ test('the length of a planned appointment follows the service but can be changed
   expect(length).toHaveValue('45')
   await user.selectOptions(within(dialog).getByLabelText('Dienst'), 'both')
   expect(length).toHaveValue('75')
-  await user.selectOptions(length, '90')
-  expect(dialog).toHaveTextContent('ma 5 okt · 12:00–13:30')
+  const options = [...(length as HTMLSelectElement).options].map((option) => Number(option.value))
+  expect(options.slice(0, 3)).toEqual([5, 10, 15])
+  expect(Math.max(...options)).toBe(120)
+  await user.selectOptions(length, '50')
+  expect(dialog).toHaveTextContent('ma 5 okt · 12:00–12:50')
   await user.type(within(dialog).getByLabelText('Naam'), 'Lauren Willaert')
   await user.click(within(dialog).getByRole('button', { name: 'Inplannen' }))
-  expect(adminBook).toHaveBeenCalledWith(expect.objectContaining({ service: 'both', start: '2026-10-05T12:00:00', minutes: 90 }))
+  expect(adminBook).toHaveBeenCalledWith(expect.objectContaining({ service: 'both', start: '2026-10-05T12:00:00', minutes: 50 }))
 })
 
 test('the agenda pages forward to two years from now', async () => {
