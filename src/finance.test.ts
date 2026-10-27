@@ -9,6 +9,8 @@ import {
   reportCsv,
   settled,
   summarize,
+  unpaid,
+  upcomingUnpaid,
   vatIn,
   type Billable,
 } from './finance'
@@ -152,4 +154,21 @@ test('a client who did not turn up is never revenue', async () => {
     { ...base, id: 'noshow', start: '2026-10-06T10:00:00', status: 'noshow' as const },
   ]
   expect(settled(rows as never, now).map((row) => row.id)).toEqual(['came'])
+})
+
+test('once payment is tracked, only paid appointments are revenue', () => {
+  const now = new Date('2026-10-20T12:00:00')
+  const base = { service: 'cut' as const, name: 'A', email: '', price: '€30', charged: null, items: [] }
+  const rows = [
+    { ...base, id: 'paid', start: '2026-10-19T10:00:00', status: 'confirmed' as const, paid: true },
+    { ...base, id: 'open', start: '2026-10-19T11:00:00', status: 'confirmed' as const, paid: false },
+    { ...base, id: 'ahead', start: '2026-10-25T10:00:00', status: 'confirmed' as const, paid: true },
+    { ...base, id: 'later', start: '2026-10-26T10:00:00', status: 'confirmed' as const, paid: false },
+    { ...base, id: 'old', start: '2026-10-18T10:00:00', status: 'confirmed' as const },
+    { ...base, id: 'gone', start: '2026-10-18T11:00:00', status: 'noshow' as const, paid: false },
+  ]
+  // Paid counts, also in advance; untracked old rows keep the old rule; unpaid and no-shows do not.
+  expect(settled(rows, now).map((row) => row.id)).toEqual(['paid', 'ahead', 'old'])
+  expect(unpaid(rows, now).map((row) => row.id)).toEqual(['open'])
+  expect(upcomingUnpaid(rows, now).map((row) => row.id)).toEqual(['later'])
 })

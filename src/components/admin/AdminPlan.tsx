@@ -109,6 +109,9 @@ export function AdminPlan({ date, time, stamp, people, check, onClose, onBooked 
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [mail, setMail] = useState(true)
+  /** Chosen length; null follows the service. */
+  const [override, setOverride] = useState<number | null>(null)
+  const [paidChoice, setPaidChoice] = useState<boolean | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const first = useRef<HTMLSelectElement>(null)
@@ -143,10 +146,16 @@ export function AdminPlan({ date, time, stamp, people, check, onClose, onBooked 
   }, [onClose])
 
   const chosen = services.find((item) => item.id === service) ?? services[0]
-  const length = chosen?.minutes ?? 30
+  const standard = chosen?.minutes ?? 30
+  const length = override ?? standard
   const under = check(date, start, length)
   // A walk-in is often written down afterwards; it counts as been, and gets no mail.
   const over = `${date}T${start}:00` <= wallNow()
+  // Payment is tracked once the bookings carry it; a past walk-in is usually paid already.
+  const tracksPayment = people.some((row) => row.paid !== undefined)
+  const paid = paidChoice ?? over
+  const lengths: number[] = []
+  for (let total = SLOT_MINUTES; total <= 8 * 60; total += SLOT_MINUTES) lengths.push(total)
   const emailOk = !email.trim() || EMAIL.test(email.trim())
 
   function pickName(value: string) {
@@ -183,6 +192,8 @@ export function AdminPlan({ date, time, stamp, people, check, onClose, onBooked 
       email: email.trim(),
       phone: phone.trim(),
       mail: send,
+      ...(length !== standard ? { minutes: length } : {}),
+      ...(tracksPayment && paid ? { paid: true } : {}),
     })
     setBusy(false)
     if (!result.ok) return setError(errorText(result.error))
@@ -201,6 +212,7 @@ export function AdminPlan({ date, time, stamp, people, check, onClose, onBooked 
       price: chosen?.price ?? null,
       charged: null,
       items: [],
+      ...(tracksPayment ? { paid } : {}),
     })
   }
 
@@ -216,7 +228,14 @@ export function AdminPlan({ date, time, stamp, people, check, onClose, onBooked 
         </h2>
         <label>
           Dienst
-          <select ref={first} value={service} onChange={(event) => setService(event.target.value as ServiceId)}>
+          <select
+            ref={first}
+            value={service}
+            onChange={(event) => {
+              setService(event.target.value as ServiceId)
+              setOverride(null)
+            }}
+          >
             {services.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name.nl} · {item.minutes} min · {euroLabel(item.price)}
@@ -230,6 +249,24 @@ export function AdminPlan({ date, time, stamp, people, check, onClose, onBooked 
             {steps.map((step) => (
               <option key={step} value={step}>
                 {step}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Duur
+          <select
+            aria-label="Duur"
+            value={length}
+            onChange={(event) => {
+              const next = Number(event.target.value)
+              setOverride(next === standard ? null : next)
+            }}
+          >
+            {lengths.map((total) => (
+              <option key={total} value={total}>
+                {total} min · tot {endOf(start, total)}
+                {total === standard ? ' (standaard)' : ''}
               </option>
             ))}
           </select>
@@ -309,6 +346,12 @@ export function AdminPlan({ date, time, stamp, people, check, onClose, onBooked 
         </label>
         {over ? (
           <p className="admin-plan-warn">Dit tijdstip is al geweest. De afspraak telt meteen als geweest; er gaat geen mail.</p>
+        ) : null}
+        {tracksPayment ? (
+          <label className="admin-plan-check">
+            <input type="checkbox" checked={paid} onChange={(event) => setPaidChoice(event.target.checked)} />
+            Al betaald
+          </label>
         ) : null}
         {email.trim() && !over ? (
           <label className="admin-plan-check">

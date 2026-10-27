@@ -64,9 +64,16 @@ export function AdminShell({ pending, onLogout }: Props) {
     }
   }
 
-  function onOrderSaved(id: string, charged: number | null, items: OrderItem[]) {
-    setRows((current) => current.map((row) => (row.id === id ? { ...row, charged, items } : row)))
+  function onOrderSaved(id: string, charged: number | null, items: OrderItem[], paid?: boolean) {
+    setRows((current) =>
+      current.map((row) => (row.id === id ? { ...row, charged, items, ...(paid === undefined ? {} : { paid }) } : row)),
+    )
     void pullProducts()
+  }
+
+  function onPaid(id: string, paid: boolean) {
+    setRows((current) => current.map((row) => (row.id === id ? { ...row, paid } : row)))
+    pullInbox(false)
   }
   const inboxGeneration = useRef(0)
   const decidedStatus = useRef(new Map<string, InboxRow['status']>())
@@ -226,6 +233,7 @@ export function AdminShell({ pending, onLogout }: Props) {
             onOrderSaved={onOrderSaved}
             onUpdated={onUpdated}
             onRemoved={onRemoved}
+            onPaid={onPaid}
             loading={!inboxLoaded}
             error={inboxError}
             onChanged={onDecided}

@@ -66,8 +66,9 @@ export type AgendaDay = {
   slots: Slot[]
 }
 
-/** How far ahead the calendar reaches: ten weeks from this Monday. */
-export const AGENDA_DAYS = 70
+/** How far ahead the calendar reaches: 106 weeks from this Monday, so always at least two years. */
+export const AGENDA_WEEKS = 106
+export const AGENDA_DAYS = AGENDA_WEEKS * 7
 
 const WEEKDAYS: Weekday[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 
@@ -121,39 +122,41 @@ function addDays(value: Date, count: number): Date {
   return next
 }
 
-function hoursFor(date: string, schedule: Schedule): DayHours {
-  if (schedule.blocks?.some((block) => block.date === date && !block.time)) {
-    return { closed: true }
-  }
-  if (schedule.exceptions?.[date]) return schedule.exceptions[date]
-  return schedule.week[weekdayOf(localDate(date, '12:00'))]
-}
-
 function overlaps(startA: number, endA: number, startB: number, endB: number): boolean {
   return startA < endB && startB < endA
 }
 
-function holdsOn(date: string, schedule: Schedule): { start: number; end: number }[] {
-  const fromBlocks = (schedule.blocks ?? [])
-    .filter((block) => block.date === date && block.time)
-    .map((block) => {
-      const start = minutesOf(block.time!)
-      return { start, end: start + SLOT_MINUTES }
-    })
-  const fromBookings = (schedule.bookings ?? [])
-    .filter((hold) => hold.start.startsWith(date))
-    .map((hold) => {
-      const time = hold.start.slice(11, 16)
-      const start = minutesOf(time)
-      return { start, end: start + hold.minutes }
-    })
-  return [...fromBlocks, ...fromBookings]
+
+/** Closed days and held times per date, built once so two years of days stay quick to lay out. */
+function indexSchedule(schedule: Schedule) {
+  const closedDays = new Set<string>()
+  const holds = new Map<string, { start: number; end: number }[]>()
+  const add = (date: string, hold: { start: number; end: number }) => {
+    const list = holds.get(date)
+    if (list) list.push(hold)
+    else holds.set(date, [hold])
+  }
+  for (const block of schedule.blocks ?? []) {
+    if (!block.time) {
+      closedDays.add(block.date)
+      continue
+    }
+    const start = minutesOf(block.time)
+    add(block.date, { start, end: start + SLOT_MINUTES })
+  }
+  for (const hold of schedule.bookings ?? []) {
+    const start = minutesOf(hold.start.slice(11, 16))
+    add(hold.start.slice(0, 10), { start, end: start + hold.minutes })
+  }
+  return { closedDays, holds }
 }
 
 export function agendaDays(
   service: ServiceId | '',
   now: Date,
   extra: Partial<Schedule> = {},
+  /** How many days from this Monday; a single-day check needs far fewer than the whole horizon. */
+  count = AGENDA_DAYS,
 ): AgendaDay[] {
   const schedule: Schedule = {
     week: extra.week ?? defaultSchedule.week,
@@ -169,17 +172,20 @@ export function agendaDays(
   const today = dateIso(now)
   const origin = mondayOf(now)
   const nowMinutes = now.getHours() * 60 + now.getMinutes()
+  const index = indexSchedule(schedule)
 
-  return Array.from({ length: AGENDA_DAYS }, (_, index) => {
-    const date = dateIso(addDays(origin, index))
-    const hours = hoursFor(date, schedule)
+  return Array.from({ length: count }, (_, offset) => {
+    const date = dateIso(addDays(origin, offset))
+    const hours: DayHours = index.closedDays.has(date)
+      ? { closed: true }
+      : (schedule.exceptions?.[date] ?? schedule.week[weekdayOf(localDate(date, '12:00'))])
     const weekday = weekdayOf(localDate(date, '12:00'))
     if ('closed' in hours) {
       return { date, weekday, closed: true, slots: [] }
     }
     const open = minutesOf(hours.open)
     const close = minutesOf(hours.close)
-    const held = holdsOn(date, schedule)
+    const held = index.holds.get(date) ?? []
     const slots: Slot[] = []
     // Every quarter-hour up to closing is shown, like the dashboard; late starts simply do not fit.
     for (let start = open; start < close; start += SLOT_MINUTES) {

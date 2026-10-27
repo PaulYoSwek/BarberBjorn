@@ -25,6 +25,8 @@ export type ClientBooking = {
   charged?: number | null
   /** Products sold with the appointment. */
   items?: { price: number; quantity: number }[]
+  /** Undefined when payment is not tracked yet. */
+  paid?: boolean
 }
 
 export type DayPart = 'ochtend' | 'middag' | 'avond'
@@ -195,9 +197,12 @@ export function summarizeClients(
     if (booking.status !== 'confirmed') continue
     if (booking.start <= today) {
       summary.visits += 1
-      const service = booking.charged ?? parsePrice(booking.price ?? prices[booking.service] ?? null)
-      const products = (booking.items ?? []).reduce((sum, item) => sum + item.price * item.quantity, 0)
-      summary.paid += service + products
+      // A visit nobody paid for yet is not money spent.
+      if (booking.paid !== false) {
+        const service = booking.charged ?? parsePrice(booking.price ?? prices[booking.service] ?? null)
+        const products = (booking.items ?? []).reduce((sum, item) => sum + item.price * item.quantity, 0)
+        summary.paid += service + products
+      }
       summary.lastVisit = booking.start
     } else {
       summary.upcoming += 1

@@ -12,8 +12,9 @@ servePost(async (req) => {
       .from('bookings')
       .select(extra ? `${columns}, ${extra}` : columns)
       .order('created_at', { ascending: false })
-  // Older databases miss the price or charged column; fall back step by step.
-  let listed = await list('price, charged')
+  // Older databases miss the paid, charged or price column; fall back step by step.
+  let listed = await list('price, charged, paid_at')
+  if (listed.error && isSchemaMissing(listed.error)) listed = await list('price, charged')
   if (listed.error && isSchemaMissing(listed.error)) listed = await list('price')
   if (listed.error && isSchemaMissing(listed.error)) listed = await list('')
   if (listed.error) throw new Error(listed.error.message)

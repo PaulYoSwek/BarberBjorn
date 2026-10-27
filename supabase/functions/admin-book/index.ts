@@ -1,4 +1,4 @@
-import { insertBooking, rememberClient, servicePrice } from '../_shared/clients.ts'
+import { insertBooking, isSchemaMissing, rememberClient, servicePrice } from '../_shared/clients.ts'
 import { serviceClient } from '../_shared/db.ts'
 import { confirmedOverlaps, lostOverlapRace } from '../_shared/holds.ts'
 import { json, readJson, rejectUnlessSession, servePost } from '../_shared/http.ts'
@@ -35,6 +35,12 @@ servePost(async (req) => {
   const email = text(record.email, 160)
   const phone = text(record.phone, 40)
   const mail = record.mail === true
+  const paid = record.paid === true
+  // Bjorn may make it longer or shorter than the service, in quarter-hours, up to a working day.
+  const asked = record.minutes
+  if (asked !== undefined && (typeof asked !== 'number' || !Number.isInteger(asked) || asked < 15 || asked > 480 || asked % 15 !== 0)) {
+    return json(req, 400, { ok: false, error: 'invalid' })
+  }
   if (!service || !WALL.test(start) || !name) return json(req, 400, { ok: false, error: 'invalid' })
   if (email && !EMAIL.test(email)) return json(req, 400, { ok: false, error: 'email' })
   // An appointment that already happened gets no confirmation mail.
@@ -43,7 +49,7 @@ servePost(async (req) => {
   const db = serviceClient()
   const schedule = await loadSchedule(db)
   if (!offersService(schedule, service)) return json(req, 400, { ok: false, error: 'service' })
-  const minutes = serviceMinutes(schedule, service)
+  const minutes = typeof asked === 'number' ? asked : serviceMinutes(schedule, service)
   if ((await confirmedOverlaps(db, '', start, minutes)).length > 0) {
     return json(req, 409, { ok: false, error: 'overlap' })
   }
@@ -76,6 +82,11 @@ servePost(async (req) => {
     const removed = await db.from('bookings').delete().eq('id', row.id)
     if (removed.error) throw new Error(removed.error.message)
     return json(req, 409, { ok: false, error: 'overlap' })
+  }
+
+  if (paid) {
+    const marked = await db.from('bookings').update({ paid_at: new Date().toISOString() }).eq('id', row.id)
+    if (marked.error && !isSchemaMissing(marked.error)) throw new Error(marked.error.message)
   }
 
   await rememberClient(db, { name, email, phone })

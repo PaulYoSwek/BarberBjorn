@@ -30,6 +30,8 @@ export type Billable = {
   price: string | null
   charged: number | null
   items: OrderItem[]
+  /** Undefined: the database does not track payment yet, so having been counts. */
+  paid?: boolean
 }
 
 /** Dutch VAT: hairdressing is in the low rate, goods in the high rate. Prices include VAT. */
@@ -129,10 +131,27 @@ function wallNow(now: Date): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:00`
 }
 
-/** Appointments that count as income: confirmed and already happened. */
+/**
+ * Appointments that count as income: confirmed and paid. Without payment
+ * tracking (paid undefined) the old rule holds: confirmed and already happened.
+ */
 export function settled(bookings: Billable[], now = new Date()): Billable[] {
   const today = wallNow(now)
-  return bookings.filter((booking) => booking.status === 'confirmed' && booking.start <= today)
+  return bookings.filter(
+    (booking) => booking.status === 'confirmed' && (booking.paid === undefined ? booking.start <= today : booking.paid),
+  )
+}
+
+/** Confirmed appointments that have happened but are not paid yet. */
+export function unpaid(bookings: Billable[], now = new Date()): Billable[] {
+  const today = wallNow(now)
+  return bookings.filter((booking) => booking.status === 'confirmed' && booking.paid === false && booking.start <= today)
+}
+
+/** Confirmed appointments still to come that nobody paid for in advance. */
+export function upcomingUnpaid(bookings: Billable[], now = new Date()): Billable[] {
+  const today = wallNow(now)
+  return bookings.filter((booking) => booking.status === 'confirmed' && booking.paid !== true && booking.start > today)
 }
 
 export type Summary = {

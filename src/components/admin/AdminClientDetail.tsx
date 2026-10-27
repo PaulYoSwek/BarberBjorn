@@ -33,13 +33,14 @@ function usually(summary: ClientSummary): string {
   return parts.filter(Boolean).join(' · ')
 }
 
-type Standing = { key: 'over' | 'coming' | 'pending' | 'expired' | 'declined' | 'noshow'; label: string }
+type Standing = { key: 'over' | 'unpaid' | 'coming' | 'pending' | 'expired' | 'declined' | 'noshow'; label: string }
 
 function standingOf(row: InboxRow, now: Date): Standing {
   if (row.status === 'declined') return { key: 'declined', label: 'Geweigerd' }
   if (row.status === 'noshow') return { key: 'noshow', label: 'Niet gekomen' }
   const over = momentOf(row, now) === 'over'
   if (row.status === 'pending') return over ? { key: 'expired', label: 'Verlopen' } : { key: 'pending', label: 'Te beoordelen' }
+  if (over && row.paid === false) return { key: 'unpaid', label: 'Niet betaald' }
   return over ? { key: 'over', label: 'Geweest' } : { key: 'coming', label: 'Komend' }
 }
 
@@ -56,8 +57,9 @@ export function AdminClientDetail({ summary, rows, prices, onClose, onEdit }: Pr
   const now = new Date()
   const own = new Set(summary.bookings.map((booking) => booking.id))
   const bookings = rows.filter((row) => own.has(row.id)).sort((a, b) => b.start.localeCompare(a.start))
-  const visits = bookings.filter((row) => row.status === 'confirmed' && standingOf(row, now).key === 'over')
-  const money = visits.map((row) => bookingMoney(row, prices))
+  const visits = bookings.filter((row) => row.status === 'confirmed' && ['over', 'unpaid'].includes(standingOf(row, now).key))
+  // Only what was paid is money spent.
+  const money = visits.filter((row) => row.paid !== false).map((row) => bookingMoney(row, prices))
   const totals = money.reduce(
     (sum, item) => ({
       services: sum.services + item.servicePrice,
@@ -67,7 +69,7 @@ export function AdminClientDetail({ summary, rows, prices, onClose, onEdit }: Pr
     }),
     { services: 0, products: 0, discount: 0, total: 0 },
   )
-  const average = visits.length > 0 ? totals.total / visits.length : 0
+  const average = money.length > 0 ? totals.total / money.length : 0
   const name = summary.name || 'Zonder naam'
 
   return (
@@ -144,7 +146,7 @@ export function AdminClientDetail({ summary, rows, prices, onClose, onEdit }: Pr
             {bookings.map((row) => {
               const standing = standingOf(row, now)
               const amount = bookingMoney(row, prices)
-              const counted = row.status === 'confirmed' && standing.key === 'over'
+              const counted = row.status === 'confirmed' && standing.key === 'over' && row.paid !== false
               return (
                 <li key={row.id} className={`admin-detail-row is-${standing.key}`}>
                   <div className="admin-detail-when">

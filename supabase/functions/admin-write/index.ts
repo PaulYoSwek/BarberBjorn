@@ -152,6 +152,22 @@ servePost(async (req) => {
     return json(req, 200, { ok: true, minutes: info.minutes, price: info.price ?? null })
   }
 
+  if (record.type === 'bookingPaid') {
+    // Paid is what makes an appointment revenue. Only a confirmed one can be paid.
+    const id = typeof record.id === 'string' ? record.id : ''
+    if (!id || typeof record.paid !== 'boolean') return json(req, 400, { ok: false, error: 'invalid' })
+    const found = await db.from('bookings').select('id, status').eq('id', id).maybeSingle()
+    if (found.error) throw new Error(found.error.message)
+    if (!found.data) return json(req, 404, { ok: false, error: 'missing' })
+    if ((found.data as { status: string }).status !== 'confirmed') return json(req, 409, { ok: false, error: 'status' })
+    const updated = await db.from('bookings').update({ paid_at: record.paid ? new Date().toISOString() : null }).eq('id', id)
+    if (updated.error) {
+      if (isSchemaMissing(updated.error)) return json(req, 503, { ok: false, error: 'schema' })
+      throw new Error(updated.error.message)
+    }
+    return json(req, 200, { ok: true })
+  }
+
   if (record.type === 'bookingDelete') {
     // Products sold with it go too (on delete cascade); the client record stays.
     const id = typeof record.id === 'string' ? record.id : ''
@@ -186,7 +202,7 @@ servePost(async (req) => {
   if (record.type === 'copyBlocks') {
     const from = typeof record.from === 'string' ? record.from.slice(0, 10) : ''
     const weeks = typeof record.weeks === 'number' && Number.isInteger(record.weeks) ? record.weeks : 0
-    if (!DATE.test(from) || weeks < 1 || weeks > 104) return json(req, 400, { ok: false, error: 'invalid' })
+    if (!DATE.test(from) || weeks < 1 || weeks > 110) return json(req, 400, { ok: false, error: 'invalid' })
     if (!record.pattern || typeof record.pattern !== 'object') return json(req, 400, { ok: false, error: 'invalid' })
     const given = record.pattern as Record<string, unknown>
     const pattern: Partial<Record<Weekday, BlockPattern[]>> = {}

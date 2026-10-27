@@ -9,6 +9,8 @@ import {
   periodLabel,
   reportCsv,
   settled,
+  unpaid,
+  upcomingUnpaid,
   summarize,
   VAT_PRODUCTS,
   VAT_SERVICES,
@@ -155,10 +157,8 @@ export function AdminFinance({ rows, prices }: Props) {
   )
   const inRange = useMemo(() => income.filter((row) => inPeriod(row.start, period)), [income, period])
   const summary = useMemo(() => summarize(inRange, prices), [inRange, prices])
-  const upcoming = useMemo(
-    () => summarize(rows.filter((row) => row.status === 'confirmed' && !income.includes(row)), prices),
-    [rows, income, prices],
-  )
+  const upcoming = useMemo(() => summarize(upcomingUnpaid(rows), prices), [rows, prices])
+  const open = useMemo(() => summarize(unpaid(rows), prices), [rows, prices])
 
   const months = useMemo(() => {
     const seen = new Set(income.map((row) => row.start.slice(0, 7)))
@@ -366,10 +366,16 @@ export function AdminFinance({ rows, prices }: Props) {
         </table></div>
       </section>
 
+      {open.appointments > 0 ? (
+        <p className="admin-hint finance-open">
+          Nog niet betaald: {open.appointments} {open.appointments === 1 ? 'afspraak die al is' : 'afspraken die al zijn'}{' '}
+          geweest, samen {formatMoney(open.total)}. Die tellen pas mee als je ze bij Afspraken als betaald markeert.
+        </p>
+      ) : null}
       {upcoming.appointments > 0 ? (
         <p className="admin-hint finance-upcoming">
           Nog te komen: {upcoming.appointments} bevestigde {upcoming.appointments === 1 ? 'afspraak' : 'afspraken'} ter
-          waarde van {formatMoney(upcoming.total)}. Die tellen pas mee als ze zijn geweest.
+          waarde van {formatMoney(upcoming.total)}. Die tellen mee zodra ze betaald zijn.
         </p>
       ) : null}
     </div>

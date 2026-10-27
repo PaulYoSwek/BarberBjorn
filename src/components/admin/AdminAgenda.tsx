@@ -694,7 +694,7 @@ export function AdminAgenda({ clients = [], onBooked, onUpdated, onRemoved }: Pr
       </div>
       <p className="admin-hint">
         Tik op een dagkop om dagen samen in te stellen. Uren gelden alleen voor die dag. Kopieer naar aankomende
-        weken zet de uren en dichte tijden van deze week vast voor het komende jaar. Geboekt opent de klant.
+        weken zet de uren en dichte tijden van deze week vast voor de komende twee jaar. Geboekt opent de klant.
       </p>
       </div>
       <div className="admin-agenda-main">

@@ -1,11 +1,13 @@
 import { expect, test } from 'vitest'
-import { agendaDays, SERVICE_MINUTES, SLOT_MINUTES, spanCells, spanStarts, firstBookableDate, hasFreeStart, monthCells, monthOf } from './schedule'
+import { AGENDA_DAYS, agendaDays, SERVICE_MINUTES, SLOT_MINUTES, spanCells, spanStarts, firstBookableDate, hasFreeStart, monthCells, monthOf } from './schedule'
 
 const saturday = new Date('2026-10-03T11:00:00')
 
-test('lists four weeks from Monday and keeps Sunday last', () => {
+test('lists at least two years from Monday and keeps Sunday last', () => {
   const days = agendaDays('cut', saturday)
-  expect(days).toHaveLength(70)
+  expect(days).toHaveLength(AGENDA_DAYS)
+  // Two full years ahead of today, whatever weekday today is.
+  expect(days[days.length - 1].date >= '2028-10-03').toBe(true)
   expect(days[0].date).toBe('2026-09-28')
   expect(days[0].weekday).toBe('mon')
   expect(days[6].date).toBe('2026-10-04')
@@ -157,4 +159,19 @@ test('the first bookable day is the first with a start the service fits in', () 
   const days = agendaDays('cut', new Date('2026-10-05T17:30:00'))
   expect(hasFreeStart(days[0])).toBe(false) // Monday evening: nothing fits before 18:00
   expect(firstBookableDate(days)).toBe('2026-10-06')
+})
+
+test('two years of days with a year of copied breaks lay out quickly', () => {
+  const blocks = Array.from({ length: 106 * 5 * 4 }, (_, index) => {
+    const day = new Date('2026-10-05T12:00:00')
+    day.setDate(day.getDate() + Math.floor(index / 4))
+    const date = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`
+    return { date, time: ['12:00', '12:15', '12:30', '12:45'][index % 4] }
+  })
+  const started = performance.now()
+  const days = agendaDays('cut', saturday, { blocks })
+  expect(performance.now() - started).toBeLessThan(400)
+  const day = days.find((item) => item.date === '2027-03-03')!
+  expect(day.slots.find((slot) => slot.time === '12:00')?.taken).toBe(true)
+  expect(day.slots.find((slot) => slot.time === '11:00')?.taken).toBe(false)
 })

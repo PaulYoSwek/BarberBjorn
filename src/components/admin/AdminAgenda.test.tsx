@@ -290,7 +290,7 @@ test('Kopieer naar aankomende weken copies closed quarter-hours and says it work
     expect(adminWrite).toHaveBeenCalledWith({
       type: 'copyBlocks',
       from: '2026-10-12',
-      weeks: 52,
+      weeks: 106,
       pattern: {
         mon: [{ time: '12:00', reason: '', color: '' }, { time: '12:30', reason: '', color: '' }],
         tue: [],
@@ -303,7 +303,7 @@ test('Kopieer naar aankomende weken copies closed quarter-hours and says it work
     }),
   )
   const status = await screen.findByRole('status')
-  expect(status).toHaveTextContent('Gekopieerd naar de komende 52 weken')
+  expect(status).toHaveTextContent('Gekopieerd naar de komende 106 weken')
   expect(status).toHaveTextContent('3 dichte kwartieren per week')
   await userEvent.click(screen.getByRole('button', { name: 'Volgende week' }))
   expect(screen.getByRole('button', { name: 'ma 12 okt 12:00 dicht' })).toHaveAttribute('aria-pressed', 'true')
@@ -617,4 +617,30 @@ test('a booked appointment can be removed after a confirmation', async () => {
   expect(adminWrite).toHaveBeenCalledWith({ type: 'bookingDelete', id: 'demo-jan' })
   expect(screen.getByRole('status')).toHaveTextContent('Afspraak verwijderd: Jan de Vries, 10:00.')
   expect(await screen.findByRole('button', { name: 'ma 5 okt 10:00 vrij' })).toBeInTheDocument()
+})
+
+test('the length of a planned appointment follows the service but can be changed', async () => {
+  await openReady()
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  await user.click(screen.getByRole('radio', { name: 'Afspraak te plannen' }))
+  await user.click(screen.getByRole('button', { name: 'ma 5 okt 12:00 vrij' }))
+  const dialog = screen.getByRole('dialog', { name: 'Afspraak plannen' })
+  const length = within(dialog).getByLabelText('Duur')
+  expect(length).toHaveValue('45')
+  await user.selectOptions(within(dialog).getByLabelText('Dienst'), 'both')
+  expect(length).toHaveValue('75')
+  await user.selectOptions(length, '90')
+  expect(dialog).toHaveTextContent('ma 5 okt · 12:00–13:30')
+  await user.type(within(dialog).getByLabelText('Naam'), 'Lauren Willaert')
+  await user.click(within(dialog).getByRole('button', { name: 'Inplannen' }))
+  expect(adminBook).toHaveBeenCalledWith(expect.objectContaining({ service: 'both', start: '2026-10-05T12:00:00', minutes: 90 }))
+})
+
+test('the agenda pages forward to two years from now', async () => {
+  await openReady()
+  const next = screen.getByRole('button', { name: 'Volgende week' })
+  for (let index = 0; index < 105; index++) fireEvent.click(next)
+  expect(next).toBeDisabled()
+  // 105 weeks after the week of 5 October 2026.
+  expect(screen.getByText('9 okt – 15 okt')).toBeInTheDocument()
 })

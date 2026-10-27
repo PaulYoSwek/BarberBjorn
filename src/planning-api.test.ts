@@ -9,6 +9,8 @@ function query(result: Result, filters: string[] = []) {
   const builder = {
     gte: (column: string, value: string) => (filters.push(`${column}>=${value}`), builder),
     lte: (column: string, value: string) => (filters.push(`${column}<=${value}`), builder),
+    order: () => builder,
+    range: () => builder,
     then: (resolve: (value: Result) => unknown, reject?: (reason: unknown) => unknown) =>
       Promise.resolve(result).then(resolve, reject),
   }
@@ -87,9 +89,8 @@ test('maps live week blocks and occupancy into a schedule', async () => {
   const api = await import('./planning-api')
   const schedule = await api.loadPublicSchedule()
   vi.useRealTimers()
-  // Only the agenda window (this Monday + 4 weeks + a week of slack) is fetched.
-  // Ten weeks of agenda plus a week of slack.
-  expect(blockFilters).toEqual(['date>=2026-10-05', 'date<=2026-12-21'])
+  // Only the agenda window is fetched: 106 weeks from this Monday plus a week of slack.
+  expect(blockFilters).toEqual(['date>=2026-10-05', 'date<=2028-10-23'])
   const listed = await api.loadServices()
   const zoned = schedule.bookings?.[1]
 

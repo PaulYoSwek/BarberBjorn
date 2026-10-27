@@ -1,4 +1,5 @@
 import { applyDecision, decisionMail } from '../../../src/planning.ts'
+import { isSchemaMissing } from '../_shared/clients.ts'
 import { serviceClient } from '../_shared/db.ts'
 import { confirmedOverlaps } from '../_shared/holds.ts'
 import { json, readJson, rejectUnlessSession, servePost } from '../_shared/http.ts'
@@ -54,6 +55,11 @@ servePost(async (req) => {
       .eq('id', id)
       .eq('status', from)
     if (marked.error) throw new Error(marked.error.message)
+    // Someone who did not turn up did not pay either.
+    if (action === 'noshow') {
+      const cleared = await db.from('bookings').update({ paid_at: null }).eq('id', id)
+      if (cleared.error && !isSchemaMissing(cleared.error)) throw new Error(cleared.error.message)
+    }
     return json(req, 200, { ok: true, sent: false })
   }
 

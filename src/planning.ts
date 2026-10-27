@@ -1,5 +1,5 @@
 import type { ServiceId } from './content.ts'
-import { agendaDays, SLOT_MINUTES, type DayHours, type Schedule, type Weekday } from './schedule.ts'
+import { AGENDA_WEEKS, agendaDays, SLOT_MINUTES, type DayHours, type Schedule, type Weekday } from './schedule.ts'
 
 function clockMinutes(stamp: string): number {
   const [hours, minutes] = stamp.split(':')
@@ -49,10 +49,13 @@ export function isFree(
     return false
   }
   const date = start.slice(0, 10)
-  const days = agendaDays('cut', new Date(`${date}T00:00:00`), {
-    ...schedule,
-    minutes: { cut: minutes, beard: minutes, both: minutes } as Record<ServiceId, number>,
-  })
+  // The day itself sits in the first week counted from its own Monday.
+  const days = agendaDays(
+    'cut',
+    new Date(`${date}T00:00:00`),
+    { ...schedule, minutes: { cut: minutes, beard: minutes, both: minutes } as Record<ServiceId, number> },
+    7,
+  )
   for (const day of days) {
     const found = day.slots.find((slot) => slot.start === start)
     if (found) {
@@ -103,7 +106,7 @@ export function fillTemplate(
 const WEEKDAY_ORDER: Weekday[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 
 /** How far "Kopieer naar aankomende weken" stamps closed half-hours ahead. */
-export const COPY_WEEKS = 52
+export const COPY_WEEKS = AGENDA_WEEKS
 
 /** The date `count` days after an ISO date (calendar math in UTC, so DST never shifts the day). */
 export function addDaysIso(date: string, count: number): string {

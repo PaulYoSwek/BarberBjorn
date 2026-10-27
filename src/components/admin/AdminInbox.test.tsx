@@ -505,3 +505,57 @@ test('an appointment card opens a dialog to change the service or remove it', as
   expect(screen.getByRole('status')).toHaveTextContent('Afspraak verwijderd: Kim Confirmed')
   await waitFor(() => expect(screen.queryByText('Kim Confirmed')).not.toBeInTheDocument())
 })
+
+test('appointments that happened show whether they were paid, and can be marked paid', async () => {
+  adminWrite.mockReset()
+  adminWrite.mockResolvedValue({ ok: true })
+  vi.setSystemTime(new Date('2026-10-07T12:00:00'))
+  const done = { ...confirmed, id: 'done-1', name: 'Pia Paid', paid: true }
+  const open = { ...confirmed, id: 'open-1', name: 'Olaf Open', start: '2026-10-06T11:00:00', paid: false }
+  loadInbox.mockResolvedValue([done, open])
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  render(<AdminShell />)
+  await user.click(await screen.findByRole('button', { name: 'Afspraken' }))
+  await user.click(screen.getByRole('radio', { name: /Geweest/ }))
+  expect(within(row('Pia Paid')).getByText('Betaald')).toBeInTheDocument()
+  expect(within(row('Pia Paid')).queryByRole('button', { name: 'Pia Paid betaald' })).not.toBeInTheDocument()
+  expect(within(row('Olaf Open')).getByText('Nog niet betaald')).toBeInTheDocument()
+
+  // The filter narrows to who still has to pay.
+  await user.selectOptions(screen.getByLabelText('Status'), 'unpaid')
+  expect(screen.queryByText('Pia Paid')).not.toBeInTheDocument()
+
+  loadInbox.mockResolvedValue([done, { ...open, paid: true }])
+  await user.click(within(row('Olaf Open')).getByRole('button', { name: 'Olaf Open betaald' }))
+  expect(adminWrite).toHaveBeenCalledWith({ type: 'bookingPaid', id: 'open-1', paid: true })
+  expect(screen.getByRole('status')).toHaveTextContent('Olaf Open heeft betaald')
+})
+
+test('the Bon can mark the appointment paid when it is saved', async () => {
+  vi.setSystemTime(new Date('2026-10-07T12:00:00'))
+  saveOrder.mockResolvedValue({ ok: true })
+  loadInbox.mockResolvedValue([{ ...confirmed, paid: false }])
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  render(<AdminShell />)
+  await user.click(await screen.findByRole('button', { name: 'Afspraken' }))
+  await user.click(screen.getByRole('radio', { name: /Geweest/ }))
+  await user.click(screen.getByRole('button', { name: 'Bon Kim Confirmed' }))
+  const paid = screen.getByLabelText(/Klant heeft betaald/)
+  expect(paid).not.toBeChecked()
+  await user.click(paid)
+  await user.click(screen.getByRole('button', { name: 'Bon opslaan' }))
+  expect(saveOrder).toHaveBeenCalledWith('conf-1', expect.objectContaining({ paid: true }))
+  expect(screen.getByRole('status')).toHaveTextContent('betaald.')
+})
+
+test('without payment tracking there are no paid marks', async () => {
+  vi.setSystemTime(new Date('2026-10-07T12:00:00'))
+  loadInbox.mockResolvedValue([confirmed])
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  render(<AdminShell />)
+  await user.click(await screen.findByRole('button', { name: 'Afspraken' }))
+  await user.click(screen.getByRole('radio', { name: /Geweest/ }))
+  expect(within(row('Kim Confirmed')).queryByText('Nog niet betaald')).not.toBeInTheDocument()
+  expect(within(row('Kim Confirmed')).queryByRole('button', { name: 'Kim Confirmed betaald' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('option', { name: 'Nog niet betaald' })).not.toBeInTheDocument()
+})

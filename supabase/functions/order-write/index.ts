@@ -1,3 +1,4 @@
+import { isSchemaMissing } from '../_shared/clients.ts'
 import { serviceClient } from '../_shared/db.ts'
 import { json, readJson, rejectUnlessSession, servePost } from '../_shared/http.ts'
 
@@ -36,7 +37,7 @@ servePost(async (req) => {
   if (denied) return denied
   const body = await readJson(req)
   if (!body || typeof body !== 'object') return json(req, 400, { ok: false, error: 'invalid' })
-  const record = body as { id?: unknown; charged?: unknown; items?: unknown }
+  const record = body as { id?: unknown; charged?: unknown; items?: unknown; paid?: unknown }
   const id = typeof record.id === 'string' ? record.id : ''
   if (!id || !Array.isArray(record.items)) return json(req, 400, { ok: false, error: 'invalid' })
   const charged = record.charged === null || record.charged === undefined ? null : money(record.charged)
@@ -96,5 +97,10 @@ servePost(async (req) => {
 
   const updated = await db.from('bookings').update({ charged }).eq('id', id)
   if (updated.error) throw new Error(updated.error.message)
+  // The Bon also says whether the client paid; a database without the column keeps the old rule.
+  if (typeof record.paid === 'boolean') {
+    const paid = await db.from('bookings').update({ paid_at: record.paid ? new Date().toISOString() : null }).eq('id', id)
+    if (paid.error && !isSchemaMissing(paid.error)) throw new Error(paid.error.message)
+  }
   return json(req, 200, { ok: true })
 })

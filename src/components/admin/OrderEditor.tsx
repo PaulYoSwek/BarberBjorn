@@ -17,7 +17,7 @@ type Props = {
   row: InboxRow
   products: Product[]
   prices: Partial<Record<ServiceId, string>>
-  onSaved: (id: string, charged: number | null, items: OrderItem[]) => void
+  onSaved: (id: string, charged: number | null, items: OrderItem[], paid?: boolean) => void
   onClose: () => void
 }
 
@@ -30,6 +30,9 @@ type Line = { item: OrderItem; priceText: string; discountText: string }
 
 export function OrderEditor({ row, products, prices, onSaved, onClose }: Props) {
   const base = bookingMoney(row, prices)
+  // Shown once payment is tracked (row.paid is set) and only for an appointment that goes ahead.
+  const tracksPayment = row.paid !== undefined && row.status === 'confirmed'
+  const [paid, setPaid] = useState(row.paid === true)
   const [servicePrice, setServicePrice] = useState(base.servicePrice)
   const [serviceText, setServiceText] = useState(num(base.servicePrice))
   const [serviceDiscountText, setServiceDiscountText] = useState(num(discountFromPrice(base.serviceList, base.servicePrice)))
@@ -135,13 +138,13 @@ export function OrderEditor({ row, products, prices, onSaved, onClose }: Props) 
     setBusy(true)
     try {
       const charged = servicePrice === base.serviceList ? null : servicePrice
-      const result = await saveOrder(row.id, { charged, items })
+      const result = await saveOrder(row.id, { charged, items, ...(tracksPayment ? { paid } : {}) })
       if (!result.ok) {
         setNotice('Opslaan mislukt. Probeer het nog eens.')
         return
       }
       setNotice(null)
-      onSaved(row.id, charged, items)
+      onSaved(row.id, charged, items, tracksPayment ? paid : undefined)
     } finally {
       setBusy(false)
     }
@@ -263,6 +266,15 @@ export function OrderEditor({ row, products, prices, onSaved, onClose }: Props) 
           <dd data-testid="order-total">{formatMoney(money.total)}</dd>
         </div>
       </dl>
+      {tracksPayment ? (
+        <label className={`order-paid${paid ? ' is-on' : ''}`}>
+          <input type="checkbox" checked={paid} onChange={(event) => setPaid(event.target.checked)} />
+          <span>
+            <strong>Klant heeft betaald</strong>
+            <small>{paid ? 'Telt mee in de omzet.' : 'Telt pas mee in de omzet als dit aan staat.'}</small>
+          </span>
+        </label>
+      ) : null}
       <div className="admin-actions">
         <button type="submit" className="admin-primary" disabled={busy}>
           {busy ? 'Opslaan…' : 'Bon opslaan'}

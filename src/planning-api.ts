@@ -90,22 +90,41 @@ function toBlock(row: BlockRow): ScheduleBlock {
   return { date, time: row.time.slice(0, 5), ...note }
 }
 
+/** Supabase hands out at most this many rows per request; longer lists are read page by page. */
+const PAGE = 1000
+
 async function read<T>(table: string, columns: string): Promise<T[]> {
   if (!supabase) return []
-  const { data, error } = await supabase.from(table).select(columns)
-  if (error) throw new Error(error.message)
-  return (data ?? []) as T[]
+  const rows: T[] = []
+  for (let page = 0; ; page++) {
+    const { data, error } = await supabase.from(table).select(columns).range(page * PAGE, page * PAGE + PAGE - 1)
+    if (error) throw new Error(error.message)
+    const batch = (data ?? []) as T[]
+    rows.push(...batch)
+    if (batch.length < PAGE) return rows
+  }
 }
 
-/** Rows whose `date` falls in [from, to]. Keeps a year of copied blocks out of every page load. */
+/** Rows whose `date` falls in [from, to], read page by page: two years of copied breaks run into the thousands. */
 async function readDates<T>(table: string, columns: string, from: string, to: string): Promise<T[]> {
   if (!supabase) return []
-  const { data, error } = await supabase.from(table).select(columns).gte('date', from).lte('date', to)
-  if (error) throw new Error(error.message)
-  return (data ?? []) as T[]
+  const rows: T[] = []
+  for (let page = 0; ; page++) {
+    const { data, error } = await supabase
+      .from(table)
+      .select(columns)
+      .gte('date', from)
+      .lte('date', to)
+      .order('date')
+      .range(page * PAGE, page * PAGE + PAGE - 1)
+    if (error) throw new Error(error.message)
+    const batch = (data ?? []) as T[]
+    rows.push(...batch)
+    if (batch.length < PAGE) return rows
+  }
 }
 
-/** The agenda shows four weeks from this Monday; a week of slack covers the page staying open. */
+/** The agenda's whole horizon from this Monday; a week of slack covers the page staying open. */
 function agendaRange(now = new Date()): { from: string; to: string } {
   const monday = mondayOf(now)
   const last = new Date(monday)
@@ -255,6 +274,7 @@ export type AdminWriteBody =
   | { type: 'copyBlocks'; from: string; weeks: number; pattern: Partial<Record<Weekday, BlockPattern[]>> }
   | { type: 'bookingService'; id: string; service: string }
   | { type: 'bookingDelete'; id: string }
+  | { type: 'bookingPaid'; id: string; paid: boolean }
 
 export type LoginResult = 'ok' | 'wrong' | 'unavailable'
 
@@ -312,6 +332,11 @@ export type InboxRow = {
   charged: number | null
   /** Products sold with this appointment. */
   items: OrderItem[]
+  /**
+   * Whether the client paid. Only paid appointments are revenue. Undefined when
+   * the database has no paid column yet; the old rule (been = revenue) applies then.
+   */
+  paid?: boolean
 }
 
 export type ServiceSave = ServiceInfo
@@ -340,6 +365,7 @@ type BookingRow = {
   price?: string | null
   charged?: number | null
   items?: unknown
+  paid_at?: string | null
 }
 
 function toItems(value: unknown): OrderItem[] {
@@ -397,6 +423,7 @@ function toInbox(rows: BookingRow[]): InboxRow[] {
       price: typeof row.price === 'string' && row.price ? row.price : null,
       charged: typeof row.charged === 'number' && Number.isFinite(row.charged) ? row.charged : null,
       items: toItems(row.items),
+      ...(row.paid_at === undefined ? {} : { paid: Boolean(row.paid_at) }),
     })
   }
   return inbox
@@ -565,6 +592,10 @@ export type AdminBooking = {
   phone: string
   /** Mail the client a confirmation (only when there is an email address). */
   mail: boolean
+  /** Length when it differs from the service's own, in quarter-hours. */
+  minutes?: number
+  /** The client already paid, e.g. a walk-in written down afterwards. */
+  paid?: boolean
 }
 
 /** Bjorn plans an appointment himself; it is confirmed straight away. */
@@ -639,6 +670,11 @@ export function saveProduct(product: ProductSave) {
 }
 
 /** What an appointment costs: service price after discount and the products sold. */
-export function saveOrder(bookingId: string, order: { charged: number | null; items: OrderItem[] }) {
-  return invokeOk('order-write', { id: bookingId, charged: order.charged, items: order.items })
+export function saveOrder(bookingId: string, order: { charged: number | null; items: OrderItem[]; paid?: boolean }) {
+  return invokeOk('order-write', {
+    id: bookingId,
+    charged: order.charged,
+    items: order.items,
+    ...(order.paid === undefined ? {} : { paid: order.paid }),
+  })
 }

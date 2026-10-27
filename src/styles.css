@@ -2276,3 +2276,22 @@ button.inbox-count { border: 0; cursor: pointer; width: auto; }
 
 .inbox-actions .inbox-edit { margin-left: auto; background: #fff; border: 1px solid var(--hair-strong); color: var(--ink); font-weight: 600; }
 .inbox-actions .inbox-edit:hover { border-color: var(--ink); }
+
+/* ---------- paid or not: revenue is what was paid */
+.inbox-tag.is-paid { background: #e3f0e6; border-color: #b9dcc4; color: #1d6b3a; font-weight: 700; }
+.inbox-tag.is-paid::before { content: '✓ '; }
+.inbox-card.is-due { box-shadow: inset 4px 0 0 #b3261e; }
+.inbox-card.is-due .inbox-date { background: #8c1d18; }
+.inbox-actions .inbox-pay { background: #1d6b3a; border-color: #1d6b3a; color: #fff; font-weight: 700; }
+.inbox-actions .inbox-pay:disabled { opacity: 0.6; }
+.order-paid {
+  display: flex !important; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer;
+  border: 1px solid var(--hair-strong); background: #fff;
+}
+.order-paid.is-on { border-color: #1d6b3a; background: #e3f0e6; }
+.order-paid input { width: 22px; height: 22px; accent-color: #1d6b3a; flex: 0 0 auto; }
+.order-paid span { display: grid; gap: 2px; }
+.order-paid strong { font-size: 0.95rem; }
+.order-paid small { font-size: 0.78rem; color: var(--muted); }
+.finance-open { padding: 10px 14px; background: #f9dedc; border-left: 3px solid #b3261e; color: #8c1d18; }
+.admin-detail-standing.is-unpaid { background: #f9dedc; color: #8c1d18; }

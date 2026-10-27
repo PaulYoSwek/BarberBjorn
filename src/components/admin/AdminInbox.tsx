@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { copy, type ServiceId } from '../../content'
 import { bookingMoney, formatMoney, type OrderItem, type Product } from '../../finance'
-import { decideInbox, moveBooking, publishLiveSchedule, type InboxAction, type InboxRow } from '../../planning-api'
+import { adminWrite, decideInbox, moveBooking, publishLiveSchedule, type InboxAction, type InboxRow } from '../../planning-api'
 import { serviceName } from './admin-defaults'
 import { AdminBookingDetail } from './AdminBookingDetail'
 import { OrderEditor } from './OrderEditor'
@@ -22,7 +22,9 @@ type Props = {
   onMoved?: (id: string, start: string, sent: boolean) => void
   products?: Product[]
   prices?: Partial<Record<ServiceId, string>>
-  onOrderSaved?: (id: string, charged: number | null, items: OrderItem[]) => void
+  onOrderSaved?: (id: string, charged: number | null, items: OrderItem[], paid?: boolean) => void
+  /** The client paid, or the mark was taken back. */
+  onPaid?: (id: string, paid: boolean) => void
   /** An appointment got another service. */
   onUpdated?: (row: InboxRow) => void
   /** An appointment was removed. */
@@ -69,7 +71,7 @@ export function momentOf(row: Pick<InboxRow, 'start' | 'minutes'>, now = new Dat
 }
 
 export type When = 'coming' | 'today' | 'over' | 'all'
-export type InboxFilter = { when: When; status: '' | InboxRow['status']; service: string; query: string }
+export type InboxFilter = { when: When; status: '' | InboxRow['status'] | 'paid' | 'unpaid'; service: string; query: string }
 export const DEFAULT_FILTER: InboxFilter = { when: 'coming', status: '', service: '', query: '' }
 
 const WHEN_LABEL: Record<When, string> = {
@@ -88,7 +90,11 @@ function matchesWhen(row: InboxRow, when: When, now: Date): boolean {
 
 /** Everything but the when-filter, so the when-buttons can show their counts. */
 function matchesRest(row: InboxRow, filter: InboxFilter): boolean {
-  if (filter.status && row.status !== filter.status) return false
+  if (filter.status === 'paid') {
+    if (row.status !== 'confirmed' || row.paid !== true) return false
+  } else if (filter.status === 'unpaid') {
+    if (row.status !== 'confirmed' || row.paid !== false) return false
+  } else if (filter.status && row.status !== filter.status) return false
   if (filter.service && row.service !== filter.service) return false
   const query = filter.query.trim().toLowerCase()
   if (!query) return true
@@ -168,6 +174,7 @@ export function AdminInbox({
   onOrderSaved,
   onUpdated,
   onRemoved,
+  onPaid,
 }: Props) {
   const [notice, setNotice] = useState<string | null>(null)
   const [done, setDone] = useState<string | null>(null)
@@ -176,6 +183,21 @@ export function AdminInbox({
   const [moving, setMoving] = useState<{ id: string; date: string; time: string } | null>(null)
   const [orderId, setOrderId] = useState<string | null>(null)
   const [editId, setEditId] = useState<string | null>(null)
+  const [payingId, setPayingId] = useState<string | null>(null)
+  // Payment shows once the database tracks it: rows then carry paid true or false.
+  const tracksPayment = rows.some((row) => row.paid !== undefined)
+
+  async function markPaid(row: InboxRow) {
+    if (payingId) return
+    setPayingId(row.id)
+    setNotice(null)
+    setDone(null)
+    const result = await adminWrite({ type: 'bookingPaid', id: row.id, paid: true })
+    setPayingId(null)
+    if (!result.ok) return setNotice('Markeren als betaald mislukt. Probeer het nog eens.')
+    setDone(`${row.name} heeft betaald: ${formatMoney(bookingMoney(row, prices).total)}. Telt nu mee in de omzet.`)
+    onPaid?.(row.id, true)
+  }
   const [movingBusy, setMovingBusy] = useState(false)
   const [filter, setFilter] = useState<InboxFilter>(DEFAULT_FILTER)
 
@@ -314,6 +336,12 @@ export function AdminInbox({
                 <option value="confirmed">Bevestigd</option>
                 <option value="noshow">Niet gekomen</option>
                 <option value="declined">Geweigerd</option>
+                {tracksPayment ? (
+                  <>
+                    <option value="unpaid">Nog niet betaald</option>
+                    <option value="paid">Betaald</option>
+                  </>
+                ) : null}
               </select>
             </label>
             <label>
@@ -392,10 +420,11 @@ export function AdminInbox({
               products={products}
               prices={prices}
               onClose={() => setOrderId(null)}
-              onSaved={(id, charged, items) => {
+              onSaved={(id, charged, items, paid) => {
                 setOrderId(null)
-                setDone(`Bon van ${orderRow.name} opgeslagen: ${formatMoney(bookingMoney({ ...orderRow, charged, items }, prices).total)}.`)
-                onOrderSaved?.(id, charged, items)
+                const total = formatMoney(bookingMoney({ ...orderRow, charged, items }, prices).total)
+                setDone(`Bon van ${orderRow.name} opgeslagen: ${total}${paid === true ? ', betaald' : paid === false ? ', nog niet betaald' : ''}.`)
+                onOrderSaved?.(id, charged, items, paid)
               }}
             />
           </div>
@@ -417,7 +446,7 @@ export function AdminInbox({
               const isMoving = moving?.id === row.id
               const today = row.start.slice(0, 10) === wallOf(now).slice(0, 10)
               return (
-                <li key={row.id} className={`inbox-card is-${row.status}${over ? ' is-over' : ''}${moment === 'now' ? ' is-now' : ''}`}>
+                <li key={row.id} className={`inbox-card is-${row.status}${over ? ' is-over' : ''}${row.status === 'confirmed' && row.paid === false && over ? ' is-due' : ''}${moment === 'now' ? ' is-now' : ''}`}>
                   <DateTile start={row.start} />
                   <div className="inbox-body">
                     <div className="inbox-top">
@@ -454,6 +483,10 @@ export function AdminInbox({
                           </>
                         )
                       })()}
+                      {row.status === 'confirmed' && row.paid === true ? <span className="inbox-tag is-paid">Betaald</span> : null}
+                      {row.status === 'confirmed' && row.paid === false && over ? (
+                        <span className="inbox-tag is-unpaid">Nog niet betaald</span>
+                      ) : null}
                       {row.kind === 'custom' ? <span className="inbox-tag is-custom">Ander tijdstip</span> : null}
                     </p>
                     <p className="inbox-contact">
@@ -529,6 +562,19 @@ export function AdminInbox({
                             }}
                           >
                             Toch gekomen
+                          </button>
+                        ) : null}
+                        {row.status === 'confirmed' && row.paid === false ? (
+                          <button
+                            type="button"
+                            className="inbox-pay"
+                            aria-label={`${row.name} betaald`}
+                            disabled={payingId === row.id}
+                            onClick={() => {
+                              void markPaid(row)
+                            }}
+                          >
+                            {payingId === row.id ? 'Bezig…' : 'Betaald'}
                           </button>
                         ) : null}
                         {row.status === 'confirmed' ? (
