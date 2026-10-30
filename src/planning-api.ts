@@ -678,3 +678,15 @@ export function saveOrder(bookingId: string, order: { charged: number | null; it
     ...(order.paid === undefined ? {} : { paid: order.paid }),
   })
 }
+
+/** The secret feed link for Google Calendar, Outlook and Apple Calendar. Dashboard only. */
+export async function loadCalendarLink(): Promise<{ url: string; name: string }> {
+  if (!supabase) throw new Error('offline')
+  const { data, error } = await supabase.functions.invoke('calendar-feed', { body: {} })
+  const failed = failurePayload(data)
+  if (failed) throw new Error(failed)
+  if (error) throw new Error(await invokeDetail(error))
+  const record = (data ?? {}) as { url?: unknown; name?: unknown }
+  if (typeof record.url !== 'string' || !record.url) throw new Error('offline')
+  return { url: record.url, name: typeof record.name === 'string' ? record.name : 'Afspraken' }
+}

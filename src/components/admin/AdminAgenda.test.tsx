@@ -7,7 +7,8 @@ import { AdminPage } from '../../pages/AdminPage'
 import { AdminShell } from './AdminShell'
 import { DEMO_INBOX, DEMO_SCHEDULE } from './demo'
 
-const { adminWrite, adminBook, loadPublicSchedule, loadInbox, loadAdminBlocks } = vi.hoisted(() => ({
+const { adminWrite, adminBook, loadPublicSchedule, loadInbox, loadAdminBlocks, loadCalendarLink } = vi.hoisted(() => ({
+  loadCalendarLink: vi.fn(),
   adminWrite: vi.fn(),
   adminBook: vi.fn(),
   loadPublicSchedule: vi.fn(),
@@ -24,6 +25,7 @@ vi.mock('../../planning-api', async (importOriginal) => {
     loadPublicSchedule,
     loadInbox,
     loadAdminBlocks,
+    loadCalendarLink,
   }
 })
 
@@ -654,4 +656,20 @@ test('a week across new year shows both years', async () => {
   const next = screen.getByRole('button', { name: 'Volgende week' })
   for (let index = 0; index < 12; index++) fireEvent.click(next)
   expect(screen.getByText('28 dec 2026 – 3 jan 2027')).toBeInTheDocument()
+})
+
+test('the agenda offers the appointments as a calendar to subscribe to', async () => {
+  loadCalendarLink.mockResolvedValue({ url: 'https://x.supabase.co/functions/v1/calendar-feed?token=abc', name: 'Afspraken' })
+  await openReady()
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  const block = screen.getByRole('region', { name: 'Agenda koppelen' })
+  expect(loadCalendarLink).not.toHaveBeenCalled()
+  await user.click(within(block).getByRole('button', { name: 'Koppelen aan Google of Outlook' }))
+  expect(within(block).getByRole('link', { name: 'Google Agenda' })).toHaveAttribute(
+    'href',
+    'https://calendar.google.com/calendar/render?cid=' + encodeURIComponent('webcal://x.supabase.co/functions/v1/calendar-feed?token=abc'),
+  )
+  expect(within(block).getByRole('link', { name: 'Outlook' }).getAttribute('href')).toContain('outlook.live.com/calendar/0/addfromweb')
+  expect(within(block).getByRole('link', { name: 'iPhone / Mac' })).toHaveAttribute('href', 'webcal://x.supabase.co/functions/v1/calendar-feed?token=abc')
+  expect(within(block).getByDisplayValue('https://x.supabase.co/functions/v1/calendar-feed?token=abc')).toBeInTheDocument()
 })

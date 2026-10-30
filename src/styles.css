@@ -2295,3 +2295,21 @@ button.inbox-count { border: 0; cursor: pointer; width: auto; }
 .order-paid small { font-size: 0.78rem; color: var(--muted); }
 .finance-open { padding: 10px 14px; background: #f9dedc; border-left: 3px solid #b3261e; color: #8c1d18; }
 .admin-detail-standing.is-unpaid { background: #f9dedc; color: #8c1d18; }
+
+/* ---------- agenda koppelen: the appointments in Google, Outlook or Apple Calendar */
+.admin-calendar-link { display: grid; gap: 10px; padding: 14px 16px; background: #fff; border: 1px solid var(--hair-strong); }
+.admin-calendar-link .admin-hours-title { margin: 0; }
+.admin-calendar-link .admin-hint { margin: 0; font-size: 0.78rem; }
+.admin-calendar-open, .admin-calendar-copy {
+  justify-self: start; width: auto; min-height: 40px; padding: 0 14px; cursor: pointer;
+  border: 1px solid var(--ink); background: #fff; color: var(--ink); font-weight: 700; font-size: 0.82rem;
+}
+.admin-calendar-open { background: var(--ink); color: #f4f1ea; }
+.admin-calendar-apps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.admin-calendar-apps a {
+  display: grid; place-items: center; min-height: 44px; padding: 0 6px; text-align: center;
+  background: var(--yellow); color: var(--ink); font-weight: 700; font-size: 0.8rem; text-decoration: none;
+}
+.admin-calendar-apps a:hover { background: #e2b500; }
+.admin-calendar-url { display: grid; gap: 4px; font-size: 0.74rem; color: var(--muted); }
+.admin-calendar-url input { min-height: 38px; padding: 0 8px; border: 1px solid var(--hair-strong); font: inherit; font-size: 0.78rem; color: var(--ink); min-width: 0; width: 100%; }

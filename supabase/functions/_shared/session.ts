@@ -37,6 +37,14 @@ async function sign(payload: string): Promise<string> {
   return bytesToBase64Url(signature)
 }
 
+/**
+ * The secret part of the calendar feed link. Calendar apps cannot log in, so the
+ * link itself is the key. It follows the admin password: a new password, a new link.
+ */
+export async function calendarToken(): Promise<string> {
+  return await sign('calendar-feed:v1')
+}
+
 /** A signed `exp.signature` token. Sent back as an httpOnly cookie and in the login body. */
 export async function sessionToken(): Promise<{ token: string; exp: number }> {
   const exp = Math.floor(Date.now() / 1000) + MAX_AGE

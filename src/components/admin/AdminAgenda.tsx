@@ -16,6 +16,7 @@ import {
 } from '../../schedule'
 import { serviceName } from './admin-defaults'
 import { AdminBookingDetail } from './AdminBookingDetail'
+import { AdminCalendarLink } from './AdminCalendarLink'
 import { AdminPlan, type PlanCheck } from './AdminPlan'
 import { axisOf, blockStyle, TimeGrid, type GridColumn } from '../TimeGrid'
 
@@ -695,6 +696,7 @@ export function AdminAgenda({ clients = [], onBooked, onUpdated, onRemoved }: Pr
           </p>
         ) : null}
       </div>
+      <AdminCalendarLink />
       <p className="admin-hint">
         Tik op een dagkop om dagen samen in te stellen. Uren gelden alleen voor die dag. Kopieer naar aankomende
         weken zet de uren en dichte tijden van deze week vast voor de komende twee jaar. Geboekt opent de klant.
